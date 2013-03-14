@@ -40,8 +40,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="GraphElement.2.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="StackableElement.cs" />
+    <Compile Include="GraphElement.cs" />
     <Service Include="{94E38DFF-614B-4cbd-B67C-F211BB35CE8B}" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
