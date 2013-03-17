@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual Studio 2008
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GraphForms", "GraphForms\GraphForms.csproj", "{58895BB9-20B4-4E91-8394-AD7D4A9246E9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ElasticNodes", "ElasticNodes\ElasticNodes.csproj", "{DC784E75-BF81-4E15-9ADB-162971318D6C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -13,6 +15,10 @@ Global
 		{58895BB9-20B4-4E91-8394-AD7D4A9246E9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{58895BB9-20B4-4E91-8394-AD7D4A9246E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{58895BB9-20B4-4E91-8394-AD7D4A9246E9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DC784E75-BF81-4E15-9ADB-162971318D6C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DC784E75-BF81-4E15-9ADB-162971318D6C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DC784E75-BF81-4E15-9ADB-162971318D6C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DC784E75-BF81-4E15-9ADB-162971318D6C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -39,6 +39,8 @@ namespace GraphForms
                 this.mBoundingY = value.Y;
                 this.mBoundingW = value.Width;
                 this.mBoundingH = value.Height;
+
+                this.Invalidate(invalid);
             }
         }
 
@@ -127,6 +129,11 @@ namespace GraphForms
             set { this.SetPosition(value.X, value.Y); }
         }
 
+        public void MoveBy(float dx, float dy)
+        {
+            this.SetPosition(this.mPosX + dx, this.mPosY + dy);
+        }
+
         /// <summary>
         /// Sets this element's position in its <see cref="Parent"/>
         /// element's coordinate system.
@@ -152,7 +159,172 @@ namespace GraphForms
                 this.mPosY = y;
 
                 this.Invalidate(bbox);
+
+                this.OnPositionChanged();
             }
+        }
+
+        /// <summary>
+        /// Reimplement this function to trigger events and other reactions
+        /// to any change in this element's position in its 
+        /// <see cref="Parent"/> element's coordinate system.
+        /// </summary>
+        protected virtual void OnPositionChanged()
+        {
+        }
+        #endregion
+
+        #region Mapping
+        /// <summary>
+        /// Calculates a vector for translating points from this element's
+        /// local coordinate system to the coordinate system of the view
+        /// visualizing parentless root (the scene element).
+        /// </summary>
+        /// <returns>A translating vector from this element to the control
+        /// visualizing it.</returns>
+        public SizeF SceneTranslate()
+        {
+            float dx = this.mPosX;
+            float dy = this.mPosY;
+            GraphElement p = this.parent;
+            while (p != null)
+            {
+                dx += p.mPosX;
+                dy += p.mPosY;
+                p = p.parent;
+            }
+            return new SizeF(dx, dy);
+        }
+
+        /// <summary>
+        /// Calculates a vector for translating points from this element's
+        /// local coordinate system to <paramref name="other"/>'s 
+        /// local coordinate system. If <paramref name="other"/> is null,
+        /// a zero vector is return.
+        /// </summary>
+        /// <param name="other">The other coordinate system to translate
+        /// local points into.</param>
+        /// <returns>A translating vector from this element to the 
+        /// <paramref name="other"/> element.</returns>
+        public SizeF ItemTranslate(GraphElement other)
+        {
+            // Catch simple cases first.
+            if (other == null || other == this)
+            {
+                return new SizeF(0, 0);
+            }
+
+            // This is other's child
+            if (this.parent == other)
+            {
+                return new SizeF(this.mPosX, this.mPosY);
+            }
+
+            // This is other's parent
+            if (other.parent == this)
+            {
+                return new SizeF(-other.mPosX, -other.mPosY);
+            }
+
+            // Siblings
+            if (this.parent == other.parent)
+            {
+                return new SizeF(this.mPosX - other.mPosX,
+                    this.mPosY - other.mPosY);
+            }
+
+            // Find the closest common ancestor.
+            GraphElement thisw = this;
+            GraphElement otherw = other;
+            int thisDepth = this.Depth;
+            int otherDepth = other.Depth;
+            float thisX = 0, thisY = 0;
+            float otherX = 0, otherY = 0;
+            while (thisDepth > otherDepth)
+            {
+                thisX += thisw.mPosX; thisY += this.mPosY;
+                thisw = thisw.parent;
+                --thisDepth;
+            }
+            while (otherDepth > thisDepth)
+            {
+                otherX += other.mPosX; otherY += other.mPosY;
+                otherw = other.parent;
+                --otherDepth;
+            }
+            while (thisw != null && thisw != otherw)
+            {
+                thisX += thisw.mPosX; thisY += this.mPosY;
+                thisw = thisw.parent;
+                otherX += other.mPosX; otherY += other.mPosY;
+                otherw = otherw.parent;
+            }
+            return new SizeF(thisX - otherX, thisY - otherY);
+        }
+
+        /// <summary>
+        /// Maps a given point from this element's local coordinate system to
+        /// the local coordinate system of its parent element.
+        /// If this element has no parent, <paramref name="point"/> will be
+        /// mapped to the coordinate system of the control visualizing this
+        /// element.</summary>
+        /// <param name="point">A point to map from this element to its parent
+        /// (or the visualizing control if the parent is null).</param>
+        /// <returns>The given <paramref name="point"/> mapped to the 
+        /// coordinate system of this element's parent.</returns>
+        public PointF MapToParent(PointF point)
+        {
+            return new PointF(point.X + this.mPosX, point.Y + this.mPosY);
+        }
+
+        /// <summary>
+        /// Maps a given point from this element's local coordinate system to
+        /// the coordinate system of the control visualizing this element.
+        /// </summary>
+        /// <param name="point">A point to map from this element to the
+        /// control visualizing this element.</param>
+        /// <returns>The given <paramref name="point"/> mapped to the 
+        /// coordinate system of the visualizing control.</returns>
+        public PointF MapToScene(PointF point)
+        {
+            return PointF.Add(point, this.SceneTranslate());
+        }
+
+        /// <summary>
+        /// Maps a given point from this element's local coordinate system to
+        /// the local coordinate system of the given <paramref name="item"/>.
+        /// If the given item is null, <paramref name="point"/> is mapped to
+        /// the coordinate system of the control visualizing this element.
+        /// </summary>
+        /// <param name="item">The element to map the given 
+        /// <paramref name="point"/> into from this element's local coordinate 
+        /// system.</param>
+        /// <param name="point">A point to map from this element into
+        /// the given <paramref name="item"/>.</param>
+        /// <returns>The given <paramref name="point"/> mapped to the local
+        /// coordinate system of the given <paramref name="item"/>.</returns>
+        public PointF MapToItem(GraphElement item, PointF point)
+        {
+            if (item != null)
+                return PointF.Add(point, this.ItemTranslate(item));
+            return PointF.Add(point, this.SceneTranslate());
+        }
+
+        public PointF MapFromParent(PointF point)
+        {
+            return new PointF(point.X - this.mPosX, point.Y - this.mPosY);
+        }
+
+        public PointF MapFromScene(PointF point)
+        {
+            return PointF.Subtract(point, this.SceneTranslate());
+        }
+
+        public PointF MapFromItem(GraphElement item, PointF point)
+        {
+            if (item != null)
+                return PointF.Add(point, item.ItemTranslate(this));
+            return PointF.Subtract(point, this.SceneTranslate());
         }
         #endregion
 
@@ -202,7 +374,11 @@ namespace GraphForms
                 scene = p;
                 p = p.parent;
             }
-            scene.InvalidateScene(rect);
+            int x = (int)Math.Floor(rect.X);
+            int y = (int)Math.Floor(rect.Y);
+            int w = (int)Math.Ceiling(rect.X + rect.Width) - x;
+            int h = (int)Math.Ceiling(rect.Y + rect.Height) - y;
+            scene.InvalidateScene(new Rectangle(x, y, w, h));
         }
 
         /// <summary>
@@ -213,8 +389,9 @@ namespace GraphForms
         /// element and its children to invalidate the given area.
         /// </summary>
         /// <param name="rect">The area to invalidate in coordinate system of
-        /// this parentless element (in scene coordinates).</param>
-        protected virtual void InvalidateScene(RectangleF rect)
+        /// the control visualizing this parentless element and its children.
+        /// </param>
+        protected virtual void InvalidateScene(Rectangle rect)
         {
         }
 
@@ -433,7 +610,7 @@ namespace GraphForms
         /// <summary>
         /// Draws this element's background from either a cached image or
         /// directly from the implementation of 
-        /// <see cref="UserDrawBackground(System.Drawing.Graphics"/>,
+        /// <see cref="UserDrawBackground(System.Drawing.Graphics)"/>,
         /// depending on the <see cref="CacheBackground"/> setting.
         /// </summary>
         /// <param name="e">The data from a 
@@ -576,5 +753,145 @@ namespace GraphForms
         {
         }
         #endregion
+
+        private delegate void MouseEventTrigger(GraphElement sender, GraphMouseEventArgs e);
+
+        public GraphMouseEventArgs FixMouseEventArgs(GraphMouseEventArgs e)
+        {
+            return new GraphMouseEventArgs(e, -this.mPosX, -this.mPosY);
+        }
+
+        public GraphMouseEventArgs FixMouseEventArgs(MouseEventArgs e)
+        {
+            return new GraphMouseEventArgs(e, -this.mPosX, -this.mPosY);
+        }
+
+        private bool FireMouseEvent(MouseEventTrigger trigger, GraphMouseEventArgs e)
+        {
+            bool inShape = this.Contains(e.Pos);
+            if (this.HasChildren && (inShape || !this.bClipsChildrenToShape))
+            {
+                GraphElement child;
+                GraphElement[] children = this.Children;
+                int i = children.Length - 1;
+                for (; i >= 0; i--)
+                {
+                    child = children[i];
+                    if (child.bStacksBehindParent)
+                        break;
+                    if (child.FireMouseEvent(trigger, 
+                        child.FixMouseEventArgs(e)) &&
+                        e.Handled)
+                        return true;
+                }
+                if (this.BoundingBox.Contains(e.Location) &&
+                    (inShape || !this.bClipsToShape))
+                {
+                    trigger(this, e);
+                    if (e.Handled)
+                        return true;
+                }
+                for (; i >= 0; i--)
+                {
+                    child = children[i];
+                    if (child.FireMouseEvent(trigger, 
+                        child.FixMouseEventArgs(e))&& 
+                        e.Handled)
+                        return true;
+                }
+            }
+            if (this.BoundingBox.Contains(e.Location) && 
+                (inShape || !this.bClipsToShape))
+            {
+                trigger(this, e);
+                if (e.Handled)
+                    return true;
+            }
+            return false;
+        }
+
+        public bool FireMouseClick(GraphMouseEventArgs e)
+        {
+            return this.FireMouseEvent(TriggerMouseClick, e);
+        }
+
+        private static void TriggerMouseClick(GraphElement sender, GraphMouseEventArgs e)
+        {
+            sender.OnMouseClick(e);
+        }
+
+        protected virtual void OnMouseClick(GraphMouseEventArgs e)
+        {
+        }
+
+        public bool FireMouseDoubleClick(GraphMouseEventArgs e)
+        {
+            return this.FireMouseEvent(TriggerMouseDoubleClick, e);
+        }
+
+        private static void TriggerMouseDoubleClick(GraphElement sender, GraphMouseEventArgs e)
+        {
+            sender.OnMouseDoubleClick(e);
+        }
+
+        protected virtual void OnMouseDoubleClick(GraphMouseEventArgs e)
+        {
+        }
+
+        public bool FireMouseDown(GraphMouseEventArgs e)
+        {
+            return this.FireMouseEvent(TriggerMouseDown, e);
+        }
+
+        private static void TriggerMouseDown(GraphElement sender, GraphMouseEventArgs e)
+        {
+            sender.OnMouseDown(e);
+        }
+
+        protected virtual void OnMouseDown(GraphMouseEventArgs e)
+        {
+        }
+
+        public bool FireMouseMove(GraphMouseEventArgs e)
+        {
+            return this.FireMouseEvent(TriggerMouseMove, e);
+        }
+
+        private static void TriggerMouseMove(GraphElement sender, GraphMouseEventArgs e)
+        {
+            sender.OnMouseMove(e);
+        }
+
+        protected virtual void OnMouseMove(GraphMouseEventArgs e)
+        {
+        }
+
+        public bool FireMouseUp(GraphMouseEventArgs e)
+        {
+            return this.FireMouseEvent(TriggerMouseUp, e);
+        }
+
+        private static void TriggerMouseUp(GraphElement sender, GraphMouseEventArgs e)
+        {
+            sender.OnMouseUp(e);
+        }
+
+        protected virtual void OnMouseUp(GraphMouseEventArgs e)
+        {
+        }
+
+        public bool FireMouseWheel(GraphMouseEventArgs e)
+        {
+            return this.FireMouseEvent(TriggerMouseWheel, e);
+        }
+
+        private static void TriggerMouseWheel(GraphElement sender, GraphMouseEventArgs e)
+        {
+            sender.OnMouseWheel(e);
+        }
+
+        protected virtual void OnMouseWheel(GraphMouseEventArgs e)
+        {
+        }
     }
 }
