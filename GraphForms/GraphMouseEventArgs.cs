@@ -36,28 +36,28 @@ namespace GraphForms
             this.mDelta = e.Delta;
         }
 
-        public GraphMouseEventArgs(MouseEventArgs e, float dx, float dy)
+        public GraphMouseEventArgs(MouseEventArgs e, float x, float y)
         {
             this.mButton = e.Button;
             this.mClicks = e.Clicks;
             this.mSceneX = e.X;
             this.mSceneY = e.Y;
-            this.mX = e.X + dx;
-            this.mY = e.Y + dy;
+            this.mX = x;
+            this.mY = y;
             this.mDelta = e.Delta;
         }
 
         public GraphMouseEventArgs(GraphMouseEventArgs e) : this(e, 0, 0) { }
 
-        public GraphMouseEventArgs(GraphMouseEventArgs e, float dx, float dy)
+        public GraphMouseEventArgs(GraphMouseEventArgs e, float x, float y)
         {
             this.Handled = e.Handled;
             this.mButton = e.mButton;
             this.mClicks = e.mClicks;
             this.mSceneX = e.mSceneX;
             this.mSceneY = e.mSceneY;
-            this.mX = e.mX + dx;
-            this.mY = e.mY + dy;
+            this.mX = x;
+            this.mY = y;
             this.mDelta = e.mDelta;
         }
 

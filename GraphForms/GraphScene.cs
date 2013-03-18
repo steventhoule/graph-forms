@@ -71,11 +71,16 @@ namespace GraphForms
         private void OnViewPaint(object sender, PaintEventArgs e)
         {
             PointF pos = this.Position;
+            SizeF scale = this.Scale;
             Rectangle clip = e.ClipRectangle;
             clip.Offset(-(int)pos.X, -(int)pos.Y);
+            clip.Width = (int)(clip.Width / scale.Width);
+            clip.Height = (int)(clip.Height / scale.Height);
+            e.Graphics.ScaleTransform(scale.Width, scale.Height);
             e.Graphics.TranslateTransform(pos.X, pos.Y);
             this.OnPaint(new PaintEventArgs(e.Graphics, clip));
             e.Graphics.TranslateTransform(-pos.X, -pos.Y);
+            e.Graphics.ScaleTransform(1f / scale.Width, 1f / scale.Height);
         }
 
         private void OnViewMouseClick(object sender, MouseEventArgs e)

@@ -123,7 +123,7 @@ namespace ElasticNodes
 
             e.Graphics.FillEllipse(Brushes.DarkGray, -7, -7, 20, 20);
 
-            e.Graphics.FillEllipse(nodeBrushRisen, -10, -10, 20, 20);
+            e.Graphics.FillEllipse(mouseGrabbed ? nodeBrushSunken : nodeBrushRisen, -10, -10, 20, 20);
             e.Graphics.DrawEllipse(Pens.Black, -10, -10, 20, 20);
         }
 
@@ -161,9 +161,10 @@ namespace ElasticNodes
             if (this.mouseGrabbed)
             {
                 PointF pos = this.Position;
-                this.Position = new PointF(pos.X + e.SceneX - lastMouseX, pos.Y + e.SceneY - lastMouseY);
-                this.lastMouseX = e.SceneX;
-                this.lastMouseY = e.SceneY;
+                PointF sp = this.MapToParent(this.MapFromScene(e.ScenePos));
+                this.Position = new PointF(pos.X + sp.X - lastMouseX, pos.Y + sp.Y - lastMouseY);
+                this.lastMouseX = sp.X;
+                this.lastMouseY = sp.Y;
             }
             e.Handled = true;
         }

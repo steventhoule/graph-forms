@@ -146,6 +146,8 @@ namespace GraphForms
         {
             if (this.mPosX != x || this.mPosY != y)
             {
+                // TODO: There could be a flaw in this algorithm in that
+                // it might not compensate for relative position.
                 float offsetX = x - this.mPosX;
                 float offsetY = y - this.mPosY;
                 RectangleF bbox = this.bClipsChildrenToShape ?
@@ -174,6 +176,40 @@ namespace GraphForms
         }
         #endregion
 
+        private float mScaleX = 1f;
+        private float mScaleY = 1f;
+
+        public SizeF Scale
+        {
+            get { return new SizeF(this.mScaleX, this.mScaleY); }
+            set { this.SetScale(value.Width, value.Height); }
+            
+        }
+
+        public virtual void SetScale(float sx, float sy)
+        {
+            if (this.mScaleX != sx || this.mScaleY != sy)
+            {
+                RectangleF bbox = this.bClipsChildrenToShape ?
+                    this.BoundingBox : this.ChildrenBoundingBox();
+                if (sx < this.mScaleX)
+                    bbox.Width *= this.mScaleX / sx;
+                if (sy < this.mScaleY)
+                    bbox.Height *= this.mScaleY / sy;
+
+                this.mScaleX = sx;
+                this.mScaleY = sy;
+
+                this.Invalidate(bbox);
+
+                this.OnScaleChanged();
+            }
+        }
+
+        protected virtual void OnScaleChanged()
+        {
+        }
+
         #region Mapping
         /// <summary>
         /// Calculates a vector for translating points from this element's
@@ -194,6 +230,21 @@ namespace GraphForms
                 p = p.parent;
             }
             return new SizeF(dx, dy);
+        }
+
+        public Matrix SceneTransform()
+        {
+            Matrix transform = new Matrix();
+            transform.Scale(this.mScaleX, this.mScaleY);
+            transform.Translate(this.mPosX, this.mPosY);
+            GraphElement p = this.parent;
+            while (p != null)
+            {
+                transform.Scale(p.mScaleX, p.mScaleY);
+                transform.Translate(p.mPosX, p.mPosY);
+                p = p.parent;
+            }
+            return transform;
         }
 
         /// <summary>
@@ -262,6 +313,76 @@ namespace GraphForms
             return new SizeF(thisX - otherX, thisY - otherY);
         }
 
+        public Matrix ItemTransform(GraphElement other)
+        {
+            // Catch simple cases first.
+            if (other == null || other == this)
+            {
+                return new Matrix();
+            }
+
+            Matrix transform = new Matrix();
+
+            // This is other's child
+            if (this.parent == other)
+            {
+                transform.Scale(this.mScaleX, this.mScaleY);
+                transform.Translate(this.mPosX, this.mPosY);
+                return transform;
+            }
+
+            // This is other's parent
+            if (other.parent == this)
+            {
+                transform.Scale(1f / other.mScaleX, 1f / other.mScaleY);
+                transform.Translate(-other.mPosX, -other.mPosY);
+                return transform;
+            }
+
+            // Siblings
+            if (this.parent == other.parent)
+            {
+                transform.Scale(this.mScaleX / other.mScaleX, this.mScaleY / other.mScaleY);
+                transform.Translate(this.mPosX - other.mPosX, this.mPosY - other.mPosY);
+                return transform;
+            }
+
+            // Find the closest common ancestor.
+            GraphElement thisw = this;
+            GraphElement otherw = other;
+            int thisDepth = this.Depth;
+            int otherDepth = other.Depth;
+            Matrix otransform = new Matrix();
+            while (thisDepth > otherDepth)
+            {
+                transform.Scale(thisw.mScaleX, thisw.mScaleY);
+                transform.Translate(thisw.mPosX, thisw.mPosY);
+                thisw = thisw.parent;
+                --thisDepth;
+            }
+            while (otherDepth > thisDepth)
+            {
+                otransform.Scale(otherw.mScaleX, otherw.mScaleY);
+                otransform.Translate(otherw.mPosX, otherw.mPosY);
+                otherw = other.parent;
+                --otherDepth;
+            }
+            while (thisw != null && thisw != otherw)
+            {
+                transform.Scale(thisw.mScaleX, thisw.mScaleY);
+                transform.Translate(thisw.mPosX, thisw.mPosY);
+                thisw = thisw.parent;
+                otransform.Scale(otherw.mScaleX, otherw.mScaleY);
+                otransform.Translate(otherw.mPosX, otherw.mPosY);
+                otherw = otherw.parent;
+            }
+            otransform.Invert();
+            transform.Multiply(otransform);
+            return transform;
+        }
+
+        private PointF[] mMapHolder = new PointF[1];
+
         /// <summary>
         /// Maps a given point from this element's local coordinate system to
         /// the local coordinate system of its parent element.
@@ -274,7 +395,8 @@ namespace GraphForms
         /// coordinate system of this element's parent.</returns>
         public PointF MapToParent(PointF point)
         {
-            return new PointF(point.X + this.mPosX, point.Y + this.mPosY);
+            return new PointF(point.X * this.mScaleX + this.mPosX, 
+                point.Y * this.mScaleY + this.mPosY);
         }
 
         /// <summary>
@@ -287,7 +409,11 @@ namespace GraphForms
         /// coordinate system of the visualizing control.</returns>
         public PointF MapToScene(PointF point)
         {
-            return PointF.Add(point, this.SceneTranslate());
+            //return PointF.Add(point, this.SceneTranslate());
+            Matrix transform = this.SceneTransform();
+            this.mMapHolder[0] = point;
+            transform.TransformPoints(this.mMapHolder);
+            return this.mMapHolder[0];
         }
 
         /// <summary>
@@ -305,26 +431,51 @@ namespace GraphForms
         /// coordinate system of the given <paramref name="item"/>.</returns>
         public PointF MapToItem(GraphElement item, PointF point)
         {
+            //if (item != null)
+            //    return PointF.Add(point, this.ItemTranslate(item));
+            //return PointF.Add(point, this.SceneTranslate());
+            Matrix transform;
             if (item != null)
-                return PointF.Add(point, this.ItemTranslate(item));
-            return PointF.Add(point, this.SceneTranslate());
+                transform = this.ItemTransform(item);
+            else
+                transform = this.SceneTransform();
+            this.mMapHolder[0] = point;
+            transform.TransformPoints(this.mMapHolder);
+            return this.mMapHolder[0];
         }
 
         public PointF MapFromParent(PointF point)
         {
-            return new PointF(point.X - this.mPosX, point.Y - this.mPosY);
+            return new PointF((point.X - this.mPosX) / this.mScaleX, 
+                (point.Y - this.mPosY) / this.mScaleY);
         }
 
         public PointF MapFromScene(PointF point)
         {
-            return PointF.Subtract(point, this.SceneTranslate());
+            //return PointF.Subtract(point, this.SceneTranslate());
+            Matrix transform = this.SceneTransform();
+            transform.Invert();
+            this.mMapHolder[0] = point;
+            transform.TransformPoints(this.mMapHolder);
+            return this.mMapHolder[0];
         }
 
         public PointF MapFromItem(GraphElement item, PointF point)
         {
+            //if (item != null)
+            //    return PointF.Add(point, item.ItemTranslate(this));
+            //return PointF.Subtract(point, this.SceneTranslate());
+            Matrix transform;
             if (item != null)
-                return PointF.Add(point, item.ItemTranslate(this));
-            return PointF.Subtract(point, this.SceneTranslate());
+                transform = item.ItemTransform(this);
+            else
+            {
+                transform = this.SceneTransform();
+                transform.Invert();
+            }
+            this.mMapHolder[0] = point;
+            transform.TransformPoints(this.mMapHolder);
+            return this.mMapHolder[0];
         }
         #endregion
 
@@ -370,6 +521,8 @@ namespace GraphForms
             GraphElement p = this;
             while (p != null)
             {
+                rect.Width *= p.mScaleX;
+                rect.Height *= p.mScaleY;
                 rect.Offset(p.mPosX, p.mPosY);
                 scene = p;
                 p = p.parent;
@@ -476,11 +629,15 @@ namespace GraphForms
                 // Fix event args
                 Rectangle clip = e.ClipRectangle; // copies it, right?
                 clip.Offset(-(int)child.mPosX, -(int)child.mPosY);
+                clip.Width = (int)(clip.Width / child.mScaleX);
+                clip.Height = (int)(clip.Height / child.mScaleY);
+                g.ScaleTransform(child.mScaleX, child.mScaleY);
                 g.TranslateTransform(child.mPosX, child.mPosY);
                 // Paint child
                 child.OnPaint(new PaintEventArgs(g, clip));
                 // Restore event args
                 g.TranslateTransform(-child.mPosX, -child.mPosY);
+                g.ScaleTransform(1f / child.mScaleX, 1f / child.mScaleY);
             }
 
             // Draw the element's background
@@ -518,11 +675,15 @@ namespace GraphForms
                 // Fix event args
                 Rectangle clip = e.ClipRectangle; // copies it, right?
                 clip.Offset(-(int)child.mPosX, -(int)child.mPosY);
+                clip.Width = (int)(clip.Width / child.mScaleX);
+                clip.Height = (int)(clip.Height / child.mScaleY);
+                g.ScaleTransform(child.mScaleX, child.mScaleY);
                 g.TranslateTransform(child.mPosX, child.mPosY);
                 // Paint child
                 child.OnPaint(new PaintEventArgs(g, clip));
                 // Restore event args
                 g.TranslateTransform(-child.mPosX, -child.mPosY);
+                g.ScaleTransform(1f / child.mScaleX, 1f / child.mScaleY);
             }
 
             // Draw the element's foreground
@@ -758,12 +919,16 @@ namespace GraphForms
 
         public GraphMouseEventArgs FixMouseEventArgs(GraphMouseEventArgs e)
         {
-            return new GraphMouseEventArgs(e, -this.mPosX, -this.mPosY);
+            return new GraphMouseEventArgs(e, 
+                (e.X - this.mPosX) / this.mScaleX, 
+                (e.Y - this.mPosY) / this.mScaleY);
         }
 
         public GraphMouseEventArgs FixMouseEventArgs(MouseEventArgs e)
         {
-            return new GraphMouseEventArgs(e, -this.mPosX, -this.mPosY);
+            return new GraphMouseEventArgs(e, 
+                (e.X - this.mPosX) / this.mScaleX, 
+                (e.Y - this.mPosY) / this.mScaleY);
         }
 
         private bool FireMouseEvent(MouseEventTrigger trigger, GraphMouseEventArgs e)
@@ -822,6 +987,7 @@ namespace GraphForms
 
         protected virtual void OnMouseClick(GraphMouseEventArgs e)
         {
+            e.Handled = true;
         }
 
         public bool FireMouseDoubleClick(GraphMouseEventArgs e)
@@ -836,6 +1002,7 @@ namespace GraphForms
 
         protected virtual void OnMouseDoubleClick(GraphMouseEventArgs e)
         {
+            e.Handled = true;
         }
 
         public bool FireMouseDown(GraphMouseEventArgs e)
@@ -850,6 +1017,7 @@ namespace GraphForms
 
         protected virtual void OnMouseDown(GraphMouseEventArgs e)
         {
+            e.Handled = true;
         }
 
         public bool FireMouseMove(GraphMouseEventArgs e)
@@ -864,6 +1032,7 @@ namespace GraphForms
 
         protected virtual void OnMouseMove(GraphMouseEventArgs e)
         {
+            e.Handled = true;
         }
 
         public bool FireMouseUp(GraphMouseEventArgs e)
@@ -878,6 +1047,7 @@ namespace GraphForms
 
         protected virtual void OnMouseUp(GraphMouseEventArgs e)
         {
+            e.Handled = true;
         }
 
         public bool FireMouseWheel(GraphMouseEventArgs e)
@@ -892,6 +1062,7 @@ namespace GraphForms
 
         protected virtual void OnMouseWheel(GraphMouseEventArgs e)
         {
+            e.Handled = true;
         }
     }
 }
