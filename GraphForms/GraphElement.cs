@@ -10,7 +10,7 @@ namespace GraphForms
     /// sorted within its parent based on its Z value 
     /// and specified stacking order.
     /// </summary>
-    public partial class GraphElement
+    public abstract partial class GraphElement
     {
         private GraphElement parent;
         private int siblingIndex;
@@ -233,6 +233,15 @@ namespace GraphForms
         {
             return ClosestLeaf(item1, item2) ? -1 : 1;
         }
+        private class ChildSorter : IComparer<GraphElement>
+        {
+            public int Compare(GraphElement x, GraphElement y)
+            {
+                return ClosestLeaf(x, y) ? 1 : -1;
+            }
+        }
+        private static ChildSorter sChildSorter = new ChildSorter();
+
         /// <summary>
         /// Ensures the children are sorted in ascending order (bottom-most first)
         /// based on their stacking properties, Z values, and sibling indexes.
@@ -245,7 +254,8 @@ namespace GraphForms
                 this.sequentialOrdering = true;
                 if (children.Count == 0)
                     return;
-                this.children.Sort(new Comparison<GraphElement>(notClosestLeaf));
+                //this.children.Sort(new Comparison<GraphElement>(notClosestLeaf));
+                this.children.Sort(sChildSorter);
                 for (int i = 0; i < this.children.Count; ++i)
                 {
                     if (this.children[i].siblingIndex != i)
@@ -382,8 +392,7 @@ namespace GraphForms
 
         /// <summary>
         /// The item automatically stacks behind it's parent if it's Z-value is negative. 
-        /// This flag enables <see cref="StackableElement.Zvalue"/> 
-        /// to toggle <see cref="StackableElement.StacksBehindParent"/>.
+        /// This flag enables <see cref="Zvalue"/> to toggle <see cref="StacksBehindParent"/>.
         /// </summary>
         public bool NegativeZStacksBehindParent
         {

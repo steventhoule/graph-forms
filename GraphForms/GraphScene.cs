@@ -60,6 +60,17 @@ namespace GraphForms
             return false;
         }
 
+        /// <summary>
+        /// Draws the visual contents of this scene's background.
+        /// </summary>
+        /// <param name="e">The data from a 
+        /// <see cref="E:System.Windows.Forms.Control.Paint"/> event,
+        /// with its graphics and clipping rectangle adjusted to
+        /// this scene's local coordinate system.</param>
+        protected override void OnDrawBackground(PaintEventArgs e)
+        {
+        }
+
         protected override void InvalidateScene(Rectangle rect)
         {
             for (int i = this.mViews.Count - 1; i >= 0; i--)
@@ -71,16 +82,17 @@ namespace GraphForms
         private void OnViewPaint(object sender, PaintEventArgs e)
         {
             PointF pos = this.Position;
-            SizeF scale = this.Scale;
             Rectangle clip = e.ClipRectangle;
             clip.Offset(-(int)pos.X, -(int)pos.Y);
-            clip.Width = (int)(clip.Width / scale.Width);
-            clip.Height = (int)(clip.Height / scale.Height);
-            e.Graphics.ScaleTransform(scale.Width, scale.Height);
             e.Graphics.TranslateTransform(pos.X, pos.Y);
             this.OnPaint(new PaintEventArgs(e.Graphics, clip));
             e.Graphics.TranslateTransform(-pos.X, -pos.Y);
-            e.Graphics.ScaleTransform(1f / scale.Width, 1f / scale.Height);
+        }
+
+        public GraphMouseEventArgs FixMouseEventArgs(MouseEventArgs e)
+        {
+            return new GraphMouseEventArgs(e.Button, e.Clicks,
+                e.X, e.Y, e.X - this.X, e.Y - this.Y, e.Delta);
         }
 
         private void OnViewMouseClick(object sender, MouseEventArgs e)
@@ -112,7 +124,5 @@ namespace GraphForms
         {
             this.FireMouseWheel(this.FixMouseEventArgs(e));
         }
-
-        
     }
 }

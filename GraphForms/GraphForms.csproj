@@ -42,6 +42,7 @@
   <ItemGroup>
     <Compile Include="GraphElement.2.cs" />
     <Compile Include="GraphEventArgs.cs" />
+    <Compile Include="GraphHelpers.cs" />
     <Compile Include="GraphMouseEventArgs.cs" />
     <Compile Include="GraphScene.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

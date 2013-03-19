@@ -82,11 +82,8 @@ namespace ElasticNodes
             float y = Math.Min(mSourcePoint.Y, mDestPoint.Y) - extra / 2f;
             float w = Math.Abs(mDestPoint.X - mSourcePoint.X) + extra;
             float h = Math.Abs(mDestPoint.Y - mSourcePoint.Y) + extra;
-            int xi = (int)Math.Floor(x);
-            int yi = (int)Math.Floor(y);
 
-            return new Rectangle(xi, yi,
-                (int)Math.Ceiling(w + x) - xi, (int)Math.Ceiling(h + y) - yi);
+            return GraphHelpers.ToAlignedRect(x, y, w, h);
         }
 
         protected override void OnDrawBackground(System.Windows.Forms.PaintEventArgs e)

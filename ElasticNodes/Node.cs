@@ -161,10 +161,9 @@ namespace ElasticNodes
             if (this.mouseGrabbed)
             {
                 PointF pos = this.Position;
-                PointF sp = this.MapToParent(this.MapFromScene(e.ScenePos));
-                this.Position = new PointF(pos.X + sp.X - lastMouseX, pos.Y + sp.Y - lastMouseY);
-                this.lastMouseX = sp.X;
-                this.lastMouseY = sp.Y;
+                this.Position = new PointF(pos.X + e.SceneX - lastMouseX, pos.Y + e.SceneY - lastMouseY);
+                this.lastMouseX = e.SceneX;
+                this.lastMouseY = e.SceneY;
             }
             e.Handled = true;
         }

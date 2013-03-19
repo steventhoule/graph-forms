@@ -8,7 +8,7 @@ using System.Windows.Forms;
 
 namespace GraphForms
 {
-    public partial class GraphElement
+    public abstract partial class GraphElement
     {
         #region Hit Testing
         private int mBoundingX = 0;
@@ -31,7 +31,11 @@ namespace GraphForms
             }
             set
             {
-                this.RefitBackgroundCache(value);
+                if (this.mCacheList != null && this.mCacheList.Count > 0)
+                {
+                    for (int i = this.mCacheList.Count - 1; i >= 0; i--)
+                        this.mCacheList[i].RefitCache(value);
+                }
 
                 Rectangle invalid = Rectangle.Union(this.BoundingBox, value);
 
@@ -42,6 +46,33 @@ namespace GraphForms
 
                 this.Invalidate(invalid);
             }
+        }
+
+        /// <summary>
+        /// Returns the recursive union of this element's
+        /// <see cref="BoundingBox"/> and the bounding boxes of all of its
+        /// children, and their children, and so on.
+        /// </summary>
+        /// <returns>The recursive union of the bounding boxes of
+        /// this element and all its children.</returns>
+        RectangleF ChildrenBoundingBox()
+        {
+            RectangleF bbox = this.BoundingBox;
+            if (this.HasChildren)
+            {
+                RectangleF childRect;
+                GraphElement child;
+                GraphElement[] children = this.Children;
+                int i, length = children.Length;
+                for (i = 0; i < length; i++)
+                {
+                    child = children[i];
+                    childRect = child.ChildrenBoundingBox();
+                    childRect.Offset(child.mPosX, child.mPosY);
+                    bbox = RectangleF.Union(bbox, childRect);
+                }
+            }
+            return bbox;
         }
 
         /// <summary>
@@ -120,6 +151,26 @@ namespace GraphForms
         private float mPosY;
 
         /// <summary>
+        /// The x-coordinate of this element's position in its 
+        /// <see cref="Parent"/> element's coordinate system.
+        /// </summary>
+        public float X
+        {
+            get { return this.mPosX; }
+            set { this.SetPosition(value, this.mPosY); }
+        }
+
+        /// <summary>
+        /// The y-coordinate of this element's position in its 
+        /// <see cref="Parent"/> element's coordinate system.
+        /// </summary>
+        public float Y
+        {
+            get { return this.mPosY; }
+            set { this.SetPosition(this.mPosX, value); }
+        }
+
+        /// <summary>
         /// This element's position in its <see cref="Parent"/> 
         /// element's coordinate system.
         /// </summary>
@@ -129,6 +180,18 @@ namespace GraphForms
             set { this.SetPosition(value.X, value.Y); }
         }
 
+        /// <summary>
+        /// Moves this element by <paramref name="dx"/> points horizontally,
+        /// and by <paramref name="dy"/> points vertically. This function is
+        /// equivalent to calling 
+        /// <see cref="SetPosition(System.Single,System.Single)"/> with 
+        /// <c><see cref="X"/> + <paramref name="dx"/></c> and
+        /// <c><see cref="Y"/> + <paramref name="dy"/></c> as the arguments.
+        /// </summary>
+        /// <param name="dx">The amount by which to move this element 
+        /// horizontally.</param>
+        /// <param name="dy">The amount by which to move this element
+        /// vertically.</param>
         public void MoveBy(float dx, float dy)
         {
             this.SetPosition(this.mPosX + dx, this.mPosY + dy);
@@ -146,16 +209,12 @@ namespace GraphForms
         {
             if (this.mPosX != x || this.mPosY != y)
             {
-                // TODO: There could be a flaw in this algorithm in that
-                // it might not compensate for relative position.
                 float offsetX = x - this.mPosX;
                 float offsetY = y - this.mPosY;
                 RectangleF bbox = this.bClipsChildrenToShape ?
                     this.BoundingBox : this.ChildrenBoundingBox();
                 // Union of bbox and offset bbox (before and after movement)
                 bbox.Inflate(Math.Abs(offsetX), Math.Abs(offsetY));
-                bbox.Offset(offsetX < 0 ? offsetX : 0,
-                            offsetY < 0 ? offsetY : 0);
 
                 this.mPosX = x;
                 this.mPosY = y;
@@ -175,40 +234,6 @@ namespace GraphForms
         {
         }
         #endregion
-
-        private float mScaleX = 1f;
-        private float mScaleY = 1f;
-
-        public SizeF Scale
-        {
-            get { return new SizeF(this.mScaleX, this.mScaleY); }
-            set { this.SetScale(value.Width, value.Height); }
-            
-        }
-
-        public virtual void SetScale(float sx, float sy)
-        {
-            if (this.mScaleX != sx || this.mScaleY != sy)
-            {
-                RectangleF bbox = this.bClipsChildrenToShape ?
-                    this.BoundingBox : this.ChildrenBoundingBox();
-                if (sx < this.mScaleX)
-                    bbox.Width *= this.mScaleX / sx;
-                if (sy < this.mScaleY)
-                    bbox.Height *= this.mScaleY / sy;
-
-                this.mScaleX = sx;
-                this.mScaleY = sy;
-
-                this.Invalidate(bbox);
-
-                this.OnScaleChanged();
-            }
-        }
-
-        protected virtual void OnScaleChanged()
-        {
-        }
 
         #region Mapping
         /// <summary>
@@ -230,21 +255,6 @@ namespace GraphForms
                 p = p.parent;
             }
             return new SizeF(dx, dy);
-        }
-
-        public Matrix SceneTransform()
-        {
-            Matrix transform = new Matrix();
-            transform.Scale(this.mScaleX, this.mScaleY);
-            transform.Translate(this.mPosX, this.mPosY);
-            GraphElement p = this.parent;
-            while (p != null)
-            {
-                transform.Scale(p.mScaleX, p.mScaleY);
-                transform.Translate(p.mPosX, p.mPosY);
-                p = p.parent;
-            }
-            return transform;
         }
 
         /// <summary>
@@ -313,111 +323,36 @@ namespace GraphForms
             return new SizeF(thisX - otherX, thisY - otherY);
         }
 
-        public Matrix ItemTransform(GraphElement other)
-        {
-            // Catch simple cases first.
-            if (other == null || other == this)
-            {
-                return new Matrix();
-            }
-
-            Matrix transform = new Matrix();
-
-            // This is other's child
-            if (this.parent == other)
-            {
-                transform.Scale(this.mScaleX, this.mScaleY);
-                transform.Translate(this.mPosX, this.mPosY);
-                return transform;
-            }
-
-            // This is other's parent
-            if (other.parent == this)
-            {
-                transform.Scale(1f / other.mScaleX, 1f / other.mScaleY);
-                transform.Translate(-other.mPosX, -other.mPosY);
-                return transform;
-            }
-
-            // Siblings
-            if (this.parent == other.parent)
-            {
-                transform.Scale(this.mScaleX / other.mScaleX, this.mScaleY / other.mScaleY);
-                transform.Translate(this.mPosX - other.mPosX, this.mPosY - other.mPosY);
-                return transform;
-            }
-
-            // Find the closest common ancestor.
-            GraphElement thisw = this;
-            GraphElement otherw = other;
-            int thisDepth = this.Depth;
-            int otherDepth = other.Depth;
-            Matrix otransform = new Matrix();
-            while (thisDepth > otherDepth)
-            {
-                transform.Scale(thisw.mScaleX, thisw.mScaleY);
-                transform.Translate(thisw.mPosX, thisw.mPosY);
-                thisw = thisw.parent;
-                --thisDepth;
-            }
-            while (otherDepth > thisDepth)
-            {
-                otransform.Scale(otherw.mScaleX, otherw.mScaleY);
-                otransform.Translate(otherw.mPosX, otherw.mPosY);
-                otherw = other.parent;
-                --otherDepth;
-            }
-            while (thisw != null && thisw != otherw)
-            {
-                transform.Scale(thisw.mScaleX, thisw.mScaleY);
-                transform.Translate(thisw.mPosX, thisw.mPosY);
-                thisw = thisw.parent;
-                otransform.Scale(otherw.mScaleX, otherw.mScaleY);
-                otransform.Translate(otherw.mPosX, otherw.mPosY);
-                otherw = otherw.parent;
-            }
-            otransform.Invert();
-            transform.Multiply(otransform);
-            return transform;
-        }
-
-        private PointF[] mMapHolder = new PointF[1];
-
         /// <summary>
-        /// Maps a given point from this element's local coordinate system to
+        /// Maps a given point in this element's local coordinate system to
         /// the local coordinate system of its parent element.
         /// If this element has no parent, <paramref name="point"/> will be
         /// mapped to the coordinate system of the control visualizing this
         /// element.</summary>
-        /// <param name="point">A point to map from this element to its parent
-        /// (or the visualizing control if the parent is null).</param>
+        /// <param name="point">A point in this element's local coordinate 
+        /// system.</param>
         /// <returns>The given <paramref name="point"/> mapped to the 
         /// coordinate system of this element's parent.</returns>
         public PointF MapToParent(PointF point)
         {
-            return new PointF(point.X * this.mScaleX + this.mPosX, 
-                point.Y * this.mScaleY + this.mPosY);
+            return new PointF(point.X + this.mPosX, point.Y + this.mPosY);
         }
 
         /// <summary>
-        /// Maps a given point from this element's local coordinate system to
+        /// Maps the given point in this element's local coordinate system to
         /// the coordinate system of the control visualizing this element.
         /// </summary>
-        /// <param name="point">A point to map from this element to the
-        /// control visualizing this element.</param>
+        /// <param name="point">A point in this element's local coordinate 
+        /// system.</param>
         /// <returns>The given <paramref name="point"/> mapped to the 
         /// coordinate system of the visualizing control.</returns>
         public PointF MapToScene(PointF point)
         {
-            //return PointF.Add(point, this.SceneTranslate());
-            Matrix transform = this.SceneTransform();
-            this.mMapHolder[0] = point;
-            transform.TransformPoints(this.mMapHolder);
-            return this.mMapHolder[0];
+            return PointF.Add(point, this.SceneTranslate());
         }
 
         /// <summary>
-        /// Maps a given point from this element's local coordinate system to
+        /// Maps the given point in this element's local coordinate system to
         /// the local coordinate system of the given <paramref name="item"/>.
         /// If the given item is null, <paramref name="point"/> is mapped to
         /// the coordinate system of the control visualizing this element.
@@ -425,93 +360,73 @@ namespace GraphForms
         /// <param name="item">The element to map the given 
         /// <paramref name="point"/> into from this element's local coordinate 
         /// system.</param>
-        /// <param name="point">A point to map from this element into
-        /// the given <paramref name="item"/>.</param>
+        /// <param name="point">A point in this element's local coordinate
+        /// system.</param>
         /// <returns>The given <paramref name="point"/> mapped to the local
         /// coordinate system of the given <paramref name="item"/>.</returns>
         public PointF MapToItem(GraphElement item, PointF point)
         {
-            //if (item != null)
-            //    return PointF.Add(point, this.ItemTranslate(item));
-            //return PointF.Add(point, this.SceneTranslate());
-            Matrix transform;
             if (item != null)
-                transform = this.ItemTransform(item);
-            else
-                transform = this.SceneTransform();
-            this.mMapHolder[0] = point;
-            transform.TransformPoints(this.mMapHolder);
-            return this.mMapHolder[0];
+                return PointF.Add(point, this.ItemTranslate(item));
+            return PointF.Add(point, this.SceneTranslate());
         }
 
+        /// <summary>
+        /// Maps the given point, which is in this element's parent's local 
+        /// coordinate system, to this element's local coordinate system.
+        /// </summary>
+        /// <param name="point">A point in this element's parent's local
+        /// coordinate system.</param>
+        /// <returns>The given <paramref name="point"/> mapped to this
+        /// element's local coordinate system.</returns>
         public PointF MapFromParent(PointF point)
         {
-            return new PointF((point.X - this.mPosX) / this.mScaleX, 
-                (point.Y - this.mPosY) / this.mScaleY);
+            return new PointF(point.X - this.mPosX, point.Y - this.mPosY);
         }
 
+        /// <summary>
+        /// Maps the given point, which is in the coordinate system of
+        /// the control visualizing this element, to this element's
+        /// local coordinate system.
+        /// </summary>
+        /// <param name="point">A point in the coordinate system of
+        /// the control visualizing this element.</param>
+        /// <returns>The given <paramref name="point"/> mapped to this
+        /// element's local coordinate system.</returns>
         public PointF MapFromScene(PointF point)
         {
-            //return PointF.Subtract(point, this.SceneTranslate());
-            Matrix transform = this.SceneTransform();
-            transform.Invert();
-            this.mMapHolder[0] = point;
-            transform.TransformPoints(this.mMapHolder);
-            return this.mMapHolder[0];
+            return PointF.Subtract(point, this.SceneTranslate());;
         }
 
+        /// <summary>
+        /// Maps the given point, which is in the given 
+        /// <paramref name="item"/>'s local coordinate system, 
+        /// to this element's local coordinate system. 
+        /// If <paramref name="item"/> is null, <paramref name="point"/>
+        /// is assumed to be in the coordinate system of the control
+        /// visualizing this element.</summary>
+        /// <param name="item">The element that defines the local
+        /// coordinate system that the given <paramref name="point"/> is in.
+        /// </param>
+        /// <param name="point">A point in the local coordinate system of
+        /// the given <paramref name="item"/>.</param>
+        /// <returns>The given <paramref name="point"/> mapped to this
+        /// element's local coordinate system.</returns>
         public PointF MapFromItem(GraphElement item, PointF point)
         {
-            //if (item != null)
-            //    return PointF.Add(point, item.ItemTranslate(this));
-            //return PointF.Subtract(point, this.SceneTranslate());
-            Matrix transform;
             if (item != null)
-                transform = item.ItemTransform(this);
-            else
-            {
-                transform = this.SceneTransform();
-                transform.Invert();
-            }
-            this.mMapHolder[0] = point;
-            transform.TransformPoints(this.mMapHolder);
-            return this.mMapHolder[0];
+                return PointF.Add(point, item.ItemTranslate(this));
+            return PointF.Subtract(point, this.SceneTranslate());
         }
         #endregion
 
-        /// <summary>
-        /// Returns the recursive union of this element's
-        /// <see cref="BoundingBox"/> and the bounding boxes of all of its
-        /// children, and their children, and so on.
-        /// </summary>
-        /// <returns>The recursive union of the bounding boxes of
-        /// this element and all its children.</returns>
-        RectangleF ChildrenBoundingBox()
-        {
-            RectangleF bbox = this.BoundingBox;
-            if (this.HasChildren)
-            {
-                RectangleF childRect;
-                GraphElement child;
-                GraphElement[] children = this.Children;
-                int i, length = children.Length;
-                for (i = 0; i < length; i++)
-                {
-                    child = children[i];
-                    childRect = child.ChildrenBoundingBox();
-                    childRect.Offset(child.mPosX, child.mPosY);
-                    bbox = RectangleF.Union(bbox, childRect);
-                }
-            }
-            return bbox;
-        }
-
+        #region Updating
         /// <summary>
         /// Propagates an invalid area in this element's 
         /// local coordinate system up its ancestry chain,
         /// adjusting it to the coordinate system of the parentless root
         /// (the scene element), which then calls its 
-        /// <see cref="InvalidateScene(System.Drawing.RectangleF)"/>
+        /// <see cref="InvalidateScene(System.Drawing.Rectangle)"/>
         /// function with the adjusted area.</summary>
         /// <param name="rect">The invalid area in this element's
         /// local coordinate system to propagate up the ancestry chain.</param>
@@ -521,17 +436,11 @@ namespace GraphForms
             GraphElement p = this;
             while (p != null)
             {
-                rect.Width *= p.mScaleX;
-                rect.Height *= p.mScaleY;
                 rect.Offset(p.mPosX, p.mPosY);
                 scene = p;
                 p = p.parent;
             }
-            int x = (int)Math.Floor(rect.X);
-            int y = (int)Math.Floor(rect.Y);
-            int w = (int)Math.Ceiling(rect.X + rect.Width) - x;
-            int h = (int)Math.Ceiling(rect.Y + rect.Height) - y;
-            scene.InvalidateScene(new Rectangle(x, y, w, h));
+            scene.InvalidateScene(GraphHelpers.ToAlignedRect(rect));
         }
 
         /// <summary>
@@ -547,6 +456,7 @@ namespace GraphForms
         protected virtual void InvalidateScene(Rectangle rect)
         {
         }
+        #endregion
 
         #region Drawing
         private const CombineMode kClipCombineMode = CombineMode.Replace;
@@ -629,15 +539,11 @@ namespace GraphForms
                 // Fix event args
                 Rectangle clip = e.ClipRectangle; // copies it, right?
                 clip.Offset(-(int)child.mPosX, -(int)child.mPosY);
-                clip.Width = (int)(clip.Width / child.mScaleX);
-                clip.Height = (int)(clip.Height / child.mScaleY);
-                g.ScaleTransform(child.mScaleX, child.mScaleY);
                 g.TranslateTransform(child.mPosX, child.mPosY);
                 // Paint child
                 child.OnPaint(new PaintEventArgs(g, clip));
                 // Restore event args
                 g.TranslateTransform(-child.mPosX, -child.mPosY);
-                g.ScaleTransform(1f / child.mScaleX, 1f / child.mScaleY);
             }
 
             // Draw the element's background
@@ -675,15 +581,11 @@ namespace GraphForms
                 // Fix event args
                 Rectangle clip = e.ClipRectangle; // copies it, right?
                 clip.Offset(-(int)child.mPosX, -(int)child.mPosY);
-                clip.Width = (int)(clip.Width / child.mScaleX);
-                clip.Height = (int)(clip.Height / child.mScaleY);
-                g.ScaleTransform(child.mScaleX, child.mScaleY);
                 g.TranslateTransform(child.mPosX, child.mPosY);
                 // Paint child
                 child.OnPaint(new PaintEventArgs(g, clip));
                 // Restore event args
                 g.TranslateTransform(-child.mPosX, -child.mPosY);
-                g.ScaleTransform(1f / child.mScaleX, 1f / child.mScaleY);
             }
 
             // Draw the element's foreground
@@ -726,209 +628,342 @@ namespace GraphForms
             }
         }
 
-        private const System.Drawing.Imaging.PixelFormat kCachePixelFormat 
-            = System.Drawing.Imaging.PixelFormat.Format32bppArgb;
-
-        private bool bCacheBackground = false;
-        private Bitmap mBackgroundCache = null;
-        private int mBackAdjustX = 0;
-        private int mBackAdjustY = 0;
-
         /// <summary>
-        /// Whether or not this element's background is cached in an image or
-        /// redrawn every time this element is invalidated.
-        /// </summary>
-        /// <remarks>
-        /// Beware that this is automatically set to false if there is not
-        /// enough memory available to create the cache, so try to use caching
-        /// sparingly, especially on any element with a large 
-        /// <see cref="BoundingBox"/>.
+        /// This base class is used for caching some or all of a
+        /// <see cref="GraphElement"/>'s visual contents in order to accelerate
+        /// the drawing process for the element.
+        /// </summary><remarks>
+        /// Descendents of this class are meant to be used in implementations of the 
+        /// <see cref="OnDrawBackground(System.Windows.Forms.PaintEventArgs)"/> and
+        /// <see cref="OnDrawForeground(System.Windows.Forms.PaintEventArgs)"/>
+        /// functions by calling its 
+        /// <see cref="Cache.OnDraw(System.Windows.Forms.PaintEventArgs)"/> function.
         /// </remarks>
-        public bool CacheBackground
+        public abstract class Cache : IDisposable
         {
-            get { return this.bCacheBackground; }
-            set
+            private const System.Drawing.Imaging.PixelFormat kCachePixelFormat
+                = System.Drawing.Imaging.PixelFormat.Format32bppArgb;
+
+            private GraphElement mOwner;
+
+            private bool bCached;
+            private Bitmap mCache = null;
+            private int mAdjustX;
+            private int mAdjustY;
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="Cache"/> class
+            /// with the given <paramref name="owner"/>.
+            /// </summary>
+            /// <param name="owner">The <see cref="GraphElement"/> that will
+            /// own this cache instance and refit it whenever necessary.
+            /// </param>
+            public Cache(GraphElement owner) : this(owner, false) { }
+
+            /// <summary>
+            /// Initializes a new instance of the <see cref="Cache"/> class
+            /// with the given <paramref name="owner"/> and cache mode.
+            /// </summary>
+            /// <param name="owner">The <see cref="GraphElement"/> that will
+            /// own this cache instance and refit it whenever necessary.
+            /// </param>
+            /// <param name="cached">Whether or not this cache is cached in an
+            /// image or redrawn every time its <see cref="Owner"/> is 
+            /// invalidated.</param>
+            public Cache(GraphElement owner, bool cached)
             {
-                if (this.bCacheBackground != value)
+                this.bCached = cached;
+                this.SetOwner(owner);
+            }
+
+            /// <summary>
+            /// The element that owns this cache and refits it every time its
+            /// <see cref="GraphElement.BoundingBox"/> is changed.
+            /// </summary>
+            public GraphElement Owner
+            {
+                get { return this.mOwner; }
+            }
+
+            /// <summary>
+            /// Sets this cache's owner to the given <paramref name="owner"/>,
+            /// and attempts to refit its internal cache image to the new
+            /// owner's <see cref="GraphElement.BoundingBox"/> and redraw it
+            /// if <see cref="Cached"/> is true and it isn't already cached.
+            /// </summary>
+            /// <param name="owner">The new owner of this cache.</param>
+            internal void SetOwner(GraphElement owner)
+            {
+                if (owner != null && this.mOwner != owner)
                 {
-                    if (value)
+                    this.RefitCache(owner.BoundingBox);
+                    this.mOwner = owner;
+                    if (this.bCached && this.mCache == null)
+                        this.bCached = this.RedrawCache();
+                }
+            }
+
+            /// <summary>
+            /// Disposes this cache's internal image data if it has any.
+            /// </summary>
+            public void Dispose()
+            {
+                if (this.mCache != null)
+                {
+                    this.mCache.Dispose();
+                    this.mCache = null;
+                }
+            }
+
+            /// <summary>
+            /// Whether or not this cache is cached in an image or redrawn 
+            /// every time its <see cref="Owner"/> element is invalidated.
+            /// </summary>
+            /// <remarks>
+            /// Beware that this is automatically set to false if there is not
+            /// enough memory available to create the cache, so try to use caching
+            /// sparingly, especially on any element with a large 
+            /// <see cref="GraphElement.BoundingBox"/>.
+            /// </remarks>
+            public bool Cached
+            {
+                get { return this.bCached; }
+                set
+                {
+                    if (this.bCached != value)
                     {
-                        this.bCacheBackground = this.RedrawBackgroundCache();
-                    }
-                    else
-                    {
-                        if (this.mBackgroundCache != null)
+                        if (value)
                         {
-                            this.mBackgroundCache.Dispose();
-                            this.mBackgroundCache = null;
+                            this.bCached = this.RedrawCache();
                         }
-                        this.bCacheBackground = false;
+                        else
+                        {
+                            if (this.mCache != null)
+                            {
+                                this.mCache.Dispose();
+                                this.mCache = null;
+                            }
+                            this.bCached = false;
+                        }
                     }
                 }
             }
-        }
 
-        /// <summary>
-        /// Draws this element's background from either a cached image or
-        /// directly from the implementation of 
-        /// <see cref="UserDrawBackground(System.Drawing.Graphics)"/>,
-        /// depending on the <see cref="CacheBackground"/> setting.
-        /// </summary>
-        /// <param name="e">The data from a 
-        /// <see cref="E:System.Windows.Forms.Control.Paint"/> event,
-        /// with its graphics and clipping rectangle adjusted to
-        /// this element's local coordinate system.</param>
-        protected virtual void OnDrawBackground(PaintEventArgs e)
-        {
-            GraphicsState prev = e.Graphics.Save();
-            if (this.bCacheBackground)
+            /// <summary>
+            /// The main drawing function, which draws into the given graphics
+            /// from either a cached image or directly from the implementation
+            /// of <see cref="UserDraw(System.Drawing.Graphics)"/>,
+            /// depending on the <see cref="Cached"/> setting.
+            /// </summary>
+            /// <param name="e">The data from a 
+            /// <see cref="E:System.Windows.Forms.Control.Paint"/> event,
+            /// with its graphics and clipping rectangle adjusted to
+            /// the <see cref="Owner"/> element's local coordinate system.
+            /// </param>
+            public void OnDraw(PaintEventArgs e)
             {
-                if (this.mBackgroundCache == null && 
-                    !this.RedrawBackgroundCache())
+                GraphicsState prev = e.Graphics.Save();
+                if (this.bCached)
                 {
-                    this.bCacheBackground = false;
-                    this.UserDrawBackground(e.Graphics);
-                    e.Graphics.Restore(prev);
-                    return;
+                    if (this.mCache == null &&
+                        !this.RedrawCache())
+                    {
+                        this.bCached = false;
+                        this.UserDraw(e.Graphics);
+                        e.Graphics.Restore(prev);
+                        return;
+                    }
+                    SetGraphicsMode(e.Graphics, true);
+                    Rectangle src = new Rectangle(
+                        e.ClipRectangle.X - mOwner.mBoundingX + mAdjustX,
+                        e.ClipRectangle.Y - mOwner.mBoundingY + mAdjustY,
+                        e.ClipRectangle.Width, e.ClipRectangle.Height);
+                    e.Graphics.DrawImage(this.mCache,
+                        e.ClipRectangle, src, GraphicsUnit.Pixel);
                 }
-                SetGraphicsMode(e.Graphics, true);
-                Rectangle src = new Rectangle(
-                    e.ClipRectangle.X - this.mBoundingX + this.mBackAdjustX,
-                    e.ClipRectangle.Y - this.mBoundingY + this.mBackAdjustY,
-                    e.ClipRectangle.Width, e.ClipRectangle.Height);
-                e.Graphics.DrawImage(this.mBackgroundCache, 
-                    e.ClipRectangle, src, GraphicsUnit.Pixel);
+                else
+                {
+                    this.UserDraw(e.Graphics);
+                }
+                e.Graphics.Restore(prev);
             }
-            else
-            {
-                this.UserDrawBackground(e.Graphics);
-            }
-            e.Graphics.Restore(prev);
-        }
 
-        /// <summary>
-        /// Attempts to refit the background cache image inside 
-        /// the new bounding box by cropping the current cache or
-        /// adjusting the cache offsets or clearing the current cache
-        /// so that it's redrawn on the next draw pass.
-        /// </summary>
-        /// <param name="newBBox">The new bounding box for this element.
-        /// </param>
-        private void RefitBackgroundCache(Rectangle newBBox)
-        {
-            if (this.bCacheBackground)
+            /// <summary>
+            /// Attempts to refit the internal cache image inside 
+            /// the new bounding box by cropping the current cache or
+            /// adjusting the cache offsets or clearing the current cache
+            /// so that it's redrawn on the next draw pass.
+            /// </summary>
+            /// <param name="newBBox">The new bounding box for the
+            /// <see cref="Owner"/> element.</param>
+            internal void RefitCache(Rectangle newBBox)
             {
                 // Try to crop cache image if it already exists,
-                // otherwise draw it.
-                if (this.mBackgroundCache != null/* &&
-                    newBBox.Width > 0 && newBBox.Height > 0/**/)
+                    // otherwise draw it.
+                if (this.bCached && this.mCache != null/* &&
+                    newBBox.Width > 0 && newBBox.Height > 0/* */)
                 {
                     Rectangle crop = new Rectangle(
-                        newBBox.X - this.mBoundingX + this.mBackAdjustX,
-                        newBBox.Y - this.mBoundingY + this.mBackAdjustY,
+                        newBBox.X - mOwner.mBoundingX + mAdjustX,
+                        newBBox.Y - mOwner.mBoundingY + mAdjustY,
                         newBBox.Width, newBBox.Height);
                     if (crop.Width <= 0 || crop.Height <= 0)
                     {
                         // New bounding box is invalid, so dump cache
-                        this.mBackgroundCache.Dispose();
-                        this.mBackgroundCache = null;
+                        this.mCache.Dispose();
+                        this.mCache = null;
                     }
-                    else /**/if (crop.X > 0 && crop.Y > 0 &&
-                        crop.Width < this.mBackgroundCache.Width &&
-                        crop.Height < this.mBackgroundCache.Height)
+                    else /* */if (crop.X > 0 && crop.Y > 0 &&
+                        crop.Width < this.mCache.Width &&
+                        crop.Height < this.mCache.Height)
                     {
                         try
                         {
-                            Bitmap newCache = this.mBackgroundCache.Clone(crop, kCachePixelFormat);
+                            Bitmap newCache = this.mCache.Clone(crop, kCachePixelFormat);
                             // Switch out cache for cropped cache if successful
-                            this.mBackgroundCache.Dispose();
-                            this.mBackgroundCache = newCache;
+                            this.mCache.Dispose();
+                            this.mCache = newCache;
                         }
                         catch
                         {
                             // Continue using current cache with adjusted offsets
-                            this.mBackAdjustX = crop.X;
-                            this.mBackAdjustY = crop.Y;
+                            this.mAdjustX = crop.X;
+                            this.mAdjustY = crop.Y;
                         }
                     }
                     else
                     {
                         // If the crop doesn't fit, redraw anyway
-                        this.mBackgroundCache.Dispose();
-                        this.mBackgroundCache = null;
+                        this.mCache.Dispose();
+                        this.mCache = null;
                     }
                 }
+            }
+
+            /// <summary>
+            /// Clears the current background cache and redraws it using the
+            /// <see cref="UserDraw(System.Drawing.Graphics)"/> function.
+            /// </summary>
+            /// <returns>True if the cache image was successfully re-allocated
+            /// and drawn to, false otherwise (not enough memory or empty 
+            /// <see cref="GraphElement.BoundingBox"/>).</returns>
+            private bool RedrawCache()
+            {
+                if (mOwner.mBoundingW > 0 && mOwner.mBoundingH > 0)
+                {
+                    if (this.mCache != null)
+                    {
+                        this.mCache.Dispose();
+                        this.mCache = null;
+                    }
+                    try
+                    {
+                        this.mCache = new Bitmap(mOwner.mBoundingW, 
+                            mOwner.mBoundingH, kCachePixelFormat);
+                    }
+                    catch
+                    {
+                        this.mCache = null;
+                        return false;
+                    }
+                    Graphics g = Graphics.FromImage(this.mCache);
+                    g.TranslateTransform(-mOwner.mBoundingX, -mOwner.mBoundingY);
+                    this.UserDraw(g);
+                    g.Dispose();
+                    return true;
+                }
+                return false;
+            }
+
+            /// <summary>
+            /// Draws the visual contents of this cache into the provided 
+            /// graphics in the <see cref="Owner"/> element's local coordinate 
+            /// system.</summary>
+            /// <param name="g">The graphics into which the visual contents 
+            /// are drawn.</param>
+            /// <remarks>Make sure to constrain all everything drawn to within
+            /// the boundaries of the <see cref="Owner"/> element's 
+            /// <see cref="GraphElement.BoundingBox"/>.
+            /// Otherwise, anything outside it could be clipped by the cache
+            /// or cause rendering artifacts, depending on the 
+            /// <see cref="Cached"/> setting.</remarks>
+            protected abstract void UserDraw(Graphics g);
+        }
+
+        private volatile List<Cache> mCacheList = null;
+
+        /// <summary>
+        /// Adds the given cache to this element, removing it from its previous
+        /// owner first if it has a different owner.
+        /// </summary>
+        /// <param name="cache">The cache to add to this element.</param>
+        public void AddCache(Cache cache)
+        {
+            if (this.mCacheList == null || 
+                !this.mCacheList.Contains(cache))
+            {
+                if (cache.Owner != this)
+                {
+                    cache.Owner.RemoveCache(cache);
+                    cache.SetOwner(this);
+                }
+                if (this.mCacheList == null)
+                    this.mCacheList = new List<Cache>();
+                this.mCacheList.Add(cache);
             }
         }
 
         /// <summary>
-        /// Clears the current background cache and redraws it using the
-        /// <see cref="UserDrawBackground(System.Drawing.Graphics)"/> function.
+        /// Removes the given cache from this element if it is owned by this
+        /// element and contained in this element's internal cache list.
         /// </summary>
-        /// <returns>True if the cache image was successfully re-allocated
-        /// and drawn to, false otherwise (not enough memory or empty 
-        /// <see cref="BoundingBox"/>).</returns>
-        private bool RedrawBackgroundCache()
+        /// <param name="cache">The cache to remove from this element.</param>
+        /// <returns>True if the cache was owned by and contained in this
+        /// element and successfully removed from it, false otherwise.
+        /// </returns>
+        public bool RemoveCache(Cache cache)
         {
-            if (this.mBoundingW > 0 && this.mBoundingH > 0)
+            int index = this.mCacheList == null 
+                ? -1 : this.mCacheList.IndexOf(cache);
+            if (index >= 0)
             {
-                if (this.mBackgroundCache != null)
-                {
-                    this.mBackgroundCache.Dispose();
-                    this.mBackgroundCache = null;
-                }
-                try
-                {
-                    this.mBackgroundCache = new Bitmap(this.mBoundingW, this.mBoundingH, kCachePixelFormat);
-                }
-                catch
-                {
-                    this.mBackgroundCache = null;
-                    return false;
-                }
-                Graphics g = Graphics.FromImage(this.mBackgroundCache);
-                g.TranslateTransform(-this.mBoundingX, -this.mBoundingY);
-                this.UserDrawBackground(g);
-                g.Dispose();
+                this.mCacheList.RemoveAt(index);
+                if (this.mCacheList.Count == 0)
+                    this.mCacheList = null;
                 return true;
             }
             return false;
         }
 
-        /// <summary>
-        /// Draws the visual contents of this element's background
-        /// into the provided graphics in this element's local coordinate 
-        /// system.</summary>
-        /// <param name="g">The graphics into which the background is drawn.
-        /// </param>
-        /// <remarks>Make sure to constrain all everything drawn to within
-        /// the boundaries of this element's <see cref="BoundingBox"/>.
-        /// Otherwise, anything outside it could be clipped by the cache
-        /// or cause rendering artifacts, depending on the 
-        /// <see cref="CacheBackground"/> setting.</remarks>
-        protected virtual void UserDrawBackground(Graphics g)
-        {
-        }
+        // TODO: Add cache addition and removal functions
 
+        /// <summary>
+        /// Draws the visual contents of this element's background.
+        /// </summary>
+        /// <param name="e">The data from a 
+        /// <see cref="E:System.Windows.Forms.Control.Paint"/> event,
+        /// with its graphics and clipping rectangle adjusted to
+        /// this element's local coordinate system.</param>
+        protected abstract void OnDrawBackground(PaintEventArgs e);
+
+        /// <summary>
+        /// Draws the visual contents of this element's foreground.
+        /// </summary>
+        /// <param name="e">The data from a 
+        /// <see cref="E:System.Windows.Forms.Control.Paint"/> event,
+        /// with its graphics and clipping rectangle adjusted to
+        /// this element's local coordinate system.</param>
         protected virtual void OnDrawForeground(PaintEventArgs e)
         {
         }
         #endregion
 
+        #region Mouse Event Handling
         private delegate void MouseEventTrigger(GraphElement sender, GraphMouseEventArgs e);
 
         public GraphMouseEventArgs FixMouseEventArgs(GraphMouseEventArgs e)
         {
-            return new GraphMouseEventArgs(e, 
-                (e.X - this.mPosX) / this.mScaleX, 
-                (e.Y - this.mPosY) / this.mScaleY);
-        }
-
-        public GraphMouseEventArgs FixMouseEventArgs(MouseEventArgs e)
-        {
-            return new GraphMouseEventArgs(e, 
-                (e.X - this.mPosX) / this.mScaleX, 
-                (e.Y - this.mPosY) / this.mScaleY);
+            return new GraphMouseEventArgs(e, -this.mPosX, -this.mPosY);
         }
 
         private bool FireMouseEvent(MouseEventTrigger trigger, GraphMouseEventArgs e)
@@ -1064,5 +1099,6 @@ namespace GraphForms
         {
             e.Handled = true;
         }
+        #endregion
     }
 }
