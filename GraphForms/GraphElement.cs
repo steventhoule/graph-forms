@@ -229,10 +229,6 @@ namespace GraphForms
         /// </summary>
         private bool holesInSiblingIndex = false;
 
-        private static int notClosestLeaf(GraphElement item1, GraphElement item2)
-        {
-            return ClosestLeaf(item1, item2) ? -1 : 1;
-        }
         private class ChildSorter : IComparer<GraphElement>
         {
             public int Compare(GraphElement x, GraphElement y)
@@ -254,7 +250,6 @@ namespace GraphForms
                 this.sequentialOrdering = true;
                 if (children.Count == 0)
                     return;
-                //this.children.Sort(new Comparison<GraphElement>(notClosestLeaf));
                 this.children.Sort(sChildSorter);
                 for (int i = 0; i < this.children.Count; ++i)
                 {
@@ -267,10 +262,15 @@ namespace GraphForms
             }
         }
 
-        private static int insertOrder(GraphElement a, GraphElement b)
+        private class InsertOrder : IComparer<GraphElement>
         {
-            return a.siblingIndex - b.siblingIndex;
+            public int Compare(GraphElement x, GraphElement y)
+            {
+                return x.siblingIndex - y.siblingIndex;
+            }
         }
+        private static InsertOrder sInsertOrder = new InsertOrder();
+
         /// <summary>
         /// Ensures that the list of children is sorted by insertion order,
         /// and that the sibling indexes are packed (no gaps), and start at 0.
@@ -279,7 +279,7 @@ namespace GraphForms
         {
             if (!this.sequentialOrdering)
             {
-                this.children.Sort(new Comparison<GraphElement>(insertOrder));
+                this.children.Sort(sInsertOrder);
                 this.sequentialOrdering = true;
                 this.needSortChildren = true;
             }
@@ -366,6 +366,8 @@ namespace GraphForms
         }
         #endregion
 
+        // NOTE: Dependence on Invalidate starts here
+
         #region Flags
         /// <summary>
         /// Whether or not this object is stacked behind its parent.
@@ -386,8 +388,20 @@ namespace GraphForms
                     // Ensure child item sorting is up to date when toggling this flag.
                     if (this.parent != null)
                         this.parent.needSortChildren = true;
+
+                    this.OnStacksBehindParentChanged();
+                    this.Invalidate(this.BoundingBox);
                 }
             }
+        }
+
+        /// <summary>
+        /// Reimplement this function to trigger events and other reactions to 
+        /// any change in this element's <see cref="StacksBehindParent"/>
+        /// value before it's invalidated.
+        /// </summary>
+        protected virtual void OnStacksBehindParentChanged()
+        {
         }
 
         /// <summary>
@@ -402,10 +416,20 @@ namespace GraphForms
                 if (this.bNegativeZStacksBehindParent != value)
                 {
                     this.bNegativeZStacksBehindParent = value;
+                    this.OnNegativeZStacksBehindParentChanged();
                     // Update stack-behind.
                     this.StacksBehindParent = this.z < 0f;
                 }
             }
+        }
+
+        /// <summary>
+        /// Reimplement this function to trigger events and other reactions to 
+        /// any change in this element's <see cref="NegativeZStacksBehindParent"/>
+        /// value before it's invalidated.
+        /// </summary>
+        protected virtual void OnNegativeZStacksBehindParentChanged()
+        {
         }
         #endregion
 
@@ -421,19 +445,28 @@ namespace GraphForms
             get { return this.z; }
             set
             {
-                // TODO: Insert pre-notification (with possible adjustment)
+                if (this.z != value)
+                {
+                    this.z = value;
+                    if (this.parent != null)
+                        this.parent.needSortChildren = true;
 
-                this.z = value;
-                if (this.parent != null)
-                    this.parent.needSortChildren = true;
+                    if (this.bNegativeZStacksBehindParent)
+                        this.StacksBehindParent = this.z < 0f;
 
-                // TODO: Insert post-notification
-
-                if (this.bNegativeZStacksBehindParent)
-                    this.StacksBehindParent = this.z < 0f;
-
-                // TODO: Insert event trigger
+                    this.OnZvalueChanged();
+                    this.Invalidate(this.BoundingBox);
+                }
             }
+        }
+
+        /// <summary>
+        /// Reimplement this function to trigger events and other reactions to 
+        /// any change in this element's <see cref="Zvalue"/>
+        /// value before it's invalidated.
+        /// </summary>
+        protected virtual void OnZvalueChanged()
+        {
         }
         #endregion
 
@@ -469,8 +502,24 @@ namespace GraphForms
             this.needSortChildren = true; // maybe false
             child.siblingIndex = children.Count;
             this.children.Add(child);
-            //if (isObject)
-            //    ((GraphObject)this).childrenChanged();
+            
+            this.OnChildAdded(child);
+            System.Drawing.RectangleF invalid = child.ChildrenBoundingBox();
+            invalid.Offset(child.X, child.Y);
+            this.Invalidate(invalid);
+        }
+
+        /// <summary>
+        /// Reimplement this function to trigger events and other reactions
+        /// that occur after the given <paramref name="child"/> has been added
+        /// to this element's <see cref="Children"/> and before this element
+        /// is invalidated over the <paramref name="child"/>'s 
+        /// <see cref="BoundingBox"/> offset by its <see cref="Position"/>.
+        /// </summary>
+        /// <param name="child">The <see cref="GraphElement"/> that has just
+        /// been added to this element's <see cref="Children"/>. </param>
+        protected virtual void OnChildAdded(GraphElement child)
+        {
         }
 
         private void RemoveChild(GraphElement child)
@@ -487,15 +536,50 @@ namespace GraphForms
             // the child is not guaranteed to be at the index after the list is sorted.
             // (see ensureSortedChildren()).
             child.siblingIndex = -1;
-            //if (isObject)
-            //    ((GraphObject)this).childrenChanged();
+
+            this.OnChildRemoved(child);
+            System.Drawing.RectangleF invalid = child.ChildrenBoundingBox();
+            invalid.Offset(child.X, child.Y);
+            this.Invalidate(invalid);
         }
 
+        /// <summary>
+        /// Reimplement this function to trigger events and other reactions
+        /// that occur after the given <paramref name="child"/> has been removed
+        /// from this element's <see cref="Children"/> and before this element
+        /// is invalidated over the <paramref name="child"/>'s 
+        /// <see cref="BoundingBox"/> offset by its <see cref="Position"/>.
+        /// </summary>
+        /// <param name="child">The <see cref="GraphElement"/> that has just
+        /// been removed from this element's <see cref="Children"/>. </param>
+        protected virtual void OnChildRemoved(GraphElement child)
+        {
+        }
+
+        /// <summary>
+        /// This element's parent element, which contains this item within its
+        /// <see cref="Children"/> list.
+        /// </summary><remarks>
+        /// Elements without parents (their <see cref="Parent"/> equals null),
+        /// have special meaning. They are considered "scenes" for functions
+        /// that deal with mapping coordinates through the ancestry chain,
+        /// including <see cref="InvalidateScene(System.Drawing.Rectangle)"/>
+        /// and <see cref="MapFromScene(System.Drawing.PointF)"/> and
+        /// <see cref="MapToScene(System.Drawing.PointF)"/>.
+        /// </remarks>
         public GraphElement Parent
         {
             get { return this.parent; }
         }
 
+        /// <summary>
+        /// Sets this element's <see cref="Parent"/> element. If 
+        /// <paramref name="parent"/> is null, this element gains
+        /// special meaning as a "scene". </summary>
+        /// <param name="parent">The new parent of this element.</param>
+        /// <returns>True if this element's <see cref="Parent"/> was
+        /// successfully set to <paramref name="parent"/>, false otherwise.
+        /// </returns>
         public bool SetParent(GraphElement parent)
         {
             // TODO: Insert pre-notification (with possible adjustment?)
@@ -534,10 +618,26 @@ namespace GraphForms
             return true;
         }
 
+        /// <summary>
+        /// Reimplement this function to trigger events and other reactions
+        /// that occur before this element's <see cref="Parent"/> changes to
+        /// <paramref name="newParent"/> and before it's removed from its
+        /// <see cref="Parent"/>'s <see cref="Children"/> list.
+        /// </summary>
+        /// <param name="newParent">The new <see cref="Parent"/> 
+        /// of this element.</param>
         protected virtual void OnParentChanging(GraphElement newParent)
         {
         }
 
+        /// <summary>
+        /// Reimplement this function to trigger events and other reactions
+        /// that occur after this element's <see cref="Parent"/> has changed
+        /// and after it has been removed from the 
+        /// <paramref name="oldParent"/>'s <see cref="Children"/> list.
+        /// </summary>
+        /// <param name="oldParent">The old <see cref="Parent"/>
+        /// of this element.</param>
         protected virtual void OnParentChanged(GraphElement oldParent)
         {
         }

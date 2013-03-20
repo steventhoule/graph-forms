@@ -6,6 +6,10 @@ using System.Windows.Forms;
 
 namespace GraphForms
 {
+    /// <summary>
+    /// Provides data for mouse events that are propagated to 
+    /// <see cref="GraphElement"/> instances.
+    /// </summary>
     public class GraphMouseEventArgs : GraphEventArgs
     {
         private MouseButtons mButton;

@@ -121,9 +121,19 @@ namespace GraphForms
                 if (this.bClipsChildrenToShape != value)
                 {
                     this.bClipsChildrenToShape = value;
+                    this.OnClipsChildrenToShapeChanged();
                     this.Invalidate(this.ChildrenBoundingBox());
                 }
             }
+        }
+
+        /// <summary>
+        /// Reimplement this function to trigger events and other reactions to 
+        /// any change in this element's <see cref="ClipsChildrenToShape"/>
+        /// value before it's invalidated.
+        /// </summary>
+        protected virtual void OnClipsChildrenToShapeChanged()
+        {
         }
 
         private bool bClipsToShape = false;
@@ -140,9 +150,19 @@ namespace GraphForms
                 if (this.bClipsToShape != value)
                 {
                     this.bClipsToShape = value;
+                    this.OnClipsToShapeChanged();
                     this.Invalidate(this.BoundingBox);
                 }
             }
+        }
+
+        /// <summary>
+        /// Reimplement this function to trigger events and other reactions to 
+        /// any change in this element's <see cref="ClipsToShape"/>
+        /// value before it's invalidated.
+        /// </summary>
+        protected virtual void OnClipsToShapeChanged()
+        {
         }
         #endregion
 
@@ -219,16 +239,16 @@ namespace GraphForms
                 this.mPosX = x;
                 this.mPosY = y;
 
-                this.Invalidate(bbox);
-
+                // Notify and update
                 this.OnPositionChanged();
+                this.Invalidate(bbox);
             }
         }
 
         /// <summary>
-        /// Reimplement this function to trigger events and other reactions
-        /// to any change in this element's position in its 
-        /// <see cref="Parent"/> element's coordinate system.
+        /// Reimplement this function to trigger events and other reactions to 
+        /// any change in this element's <see cref="Position"/>
+        /// value before it's invalidated.
         /// </summary>
         protected virtual void OnPositionChanged()
         {
@@ -464,8 +484,8 @@ namespace GraphForms
         /// <summary>
         /// Whether or not this element is drawn.
         /// </summary>
-        /// <returns></returns>
-        /// <remarks>
+        /// <returns>True if this element is drawn, false if it isn't drawn.
+        /// </returns><remarks>
         /// Override in descendent classes to implement systems for
         /// visibility, opacity, etc. Please note that this affects
         /// this element only, while its children are drawn regardless
@@ -612,22 +632,6 @@ namespace GraphForms
             }
         }
 
-        internal static void SetGraphicsMode(Graphics g, bool fast)
-        {
-            if (fast)
-            {
-                g.SmoothingMode = SmoothingMode.HighSpeed;
-                g.CompositingQuality = CompositingQuality.HighSpeed;
-                g.InterpolationMode = InterpolationMode.Default;
-            }
-            else
-            {
-                g.SmoothingMode = SmoothingMode.HighQuality;
-                g.CompositingQuality = CompositingQuality.HighQuality;
-                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-            }
-        }
-
         /// <summary>
         /// This base class is used for caching some or all of a
         /// <see cref="GraphElement"/>'s visual contents in order to accelerate
@@ -694,9 +698,10 @@ namespace GraphForms
             /// <param name="owner">The new owner of this cache.</param>
             internal void SetOwner(GraphElement owner)
             {
-                if (owner != null && this.mOwner != owner)
+                if (this.mOwner != owner)
                 {
-                    this.RefitCache(owner.BoundingBox);
+                    if (owner != null)
+                        this.RefitCache(owner.BoundingBox);
                     this.mOwner = owner;
                     if (this.bCached && this.mCache == null)
                         this.bCached = this.RedrawCache();
@@ -712,6 +717,7 @@ namespace GraphForms
                 {
                     this.mCache.Dispose();
                     this.mCache = null;
+                    this.SetOwner(null);
                 }
             }
 
@@ -749,6 +755,13 @@ namespace GraphForms
                 }
             }
 
+            private static void SetFastGraphicsMode(Graphics g)
+            {
+                g.SmoothingMode = SmoothingMode.HighSpeed;
+                g.CompositingQuality = CompositingQuality.HighSpeed;
+                g.InterpolationMode = InterpolationMode.Default;
+            }
+
             /// <summary>
             /// The main drawing function, which draws into the given graphics
             /// from either a cached image or directly from the implementation
@@ -773,7 +786,7 @@ namespace GraphForms
                         e.Graphics.Restore(prev);
                         return;
                     }
-                    SetGraphicsMode(e.Graphics, true);
+                    SetFastGraphicsMode(e.Graphics);
                     Rectangle src = new Rectangle(
                         e.ClipRectangle.X - mOwner.mBoundingX + mAdjustX,
                         e.ClipRectangle.Y - mOwner.mBoundingY + mAdjustY,
@@ -799,9 +812,9 @@ namespace GraphForms
             internal void RefitCache(Rectangle newBBox)
             {
                 // Try to crop cache image if it already exists,
-                    // otherwise draw it.
-                if (this.bCached && this.mCache != null/* &&
-                    newBBox.Width > 0 && newBBox.Height > 0/* */)
+                // otherwise draw it.
+                if (this.mOwner != null && this.bCached && this.mCache != null
+                    /*&& newBBox.Width > 0 && newBBox.Height > 0/* */)
                 {
                     Rectangle crop = new Rectangle(
                         newBBox.X - mOwner.mBoundingX + mAdjustX,
@@ -819,14 +832,17 @@ namespace GraphForms
                     {
                         try
                         {
-                            Bitmap newCache = this.mCache.Clone(crop, kCachePixelFormat);
-                            // Switch out cache for cropped cache if successful
+                            Bitmap newCache = this.mCache.Clone(crop, 
+                                kCachePixelFormat);
+                            // If successful, 
+                            // switch out cache for cropped cache
                             this.mCache.Dispose();
                             this.mCache = newCache;
                         }
                         catch
                         {
-                            // Continue using current cache with adjusted offsets
+                            // Continue using current cache 
+                            // with adjusted offsets
                             this.mAdjustX = crop.X;
                             this.mAdjustY = crop.Y;
                         }
@@ -849,7 +865,8 @@ namespace GraphForms
             /// <see cref="GraphElement.BoundingBox"/>).</returns>
             private bool RedrawCache()
             {
-                if (mOwner.mBoundingW > 0 && mOwner.mBoundingH > 0)
+                if (mOwner != null && 
+                    mOwner.mBoundingW > 0 && mOwner.mBoundingH > 0)
                 {
                     if (this.mCache != null)
                     {
@@ -893,18 +910,30 @@ namespace GraphForms
         private volatile List<Cache> mCacheList = null;
 
         /// <summary>
-        /// Adds the given cache to this element, removing it from its previous
-        /// owner first if it has a different owner.
+        /// This element's internal list of all the <see cref="Cache"/> 
+        /// instances it owns.
         /// </summary>
+        public Cache[] CacheList
+        {
+            get { return this.mCacheList.ToArray(); }
+        }
+
+        /// <summary>
+        /// Adds the given <paramref name="cache"/> to this element, 
+        /// removing it from its previous owner first if it has a different
+        /// owner, and then setting its <see cref="Cache.Owner"/> to this
+        /// element. </summary>
         /// <param name="cache">The cache to add to this element.</param>
         public void AddCache(Cache cache)
         {
             if (this.mCacheList == null || 
                 !this.mCacheList.Contains(cache))
             {
-                if (cache.Owner != this)
+                GraphElement pOwner = cache.Owner;
+                if (pOwner != this)
                 {
-                    cache.Owner.RemoveCache(cache);
+                    if (pOwner != null)
+                        pOwner.RemoveCache(cache);
                     cache.SetOwner(this);
                 }
                 if (this.mCacheList == null)
@@ -914,9 +943,10 @@ namespace GraphForms
         }
 
         /// <summary>
-        /// Removes the given cache from this element if it is owned by this
-        /// element and contained in this element's internal cache list.
-        /// </summary>
+        /// Removes the given <paramref name="cache"/> from this element 
+        /// if it is owned by this element and contained in this element's 
+        /// internal cache list, and then sets its <see cref="Cache.Owner"/> 
+        /// to null.</summary>
         /// <param name="cache">The cache to remove from this element.</param>
         /// <returns>True if the cache was owned by and contained in this
         /// element and successfully removed from it, false otherwise.
@@ -930,9 +960,26 @@ namespace GraphForms
                 this.mCacheList.RemoveAt(index);
                 if (this.mCacheList.Count == 0)
                     this.mCacheList = null;
+                cache.SetOwner(null);
                 return true;
             }
             return false;
+        }
+
+        /// <summary>
+        /// Removes all <see cref="Cache"/> instances from this element's
+        /// internal cache list and sets their <see cref="Cache.Owner"/>
+        /// to null.
+        /// </summary>
+        public void ClearCache()
+        {
+            if (this.mCacheList != null)
+            {
+                for (int i = this.mCacheList.Count - 1; i >= 0; i--)
+                    this.mCacheList[i].SetOwner(null);
+                //this.mCacheList.Clear(); // No need; GC'd regardless
+                this.mCacheList = null;
+            }
         }
 
         // TODO: Add cache addition and removal functions
@@ -959,8 +1006,22 @@ namespace GraphForms
         #endregion
 
         #region Mouse Event Handling
-        private delegate void MouseEventTrigger(GraphElement sender, GraphMouseEventArgs e);
+        //private delegate void MouseEventTrigger(GraphElement sender, GraphMouseEventArgs e);
 
+        private abstract class MouseEventTrigger
+        {
+            public abstract void Trigger(GraphElement sender, GraphMouseEventArgs e);
+        }
+
+        /// <summary>
+        /// Offsets the <see cref="GraphMouseEventArgs.Pos"/> of the given 
+        /// arguments, <paramref name="e"/>, so that the mouse position of the 
+        /// new instance is in this element's local coordinate system.
+        /// </summary>
+        /// <param name="e">Event arguments with a mouse position to map into
+        /// this element's local coordinate system.</param>
+        /// <returns>A new <see cref="GraphMouseEventArgs"/> instance with its
+        /// mouse position in this element's local coordinate system.</returns>
         public GraphMouseEventArgs FixMouseEventArgs(GraphMouseEventArgs e)
         {
             return new GraphMouseEventArgs(e, -this.mPosX, -this.mPosY);
@@ -984,10 +1045,10 @@ namespace GraphForms
                         e.Handled)
                         return true;
                 }
-                if (this.BoundingBox.Contains(e.Location) &&
-                    (inShape || !this.bClipsToShape))
+                if (this.BoundingBox.Contains(e.Location) && inShape)
+                    //(inShape || !this.bClipsToShape))
                 {
-                    trigger(this, e);
+                    trigger.Trigger(this, e);
                     if (e.Handled)
                         return true;
                 }
@@ -1000,104 +1061,245 @@ namespace GraphForms
                         return true;
                 }
             }
-            if (this.BoundingBox.Contains(e.Location) && 
-                (inShape || !this.bClipsToShape))
+            if (this.BoundingBox.Contains(e.Location) && inShape)
+                //(inShape || !this.bClipsToShape))
             {
-                trigger(this, e);
+                trigger.Trigger(this, e);
                 if (e.Handled)
                     return true;
             }
             return false;
         }
 
-        public bool FireMouseClick(GraphMouseEventArgs e)
-        {
-            return this.FireMouseEvent(TriggerMouseClick, e);
-        }
-
-        private static void TriggerMouseClick(GraphElement sender, GraphMouseEventArgs e)
-        {
-            sender.OnMouseClick(e);
-        }
-
+        /// <summary>
+        /// Occurs when this element is clicked by the mouse.
+        /// The default simply sets <paramref name="e"/>'s 
+        /// <see cref="GraphEventArgs.Handled"/> value to true to avoid
+        /// processing costs from further propagation.
+        /// </summary>
+        /// <param name="e">The mouse event data of this event.</param>
         protected virtual void OnMouseClick(GraphMouseEventArgs e)
         {
             e.Handled = true;
         }
 
-        public bool FireMouseDoubleClick(GraphMouseEventArgs e)
+        private class MouseClickTrigger : MouseEventTrigger
         {
-            return this.FireMouseEvent(TriggerMouseDoubleClick, e);
+            public override void Trigger(GraphElement sender, GraphMouseEventArgs e)
+            {
+                sender.OnMouseClick(e);
+            }
+        }
+        private static MouseEventTrigger sTriggerMouseClick = new MouseClickTrigger();
+
+        /// <summary>
+        /// Propagates a Mouse Click event to this element and its children, 
+        /// calling the <see cref="OnMouseClick(GraphMouseEventArgs)"/> 
+        /// function on any elements that contain <paramref name="e"/>'s 
+        /// mouse position <see cref="GraphMouseEventArgs.Pos"/>.
+        /// </summary>
+        /// <param name="e">The event data of a Mouse Click event 
+        /// to propagate.</param>
+        /// <returns>True if the event was <see cref="GraphEventArgs.Handled"/>
+        /// by one of the elements it was propagated to, or false if it was
+        /// unhandled or no elements contained the event's mouse position
+        /// <see cref="GraphMouseEventArgs.Pos"/>. </returns>
+        protected bool FireMouseClick(GraphMouseEventArgs e)
+        {
+            return this.FireMouseEvent(sTriggerMouseClick, e);
         }
 
-        private static void TriggerMouseDoubleClick(GraphElement sender, GraphMouseEventArgs e)
-        {
-            sender.OnMouseDoubleClick(e);
-        }
-
+        /// <summary>
+        /// Occurs when this element is double clicked by the mouse.
+        /// The default simply sets <paramref name="e"/>'s 
+        /// <see cref="GraphEventArgs.Handled"/> value to true to avoid
+        /// processing costs from further propagation.
+        /// </summary>
+        /// <param name="e">The mouse event data of this event.</param>
         protected virtual void OnMouseDoubleClick(GraphMouseEventArgs e)
         {
             e.Handled = true;
         }
 
-        public bool FireMouseDown(GraphMouseEventArgs e)
+        private class MouseDoubleClickTrigger : MouseEventTrigger
         {
-            return this.FireMouseEvent(TriggerMouseDown, e);
+            public override void Trigger(GraphElement sender, GraphMouseEventArgs e)
+            {
+                sender.OnMouseDoubleClick(e);
+            }
+        }
+        private static MouseEventTrigger sTriggerMouseDoubleClick = new MouseDoubleClickTrigger();
+
+        /// <summary>
+        /// Propagates a Mouse DoubleClick event to this element and its children, 
+        /// calling the <see cref="OnMouseDoubleClick(GraphMouseEventArgs)"/> 
+        /// function on any elements that contain <paramref name="e"/>'s 
+        /// mouse position <see cref="GraphMouseEventArgs.Pos"/>.
+        /// </summary>
+        /// <param name="e">The event data of a Mouse DoubleClick event 
+        /// to propagate.</param>
+        /// <returns>True if the event was <see cref="GraphEventArgs.Handled"/>
+        /// by one of the elements it was propagated to, or false if it was
+        /// unhandled or no elements contained the event's mouse position
+        /// <see cref="GraphMouseEventArgs.Pos"/>. </returns>
+        protected bool FireMouseDoubleClick(GraphMouseEventArgs e)
+        {
+            return this.FireMouseEvent(sTriggerMouseDoubleClick, e);
         }
 
-        private static void TriggerMouseDown(GraphElement sender, GraphMouseEventArgs e)
-        {
-            sender.OnMouseDown(e);
-        }
-
+        /// <summary>
+        /// Occurs when the mouse pointer is over this element and
+        /// a mouse button is pressed.
+        /// The default simply sets <paramref name="e"/>'s 
+        /// <see cref="GraphEventArgs.Handled"/> value to true to avoid
+        /// processing costs from further propagation.
+        /// </summary>
+        /// <param name="e">The mouse event data of this event.</param>
         protected virtual void OnMouseDown(GraphMouseEventArgs e)
         {
             e.Handled = true;
         }
 
-        public bool FireMouseMove(GraphMouseEventArgs e)
+        private class MouseDownTrigger : MouseEventTrigger
         {
-            return this.FireMouseEvent(TriggerMouseMove, e);
+            public override void Trigger(GraphElement sender, GraphMouseEventArgs e)
+            {
+                sender.OnMouseDown(e);
+            }
+        }
+        private static MouseEventTrigger sTriggerMouseDown = new MouseDownTrigger();
+
+        /// <summary>
+        /// Propagates a Mouse Down event to this element and its children, 
+        /// calling the <see cref="OnMouseDown(GraphMouseEventArgs)"/> 
+        /// function on any elements that contain <paramref name="e"/>'s 
+        /// mouse position <see cref="GraphMouseEventArgs.Pos"/>.
+        /// </summary>
+        /// <param name="e">The event data of a Mouse Down event 
+        /// to propagate.</param>
+        /// <returns>True if the event was <see cref="GraphEventArgs.Handled"/>
+        /// by one of the elements it was propagated to, or false if it was
+        /// unhandled or no elements contained the event's mouse position
+        /// <see cref="GraphMouseEventArgs.Pos"/>. </returns>
+        protected bool FireMouseDown(GraphMouseEventArgs e)
+        {
+            return this.FireMouseEvent(sTriggerMouseDown, e);
         }
 
-        private static void TriggerMouseMove(GraphElement sender, GraphMouseEventArgs e)
-        {
-            sender.OnMouseMove(e);
-        }
-
+        /// <summary>
+        /// Occurs when the mouse pointer is moved over this element.
+        /// The default simply sets <paramref name="e"/>'s 
+        /// <see cref="GraphEventArgs.Handled"/> value to true to avoid
+        /// processing costs from further propagation.
+        /// </summary>
+        /// <param name="e">The mouse event data of this event.</param>
         protected virtual void OnMouseMove(GraphMouseEventArgs e)
         {
             e.Handled = true;
         }
 
-        public bool FireMouseUp(GraphMouseEventArgs e)
+        private class MouseMoveTrigger : MouseEventTrigger
         {
-            return this.FireMouseEvent(TriggerMouseUp, e);
+            public override void Trigger(GraphElement sender, GraphMouseEventArgs e)
+            {
+                sender.OnMouseMove(e);
+            }
+        }
+        private static MouseEventTrigger sTriggerMouseMove = new MouseMoveTrigger();
+
+        /// <summary>
+        /// Propagates a Mouse Move event to this element and its children, 
+        /// calling the <see cref="OnMouseMove(GraphMouseEventArgs)"/> 
+        /// function on any elements that contain <paramref name="e"/>'s 
+        /// mouse position <see cref="GraphMouseEventArgs.Pos"/>.
+        /// </summary>
+        /// <param name="e">The event data of a Mouse Move event 
+        /// to propagate.</param>
+        /// <returns>True if the event was <see cref="GraphEventArgs.Handled"/>
+        /// by one of the elements it was propagated to, or false if it was
+        /// unhandled or no elements contained the event's mouse position
+        /// <see cref="GraphMouseEventArgs.Pos"/>. </returns>
+        protected bool FireMouseMove(GraphMouseEventArgs e)
+        {
+            return this.FireMouseEvent(sTriggerMouseMove, e);
         }
 
-        private static void TriggerMouseUp(GraphElement sender, GraphMouseEventArgs e)
-        {
-            sender.OnMouseUp(e);
-        }
-
+        /// <summary>
+        /// Occurs when the mouse pointer is over this element and
+        /// a mouse button is released.
+        /// The default simply sets <paramref name="e"/>'s 
+        /// <see cref="GraphEventArgs.Handled"/> value to true to avoid
+        /// processing costs from further propagation.
+        /// </summary>
+        /// <param name="e">The mouse event data of this event.</param>
         protected virtual void OnMouseUp(GraphMouseEventArgs e)
         {
             e.Handled = true;
         }
 
-        public bool FireMouseWheel(GraphMouseEventArgs e)
+        private class MouseUpTrigger : MouseEventTrigger
         {
-            return this.FireMouseEvent(TriggerMouseWheel, e);
+            public override void Trigger(GraphElement sender, GraphMouseEventArgs e)
+            {
+                sender.OnMouseUp(e);
+            }
+        }
+        private static MouseEventTrigger sTriggerMouseUp = new MouseUpTrigger();
+
+        /// <summary>
+        /// Propagates a Mouse Up event to this element and its children, 
+        /// calling the <see cref="OnMouseUp(GraphMouseEventArgs)"/> 
+        /// function on any elements that contain <paramref name="e"/>'s 
+        /// mouse position <see cref="GraphMouseEventArgs.Pos"/>.
+        /// </summary>
+        /// <param name="e">The event data of a Mouse Up event 
+        /// to propagate.</param>
+        /// <returns>True if the event was <see cref="GraphEventArgs.Handled"/>
+        /// by one of the elements it was propagated to, or false if it was
+        /// unhandled or no elements contained the event's mouse position
+        /// <see cref="GraphMouseEventArgs.Pos"/>. </returns>
+        protected bool FireMouseUp(GraphMouseEventArgs e)
+        {
+            return this.FireMouseEvent(sTriggerMouseUp, e);
         }
 
-        private static void TriggerMouseWheel(GraphElement sender, GraphMouseEventArgs e)
-        {
-            sender.OnMouseWheel(e);
-        }
-
+        /// <summary>
+        /// Occurs when the mouse pointer is over this element and
+        /// the mouse wheel moves.
+        /// The default simply sets <paramref name="e"/>'s 
+        /// <see cref="GraphEventArgs.Handled"/> value to true to avoid
+        /// processing costs from further propagation.
+        /// </summary>
+        /// <param name="e">The mouse event data of this event.</param>
         protected virtual void OnMouseWheel(GraphMouseEventArgs e)
         {
             e.Handled = true;
+        }
+
+        private class MouseWheelTrigger : MouseEventTrigger
+        {
+            public override void Trigger(GraphElement sender, GraphMouseEventArgs e)
+            {
+                sender.OnMouseWheel(e);
+            }
+        }
+        private static MouseEventTrigger sTriggerMouseWheel = new MouseWheelTrigger();
+
+        /// <summary>
+        /// Propagates a Mouse Wheel event to this element and its children, 
+        /// calling the <see cref="OnMouseWheel(GraphMouseEventArgs)"/> 
+        /// function on any elements that contain <paramref name="e"/>'s 
+        /// mouse position <see cref="GraphMouseEventArgs.Pos"/>.
+        /// </summary>
+        /// <param name="e">The event data of a Mouse Wheel event 
+        /// to propagate.</param>
+        /// <returns>True if the event was <see cref="GraphEventArgs.Handled"/>
+        /// by one of the elements it was propagated to, or false if it was
+        /// unhandled or no elements contained the event's mouse position
+        /// <see cref="GraphMouseEventArgs.Pos"/>. </returns>
+        protected bool FireMouseWheel(GraphMouseEventArgs e)
+        {
+            return this.FireMouseEvent(sTriggerMouseWheel, e);
         }
         #endregion
     }
