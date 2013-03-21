@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Text;
 using System.Windows.Forms;
 using GraphForms;
@@ -22,6 +23,7 @@ namespace ElasticNodes
             this.scene.BoundingBox = new Rectangle(-200, -200, 400, 400);
             this.scene.Position = new PointF(200, 200);
             this.scene.AddView(this.graphPanel);
+            //this.graphPanel.Scale(0.8f, 0.8f);
 
             Node node1 = new Node(this.scene);
             Node node2 = new Node(this.scene);
@@ -65,6 +67,24 @@ namespace ElasticNodes
             node9.Position = new PointF(50, 50);
         }
 
+        protected void ScaleView(float scaleFactor)
+        {
+            //float factor = GraphHelpers.MapRect(this.graphPanel.Transform,
+            //    new RectangleF(0, 0, 1, 1)).Width;
+            //if (0.07 <= factor && factor <= 100)
+            //    this.graphPanel.Scale(scaleFactor, scaleFactor);
+        }
+
+        public void ZoomIn()
+        {
+            this.ScaleView(1.2f);
+        }
+
+        public void ZoomOut()
+        {
+            this.ScaleView(1 / 1.2f);
+        }
+
         private void MainForm_KeyUp(object sender, KeyEventArgs e)
         {
             switch (e.KeyCode)
@@ -80,6 +100,12 @@ namespace ElasticNodes
                     break;
                 case Keys.Right:
                     this.centerNode.MoveBy(20, 0);
+                    break;
+                case Keys.PageDown:
+                    //this.ZoomIn();
+                    break;
+                case Keys.PageUp:
+                    //this.ZoomOut();
                     break;
                 case Keys.Space:
                 case Keys.Enter:

@@ -49,6 +49,26 @@ namespace GraphForms
         }
 
         /// <summary>
+        /// This element's <see cref="BoundingBox"/> mapped to the coordinate 
+        /// system of the "scene" (the control rendering this element).
+        /// </summary>
+        public RectangleF SceneBoundingBox
+        {
+            get
+            {
+                RectangleF rect = new Rectangle(this.mBoundingX, 
+                    this.mBoundingY, this.mBoundingW, this.mBoundingH);
+                GraphElement p = this;
+                while (p != null)
+                {
+                    rect.Offset(p.mPosX, p.mPosY);
+                    p = p.parent;
+                }
+                return rect;
+            }
+        }
+
+        /// <summary>
         /// Returns the recursive union of this element's
         /// <see cref="BoundingBox"/> and the bounding boxes of all of its
         /// children, and their children, and so on.

@@ -28,7 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.graphPanel = new System.Windows.Forms.Panel();
+            this.graphPanel = new GraphForms.GraphPanel();
             this.SuspendLayout();
             // 
             // graphPanel
@@ -53,7 +53,8 @@
 
         #endregion
 
-        private System.Windows.Forms.Panel graphPanel;
+        private GraphForms.GraphPanel graphPanel;
+
     }
 }
 

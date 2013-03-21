@@ -44,7 +44,11 @@
     <Compile Include="GraphEventArgs.cs" />
     <Compile Include="GraphHelpers.cs" />
     <Compile Include="GraphMouseEventArgs.cs" />
+    <Compile Include="GraphPanel.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="GraphScene.cs" />
+    <Compile Include="IHasGraphScene.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="GraphElement.cs" />
     <Service Include="{94E38DFF-614B-4cbd-B67C-F211BB35CE8B}" />

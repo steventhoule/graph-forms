@@ -78,7 +78,7 @@ namespace GraphForms
         /// (i.e., if this object is <paramref name="child"/>'s parent,
         /// or one of <paramref name="child"/>'s parent's ancestors).
         /// </summary>
-        /// <param name="child">The potential descendent to test.</param>
+        /// <param name="child">The potential descendant to test.</param>
         /// <returns>true if this object is an ancestor of 
         /// <paramref name="child"/>, false otherwise.</returns>
         public bool IsAncestorOf(GraphElement child)

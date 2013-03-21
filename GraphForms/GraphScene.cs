@@ -89,6 +89,13 @@ namespace GraphForms
         /// instance to attach to this scene.</param>
         private void AttachView(Control view)
         {
+            IHasGraphScene graphView = view as IHasGraphScene;
+            if (graphView != null && graphView.Scene != null && 
+                graphView.Scene != this)
+            {
+                graphView.Scene.RemoveView(view);
+            }
+
             view.Paint += new PaintEventHandler(OnViewPaint);
 
             view.MouseClick += new MouseEventHandler(OnViewMouseClick);
@@ -97,6 +104,11 @@ namespace GraphForms
             view.MouseMove += new MouseEventHandler(OnViewMouseMove);
             view.MouseUp += new MouseEventHandler(OnViewMouseUp);
             view.MouseWheel += new MouseEventHandler(OnViewMouseWheel);
+
+            if (graphView != null)
+            {
+                graphView.Scene = this;
+            }
 
             this.UserAttachView(view);
         }
@@ -159,6 +171,11 @@ namespace GraphForms
             view.MouseMove -= new MouseEventHandler(OnViewMouseMove);
             view.MouseUp -= new MouseEventHandler(OnViewMouseUp);
             view.MouseWheel -= new MouseEventHandler(OnViewMouseWheel);
+
+            /*if (view is IHasGraphScene)
+            {
+                (view as IHasGraphScene).Scene = null;
+            }/* */
 
             this.UserDetachView(view);
         }
