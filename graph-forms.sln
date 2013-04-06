@@ -5,6 +5,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GraphForms", "GraphForms\Gr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ElasticNodes", "ElasticNodes\ElasticNodes.csproj", "{DC784E75-BF81-4E15-9ADB-162971318D6C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GraphAlgorithmDemo", "GraphAlgorithmDemo\GraphAlgorithmDemo.csproj", "{127F2990-AAF6-4B93-97B5-854B77B4668F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -19,6 +21,10 @@ Global
 		{DC784E75-BF81-4E15-9ADB-162971318D6C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DC784E75-BF81-4E15-9ADB-162971318D6C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DC784E75-BF81-4E15-9ADB-162971318D6C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{127F2990-AAF6-4B93-97B5-854B77B4668F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{127F2990-AAF6-4B93-97B5-854B77B4668F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{127F2990-AAF6-4B93-97B5-854B77B4668F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{127F2990-AAF6-4B93-97B5-854B77B4668F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
