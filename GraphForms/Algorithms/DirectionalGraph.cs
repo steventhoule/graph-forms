@@ -18,54 +18,104 @@ namespace GraphForms.Algorithms
         where Edge : IGraphEdge<Node>
     {
         /// <summary>
-        /// A container class for a <see cref="GraphNode"/> instance and an
-        /// <typeparamref name="Edge"/> that has the node's <see 
-        /// cref="GraphNode.Data"/> as either its source node or its 
-        /// destination node.</summary>
-        internal class GraphNodeEdge
+        /// This class is used to store an <typeparamref name="Edge"/> instance
+        /// along with <see cref="GraphNode"/> instances that store the edge's
+        /// <see cref="P:IGraphEdge`1{Node}.SrcNode"/> and 
+        /// <see cref="P:IGraphEdge`1{Node}.DstNode"/> in their respective
+        /// <see cref="GraphNode.Data"/>.
+        /// </summary>
+        public class GraphEdge
         {
             /// <summary>
-            /// A <see cref="GraphNode"/> instance.
+            /// The source node of this edge; its parent
             /// </summary>
-            public GraphNode node;
+            internal GraphNode mSrcNode;
             /// <summary>
-            /// An <typeparamref name="Edge"/> instance affiliated with 
-            /// <see cref="node"/>'s <see cref="GraphNode.Data"/>
+            /// The destination node of this edge; its child
             /// </summary>
-            public Edge edge;
+            internal GraphNode mDstNode;
             /// <summary>
-            /// Initializes a new <see cref="GraphNodeEdge"/> instance with the
-            /// given <paramref name="node"/> and <paramref name="edge"/>.
+            /// The underlying data that this edge represents.
             /// </summary>
-            /// <param name="node">A <see cref="GraphNode"/> instance.</param>
-            /// <param name="edge">An <typeparamref name="Edge"/> instance
-            /// affiliated with <paramref name="node"/>'s 
-            /// <see cref="GraphNode.Data"/>.</param>
-            public GraphNodeEdge(GraphNode node, Edge edge)
+            internal Edge mData;
+            
+            /// <summary>
+            /// Initializes a new <see cref="GraphEdge"/> instance with the 
+            /// given source and destination <see cref="GraphNode"/> instances
+            /// and the given <typeparamref name="Edge"/> instance.
+            /// </summary>
+            /// <param name="srcNode">The source node.</param>
+            /// <param name="dstNode">The destination node.</param>
+            /// <param name="data">The underlying edge data.</param>
+            /// <remarks>
+            /// The <see cref="GraphNode.Data"/> of <paramref name="srcNode"/>
+            /// and <paramref name="dstNode"/> must match the respective 
+            /// <see cref="P:IGraphEdge{Node}`1.SrcNode"/> and 
+            /// <see cref="P:IGraphEdge`1{Node}.DstNode"/> of 
+            /// <paramref name="data"/>.</remarks>
+            internal GraphEdge(GraphNode srcNode, GraphNode dstNode, Edge data)
             {
-                this.node = node;
-                this.edge = edge;
+                this.mSrcNode = srcNode;
+                this.mDstNode = dstNode;
+                this.mData = data;
+            }
+            /// <summary>
+            /// The underlying <typeparamref name="Edge"/> instance that this
+            /// <see cref="GraphEdge"/> instance represents.
+            /// </summary>
+            public Edge Data
+            {
+                get { return this.mData; }
+            }
+            /// <summary>
+            /// The <see cref="GraphNode"/> instance that stores the
+            /// <see cref="P:IGraphEdge`1{Node}.SrcNode"/> of 
+            /// <see cref="Data"/>.
+            /// </summary>
+            public GraphNode SrcNode
+            {
+                get { return this.mSrcNode; }
+            }
+            /// <summary>
+            /// The <see cref="GraphNode"/> instance that stores the
+            /// <see cref="P:IGraphEdge`1{Node}.DstNode"/> of 
+            /// <see cref="Data"/>.
+            /// </summary>
+            public GraphNode DstNode
+            {
+                get { return this.mDstNode; }
             }
         }
 
-        private static int IndexOf(List<GraphNodeEdge> nodes, Node data)
+        private static int IndexOfSrc(List<GraphEdge> nodes, Node data)
         {
             int count = nodes.Count;
             for (int i = 0; i < count; i++)
             {
-                if (nodes[i].node.mData == data)
+                if (nodes[i].mSrcNode.mData == data)
+                    return i;
+            }
+            return -1;
+        }
+
+        private static int IndexOfDst(List<GraphEdge> nodes, Node data)
+        {
+            int count = nodes.Count;
+            for (int i = 0; i < count; i++)
+            {
+                if (nodes[i].mDstNode.mData == data)
                     return i;
             }
             return -1;
         }
 
         /// <summary>
-        /// This class used internally to store instances of the
+        /// This class is used internally to store instances of the
         /// <typeparamref name="Node"/> class along with additional data
         /// used for traversing its containing 
         /// <see cref="T:DirectionalGraph`2{Node,Edge}"/> instance.
         /// </summary>
-        public class GraphNode : IEquatable<GraphNode>//, IDisposable
+        public class GraphNode : IEquatable<GraphNode>
         {
             private DirectionalGraph<Node, Edge> mGraph;
             /// <summary>
@@ -86,8 +136,8 @@ namespace GraphForms.Algorithms
             /// </summary>
             public float Distance;
 
-            internal List<GraphNodeEdge> mSrcNodes = new List<GraphNodeEdge>();
-            internal List<GraphNodeEdge> mDstNodes = new List<GraphNodeEdge>();
+            internal List<GraphEdge> mSrcEdges = new List<GraphEdge>();
+            internal List<GraphEdge> mDstEdges = new List<GraphEdge>();
 
             /// <summary>
             /// Initializes a new <see cref="GraphNode"/> instance contained
@@ -130,7 +180,7 @@ namespace GraphForms.Algorithms
             /// </summary>
             public int SrcEdgeCount
             {
-                get { return this.mSrcNodes.Count; }
+                get { return this.mSrcEdges.Count; }
             }
 
             /// <summary>
@@ -142,11 +192,21 @@ namespace GraphForms.Algorithms
             {
                 get
                 {
-                    Edge[] srcEdges = new Edge[this.mSrcNodes.Count];
-                    for (int i = 0; i < this.mSrcNodes.Count; i++)
-                        srcEdges[i] = this.mSrcNodes[i].edge;
+                    Edge[] srcEdges = new Edge[this.mSrcEdges.Count];
+                    for (int i = 0; i < this.mSrcEdges.Count; i++)
+                        srcEdges[i] = this.mSrcEdges[i].mData;
                     return srcEdges;
                 }
+            }
+
+            /// <summary>
+            /// An array of all <see cref="GraphEdge"/> instances that
+            /// has this <see cref="GraphNode"/> as their
+            /// <see cref="P:GraphEdge.DstNode"/>.
+            /// </summary>
+            public GraphEdge[] InternalSrcEdges
+            {
+                get { return this.mSrcEdges.ToArray(); }
             }
 
             /// <summary>
@@ -158,9 +218,9 @@ namespace GraphForms.Algorithms
             {
                 get
                 {
-                    GraphNode[] srcNodes = new GraphNode[this.mSrcNodes.Count];
-                    for (int i = 0; i < this.mSrcNodes.Count; i++)
-                        srcNodes[i] = this.mSrcNodes[i].node;
+                    GraphNode[] srcNodes = new GraphNode[this.mSrcEdges.Count];
+                    for (int i = 0; i < this.mSrcEdges.Count; i++)
+                        srcNodes[i] = this.mSrcEdges[i].mSrcNode;
                     return srcNodes;
                 }
             }
@@ -174,7 +234,7 @@ namespace GraphForms.Algorithms
             /// </summary>
             public int DstEdgeCount
             {
-                get { return this.mDstNodes.Count; }
+                get { return this.mDstEdges.Count; }
             }
 
             /// <summary>
@@ -186,11 +246,21 @@ namespace GraphForms.Algorithms
             {
                 get
                 {
-                    Edge[] dstEdges = new Edge[this.mDstNodes.Count];
-                    for (int i = 0; i < this.mDstNodes.Count; i++)
-                        dstEdges[i] = this.mDstNodes[i].edge;
+                    Edge[] dstEdges = new Edge[this.mDstEdges.Count];
+                    for (int i = 0; i < this.mDstEdges.Count; i++)
+                        dstEdges[i] = this.mDstEdges[i].mData;
                     return dstEdges;
                 }
+            }
+
+            /// <summary>
+            /// An array of all <see cref="GraphEdge"/> instances that
+            /// has this <see cref="GraphNode"/> as their
+            /// <see cref="P:GraphEdge.SrcNode"/>.
+            /// </summary>
+            public GraphEdge[] InternalDstEdges
+            {
+                get { return this.mDstEdges.ToArray(); }
             }
 
             /// <summary>
@@ -202,9 +272,9 @@ namespace GraphForms.Algorithms
             {
                 get
                 {
-                    GraphNode[] dstNodes = new GraphNode[this.mDstNodes.Count];
-                    for (int i = 0; i < this.mDstNodes.Count; i++)
-                        dstNodes[i] = this.mDstNodes[i].node;
+                    GraphNode[] dstNodes = new GraphNode[this.mDstEdges.Count];
+                    for (int i = 0; i < this.mDstEdges.Count; i++)
+                        dstNodes[i] = this.mDstEdges[i].mDstNode;
                     return dstNodes;
                 }
             }
@@ -237,73 +307,52 @@ namespace GraphForms.Algorithms
             /// node only beforehand.</returns>
             internal List<GraphNode> Disconnect()
             {
-                int count = this.mSrcNodes.Count;
-                if (count == 0 && this.mDstNodes.Count == 0)
+                int count = this.mSrcEdges.Count;
+                if (count == 0 && this.mDstEdges.Count == 0)
                 {
                     return null;
                 }
                 GraphNode n;
                 int i, index;
                 List<GraphNode> orphans = new List<GraphNode>(
-                    count + this.mDstNodes.Count + 2);
+                    count + this.mDstEdges.Count + 2);
+                // Disconnect this node from its source nodes
                 for (i = 0; i < count; i++)
                 {
-                    n = this.mSrcNodes[i].node;
-                    index = IndexOf(n.mDstNodes, this.mData);
-                    n.mDstNodes.RemoveAt(index);
-                    if (n.mDstNodes.Count == 0)
+                    n = this.mSrcEdges[i].mSrcNode;
+                    index = IndexOfDst(n.mDstEdges, this.mData);
+                    n.mDstEdges.RemoveAt(index);
+                    if (n.mDstEdges.Count == 0)
                         orphans.Add(n);
                 }
-                this.mSrcNodes.Clear();
-                count = this.mDstNodes.Count;
+                this.mSrcEdges.Clear();
+                // Disconnect this node from its destination nodes
+                count = this.mDstEdges.Count;
                 for (i = 0; i < count; i++)
                 {
-                    n = this.mDstNodes[i].node;
-                    index = IndexOf(n.mSrcNodes, this.mData);
-                    n.mSrcNodes.RemoveAt(index);
-                    if (n.mSrcNodes.Count == 0)
+                    n = this.mDstEdges[i].mDstNode;
+                    index = IndexOfSrc(n.mSrcEdges, this.mData);
+                    n.mSrcEdges.RemoveAt(index);
+                    if (n.mSrcEdges.Count == 0)
                         orphans.Add(n);
                 }
-                this.mDstNodes.Clear();
+                this.mDstEdges.Clear();
+                // Tally orphanced source and destination nodes
                 count = orphans.Count;
                 GraphNode[] temp = orphans.ToArray();
                 orphans.Clear();
                 for (i = 0; i < count; i++)
                 {
                     n = temp[i];
-                    if (n.mSrcNodes.Count == 0 && n.mDstNodes.Count == 0)
+                    if (n.mSrcEdges.Count == 0 && n.mDstEdges.Count == 0)
                         orphans.Add(n);
                 }
                 return orphans;
             }
-
-            /*/// <summary>
-            /// Removes this <see cref="GraphNode"/> instance from its 
-            /// containing <see cref="Graph"/> and clears its connection data
-            /// in the process.
-            /// </summary>
-            public void Dispose()
-            {
-                this.Dispose(false);
-            }
-
-            /// <summary>
-            /// Removes this <see cref="GraphNode"/> instance from its 
-            /// containing <see cref="Graph"/> and clears its connection data
-            /// in the process.
-            /// </summary>
-            /// <param name="disposeOrphans">Whether or not to also remove
-            /// any other <see cref="GraphNode"/> instances that were connected
-            /// to this node only before its removal.</param>
-            public void Dispose(bool disposeOrphans)
-            {
-                this.mGraph.RemoveNode(this.mData, disposeOrphans);
-                this.mGraph = null;
-            }/* */
         }
 
         private List<GraphNode> mNodes = new List<GraphNode>();
-        private List<Edge> mEdges = new List<Edge>();
+        private List<GraphEdge> mEdges = new List<GraphEdge>();
 
         #region Graph Traversal
 
@@ -326,7 +375,8 @@ namespace GraphForms.Algorithms
         public Node[] GetSrcNodes(Node node)
         {
             int index = this.IndexOfNode(node);
-            if (index < 0) return null;
+            if (index < 0) 
+                return null;
             return this.InternalGetSrcNodesAt(index);
         }
 
@@ -361,9 +411,9 @@ namespace GraphForms.Algorithms
             if (this.mEdges.Count == 0)
                 return new Node[0];
             GraphNode node = this.mNodes[index];
-            Node[] srcNodes = new Node[node.mSrcNodes.Count];
-            for (int i = 0; i < node.mSrcNodes.Count; i++)
-                srcNodes[i] = node.mSrcNodes[i].node.mData;
+            Node[] srcNodes = new Node[node.mSrcEdges.Count];
+            for (int i = 0; i < node.mSrcEdges.Count; i++)
+                srcNodes[i] = node.mSrcEdges[i].mSrcNode.mData;
             return srcNodes;
         }
         #endregion
@@ -385,7 +435,8 @@ namespace GraphForms.Algorithms
         public Edge[] GetSrcEdges(Node node)
         {
             int index = this.IndexOfNode(node);
-            if (index < 0) return null;
+            if (index < 0) 
+                return null;
             return this.mNodes[index].SrcEdges;
         }
 
@@ -432,7 +483,8 @@ namespace GraphForms.Algorithms
         public Node[] GetDstNodes(Node node)
         {
             int index = this.IndexOfNode(node);
-            if (index < 0) return null;
+            if (index < 0) 
+                return null;
             return this.InternalGetDstNodesAt(index);
         }
 
@@ -467,9 +519,9 @@ namespace GraphForms.Algorithms
             if (this.mEdges.Count == 0)
                 return new Node[0];
             GraphNode node = this.mNodes[index];
-            Node[] dstNodes = new Node[node.mDstNodes.Count];
-            for (int i = 0; i < node.mDstNodes.Count; i++)
-                dstNodes[i] = node.mDstNodes[i].node.mData;
+            Node[] dstNodes = new Node[node.mDstEdges.Count];
+            for (int i = 0; i < node.mDstEdges.Count; i++)
+                dstNodes[i] = node.mDstEdges[i].mDstNode.mData;
             return dstNodes;
         }
         #endregion
@@ -491,7 +543,8 @@ namespace GraphForms.Algorithms
         public Edge[] GetDstEdges(Node node)
         {
             int index = this.IndexOfNode(node);
-            if (index < 0) return null;
+            if (index < 0) 
+                return null;
             return this.mNodes[index].DstEdges;
         }
 
@@ -602,12 +655,12 @@ namespace GraphForms.Algorithms
                 while (queue.Count > 0)
                 {
                     current = queue.Dequeue();
-                    count = current.mDstNodes.Count;
+                    count = current.mDstEdges.Count;
                     for (i = 0; i < count; i++)
                     {
-                        n = current.mDstNodes[i].node;
+                        n = current.mDstEdges[i].mDstNode;
                         distance = current.Distance
-                            + current.mDstNodes[i].edge.Weight;
+                            + current.mDstEdges[i].mData.Weight;
                         if (!n.Visited)
                         {
                             n.Visited = true;
@@ -679,12 +732,12 @@ namespace GraphForms.Algorithms
             while (queue.Count > 0)
             {
                 current = queue.Dequeue();
-                count = current.mDstNodes.Count;
+                count = current.mDstEdges.Count;
                 for (i = 0; i < count; i++)
                 {
-                    n = current.mDstNodes[i].node;
+                    n = current.mDstEdges[i].mDstNode;
                     distance = current.Distance
-                        + current.mDstNodes[i].edge.Weight;
+                        + current.mDstEdges[i].mData.Weight;
                     if (!n.Visited)
                     {
                         n.Visited = true;
@@ -891,15 +944,15 @@ namespace GraphForms.Algorithms
             Edge e;
             for (i = 0; i < count; i++)
             {
-                e = this.mEdges[i];
+                e = this.mEdges[i].mData;
                 if (e.SrcNode == oldNode)
                 {
-                    this.mEdges[i] = e.Copy<Edge>(newNode,
+                    this.mEdges[i].mData = e.Copy<Edge>(newNode,
                         e.DstNode == oldNode ? newNode : e.DstNode);
                 }
                 else if (e.DstNode == oldNode)
                 {
-                    this.mEdges[i] = e.Copy<Edge>(e.SrcNode, newNode);
+                    this.mEdges[i].mData = e.Copy<Edge>(e.SrcNode, newNode);
                 }
             }
             return true;
@@ -923,7 +976,8 @@ namespace GraphForms.Algorithms
         public bool RemoveNode(Node node)
         {
             int i = this.IndexOfNode(node);
-            if (i < 0) return false;
+            if (i < 0) 
+                return false;
             this.InternalRemoveNodeAt(i, false);
             return true;
         }
@@ -947,7 +1001,8 @@ namespace GraphForms.Algorithms
         public bool RemoveNode(Node node, bool removeOrphans)
         {
             int i = this.IndexOfNode(node);
-            if (i < 0) return false;
+            if (i < 0) 
+                return false;
             this.InternalRemoveNodeAt(i, removeOrphans);
             return true;
         }
@@ -1024,13 +1079,13 @@ namespace GraphForms.Algorithms
                 this.mNodes.RemoveAt(i);
             }
             count = this.mEdges.Count;
-            List<Edge> newEdges = new List<Edge>(count + 1);
+            List<GraphEdge> newEdges = new List<GraphEdge>(count + 1);
             Edge e;
             for (i = 0; i < count; i++)
             {
-                e = this.mEdges[i];
+                e = this.mEdges[i].mData;
                 if (e.SrcNode != node && e.DstNode != node)
-                    newEdges.Add(e);
+                    newEdges.Add(this.mEdges[i]);
             }
             this.mEdges = newEdges;
         }
@@ -1054,7 +1109,8 @@ namespace GraphForms.Algorithms
         public bool OrphanNode(Node node)
         {
             int i = this.IndexOfNode(node);
-            if (i < 0) return false;
+            if (i < 0) 
+                return false;
             this.InternalOrphanNodeAt(i);
             return true;
         }
@@ -1080,18 +1136,18 @@ namespace GraphForms.Algorithms
         private void InternalOrphanNodeAt(int i)
         {
             GraphNode n = this.mNodes[i];
-            if (n.mSrcNodes.Count == 0 && n.mDstNodes.Count == 0)
+            if (n.mSrcEdges.Count == 0 && n.mDstEdges.Count == 0)
                 return;
             n.Disconnect();
             Node node = n.mData;
             int count = this.mEdges.Count;
-            List<Edge> newEdges = new List<Edge>(count + 1);
+            List<GraphEdge> newEdges = new List<GraphEdge>(count + 1);
             Edge e;
             for (i = 0; i < count; i++)
             {
-                e = this.mEdges[i];
+                e = this.mEdges[i].mData;
                 if (e.SrcNode != node && e.DstNode != node)
-                    newEdges.Add(e);
+                    newEdges.Add(this.mEdges[i]);
             }
             this.mEdges = newEdges;
         }
@@ -1118,7 +1174,7 @@ namespace GraphForms.Algorithms
             for (int i = 0; i < count; i++)
             {
                 n = this.mNodes[i];
-                if (n.mSrcNodes.Count == 0 && n.mDstNodes.Count == 0)
+                if (n.mSrcEdges.Count == 0 && n.mDstEdges.Count == 0)
                     orphans.Add(n.mData);
             }
             return orphans.ToArray();
@@ -1146,7 +1202,7 @@ namespace GraphForms.Algorithms
             for (int i = 0; i < count; i++)
             {
                 n = this.mNodes[i];
-                if (n.mSrcNodes.Count == 0 && n.mDstNodes.Count == 0)
+                if (n.mSrcEdges.Count == 0 && n.mDstEdges.Count == 0)
                     orphans.Add(n);
             }
             return orphans.ToArray();
@@ -1173,7 +1229,7 @@ namespace GraphForms.Algorithms
             for (i = 0; i < count; i++)
             {
                 n = this.mNodes[i];
-                if (n.mSrcNodes.Count == 0 && n.mDstNodes.Count == 0)
+                if (n.mSrcEdges.Count == 0 && n.mDstEdges.Count == 0)
                 {
                     //n.Dispose();//No need; lists are already cleared
                 }
@@ -1227,7 +1283,14 @@ namespace GraphForms.Algorithms
         /// <seealso cref="InternalNodes"/>
         public Edge[] Edges
         {
-            get { return this.mEdges.ToArray(); }
+            get
+            {
+                int count = this.mEdges.Count;
+                Edge[] edges = new Edge[count];
+                for (int i = 0; i < count; i++)
+                    edges[i] = this.mEdges[i].mData;
+                return edges;
+            }
         }
         #endregion
 
@@ -1253,7 +1316,7 @@ namespace GraphForms.Algorithms
             Edge edge;
             for (int i = 0; i < this.mEdges.Count; i++)
             {
-                edge = this.mEdges[i];
+                edge = this.mEdges[i].mData;
                 if (edge.SrcNode == srcNode &&
                     edge.DstNode == dstNode)
                     return i;
@@ -1301,7 +1364,7 @@ namespace GraphForms.Algorithms
         public Edge FindEdge(Node srcNode, Node dstNode)
         {
             int index = this.IndexOfEdge(srcNode, dstNode);
-            return index < 0 ? default(Edge) : this.mEdges[index];
+            return index < 0 ? default(Edge) : this.mEdges[index].mData;
         }
         #endregion
 
@@ -1346,19 +1409,9 @@ namespace GraphForms.Algorithms
             GraphNode src, dst;
             if (index >= 0)
             {
-                if (!replace) return false;
-                // Replace reference in edge list
-                this.mEdges[index] = edge;
-                // Replace reference in source node
-                index = this.IndexOfNode(edge.SrcNode);
-                src = this.mNodes[index];
-                index = IndexOf(src.mDstNodes, edge.DstNode);
-                src.mDstNodes[index].edge = edge;
-                // Replace reference in destination node
-                index = this.IndexOfNode(edge.DstNode);
-                dst = this.mNodes[index];
-                index = IndexOf(dst.mSrcNodes, edge.SrcNode);
-                dst.mSrcNodes[index].edge = edge;
+                if (!replace)
+                    return false;
+                this.mEdges[index].mData = edge;
                 return true;
             }
             index = this.IndexOfNode(edge.SrcNode);
@@ -1381,8 +1434,10 @@ namespace GraphForms.Algorithms
             {
                 dst = this.mNodes[index];
             }
-            src.mDstNodes.Add(new GraphNodeEdge(dst, edge));
-            dst.mSrcNodes.Add(new GraphNodeEdge(src, edge));
+            GraphEdge e = new GraphEdge(src, dst, edge);
+            this.mEdges.Add(e);
+            src.mDstEdges.Add(e);
+            dst.mSrcEdges.Add(e);
             return true;
         }
         #endregion
@@ -1407,7 +1462,8 @@ namespace GraphForms.Algorithms
         public bool RemoveEdge(Node srcNode, Node dstNode)
         {
             int index = this.IndexOfEdge(srcNode, dstNode);
-            if (index < 0) return false;
+            if (index < 0) 
+                return false;
             this.InternalRemoveEdgeAt(index, srcNode, dstNode, false);
             return true;
         }
@@ -1433,7 +1489,8 @@ namespace GraphForms.Algorithms
         public bool RemoveEdge(Node srcNode, Node dstNode, bool removeOrphans)
         {
             int index = this.IndexOfEdge(srcNode, dstNode);
-            if (index < 0) return false;
+            if (index < 0) 
+                return false;
             this.InternalRemoveEdgeAt(index, srcNode, dstNode, removeOrphans);
             return true;
         }
@@ -1455,7 +1512,7 @@ namespace GraphForms.Algorithms
         {
             if (edgeIndex < 0 || edgeIndex >= this.mEdges.Count)
                 throw new ArgumentOutOfRangeException("edgeIndex");
-            Edge e = this.mEdges[edgeIndex];
+            Edge e = this.mEdges[edgeIndex].mData;
             this.InternalRemoveEdgeAt(edgeIndex, e.SrcNode, e.DstNode,
                 false);
         }
@@ -1481,7 +1538,7 @@ namespace GraphForms.Algorithms
         {
             if (edgeIndex < 0 || edgeIndex >= this.mEdges.Count)
                 throw new ArgumentOutOfRangeException("edgeIndex");
-            Edge e = this.mEdges[edgeIndex];
+            Edge e = this.mEdges[edgeIndex].mData;
             this.InternalRemoveEdgeAt(edgeIndex, e.SrcNode, e.DstNode,
                 removeOrphans);
         }
@@ -1493,18 +1550,18 @@ namespace GraphForms.Algorithms
             index = this.IndexOfNode(src);
             GraphNode srcNode = this.mNodes[this.IndexOfNode(src)];
             GraphNode dstNode = this.mNodes[this.IndexOfNode(dst)];
-            index = IndexOf(srcNode.mDstNodes, dst);
-            srcNode.mDstNodes.RemoveAt(index);
-            index = IndexOf(dstNode.mSrcNodes, src);
-            dstNode.mSrcNodes.RemoveAt(index);
+            index = IndexOfDst(srcNode.mDstEdges, dst);
+            srcNode.mDstEdges.RemoveAt(index);
+            index = IndexOfDst(dstNode.mSrcEdges, src);
+            dstNode.mSrcEdges.RemoveAt(index);
             if (removeOrphans)
             {
-                if (srcNode.mDstNodes.Count == 0 && srcNode.mSrcNodes.Count == 0)
+                if (srcNode.mDstEdges.Count == 0 && srcNode.mSrcEdges.Count == 0)
                 {
                     index = this.IndexOfNode(src);
                     this.mNodes.RemoveAt(index);
                 }
-                if (dstNode.mSrcNodes.Count == 0 && dstNode.mDstNodes.Count == 0)
+                if (dstNode.mSrcEdges.Count == 0 && dstNode.mDstEdges.Count == 0)
                 {
                     index = this.IndexOfNode(dst);
                     this.mNodes.RemoveAt(index);
@@ -1531,8 +1588,8 @@ namespace GraphForms.Algorithms
                 int i, count = this.mNodes.Count;
                 for (i = 0; i < count; i++)
                 {
-                    this.mNodes[i].mSrcNodes.Clear();
-                    this.mNodes[i].mDstNodes.Clear();
+                    this.mNodes[i].mSrcEdges.Clear();
+                    this.mNodes[i].mDstEdges.Clear();
                 }
             }
         }
