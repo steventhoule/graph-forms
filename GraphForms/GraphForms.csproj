@@ -40,8 +40,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Algorithms\AAlgorithm.cs" />
     <Compile Include="Algorithms\AGraphEdge.cs" />
+    <Compile Include="Algorithms\ComputeState.cs" />
     <Compile Include="Algorithms\DirectionalGraph.cs" />
+    <Compile Include="Algorithms\IAlgorithm.cs" />
     <Compile Include="Algorithms\IGraphEdge.cs" />
     <Compile Include="GraphElement.2.cs" />
     <Compile Include="GraphEventArgs.cs" />
@@ -52,8 +55,10 @@
     </Compile>
     <Compile Include="GraphScene.cs" />
     <Compile Include="IHasGraphScene.cs" />
+    <Compile Include="IPropertyChangedListener.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="GraphElement.cs" />
+    <Compile Include="PropertyChangedNotifier.cs" />
     <Service Include="{94E38DFF-614B-4cbd-B67C-F211BB35CE8B}" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

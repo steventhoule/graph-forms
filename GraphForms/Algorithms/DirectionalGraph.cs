@@ -795,7 +795,7 @@ namespace GraphForms.Algorithms
         /// contained within this <see cref="T:DirectionalGraph`2{Node,Edge}"/>,
         /// in the same order as all functions with a <c>nodeIndex</c>
         /// argument.</summary><seealso cref="Nodes"/>
-        /// <seealso cref="Edges"/>
+        /// <seealso cref="InternalEdges"/>
         public GraphNode[] InternalNodes
         {
             get { return this.mNodes.ToArray(); }
@@ -1279,8 +1279,8 @@ namespace GraphForms.Algorithms
         /// An array of all the <typeparamref name="Edge"/> instances
         /// contained in this <see cref="T:DirectionalGraph`2{Node,Edge}"/>,
         /// in the same order as all functions with an <c>edgeIndex</c>
-        /// argument.</summary><seealso cref="Nodes"/>
-        /// <seealso cref="InternalNodes"/>
+        /// argument.</summary><seealso cref="InternalEdges"/>
+        /// <seealso cref="Nodes"/>
         public Edge[] Edges
         {
             get
@@ -1291,6 +1291,17 @@ namespace GraphForms.Algorithms
                     edges[i] = this.mEdges[i].mData;
                 return edges;
             }
+        }
+
+        /// <summary>
+        /// An array of all the <see cref="GraphEdge"/> instances currently
+        /// contained within this <see cref="T:DirectionalGraph`2{Node,Edge}"/>,
+        /// in the same order as all functions with an <c>edgeIndex</c>
+        /// argument.</summary><seealso cref="Edges"/>
+        /// <seealso cref="InternalNodes"/>
+        public GraphEdge[] InternalEdges
+        {
+            get { return this.mEdges.ToArray(); }
         }
         #endregion
 
@@ -1513,8 +1524,7 @@ namespace GraphForms.Algorithms
             if (edgeIndex < 0 || edgeIndex >= this.mEdges.Count)
                 throw new ArgumentOutOfRangeException("edgeIndex");
             Edge e = this.mEdges[edgeIndex].mData;
-            this.InternalRemoveEdgeAt(edgeIndex, e.SrcNode, e.DstNode,
-                false);
+            this.InternalRemoveEdgeAt(edgeIndex, e.SrcNode, e.DstNode, false);
         }
 
         /// <summary>
@@ -1539,29 +1549,29 @@ namespace GraphForms.Algorithms
             if (edgeIndex < 0 || edgeIndex >= this.mEdges.Count)
                 throw new ArgumentOutOfRangeException("edgeIndex");
             Edge e = this.mEdges[edgeIndex].mData;
-            this.InternalRemoveEdgeAt(edgeIndex, e.SrcNode, e.DstNode,
+            this.InternalRemoveEdgeAt(edgeIndex, e.SrcNode, e.DstNode, 
                 removeOrphans);
         }
 
         private void InternalRemoveEdgeAt(int index, Node src, Node dst,
             bool removeOrphans)
         {
+            GraphEdge edge = this.mEdges[index];
             this.mEdges.RemoveAt(index);
-            index = this.IndexOfNode(src);
-            GraphNode srcNode = this.mNodes[this.IndexOfNode(src)];
-            GraphNode dstNode = this.mNodes[this.IndexOfNode(dst)];
-            index = IndexOfDst(srcNode.mDstEdges, dst);
-            srcNode.mDstEdges.RemoveAt(index);
-            index = IndexOfDst(dstNode.mSrcEdges, src);
-            dstNode.mSrcEdges.RemoveAt(index);
+            index = IndexOfDst(edge.mSrcNode.mDstEdges, dst);
+            edge.mSrcNode.mDstEdges.RemoveAt(index);
+            index = IndexOfSrc(edge.mDstNode.mSrcEdges, src);
+            edge.mDstNode.mSrcEdges.RemoveAt(index);
             if (removeOrphans)
             {
-                if (srcNode.mDstEdges.Count == 0 && srcNode.mSrcEdges.Count == 0)
+                if (edge.mSrcNode.mDstEdges.Count == 0 && 
+                    edge.mSrcNode.mSrcEdges.Count == 0)
                 {
                     index = this.IndexOfNode(src);
                     this.mNodes.RemoveAt(index);
                 }
-                if (dstNode.mSrcEdges.Count == 0 && dstNode.mDstEdges.Count == 0)
+                if (edge.mDstNode.mSrcEdges.Count == 0 && 
+                    edge.mDstNode.mDstEdges.Count == 0)
                 {
                     index = this.IndexOfNode(dst);
                     this.mNodes.RemoveAt(index);

@@ -119,6 +119,17 @@ namespace GraphForms
             //return Math.Max(Math.Min(value, max), min);
         }
 
+        /// <summary>
+        /// Returns the distance between the given <paramref name="point"/>
+        /// and the origin.</summary>
+        /// <param name="point">The vector to calculate the length of.</param>
+        /// <returns>The distance between the given <paramref name="point"/>
+        /// and the origin.</returns>
+        public static double Length(PointF point)
+        {
+            return Math.Sqrt(point.X * point.X + point.Y * point.Y);
+        }
+
         #region RectangleF Functions
         /// <summary>
         /// Returns the smallest possible integer rectangle that
