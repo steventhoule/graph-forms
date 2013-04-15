@@ -16,6 +16,7 @@ namespace ElasticNodes
             linePen.StartCap = System.Drawing.Drawing2D.LineCap.Round;
             linePen.EndCap = System.Drawing.Drawing2D.LineCap.Round;
             linePen.LineJoin = System.Drawing.Drawing2D.LineJoin.Round;
+            
         }
 
         private Node mSource, mDest;
@@ -44,7 +45,7 @@ namespace ElasticNodes
             get { return this.mDest; }
         }
 
-        public void Adjust()
+        public virtual void Adjust()
         {
             if (this.mSource == null || this.mDest == null)
                 return;
@@ -71,7 +72,7 @@ namespace ElasticNodes
             this.BoundingBox = this.CalcBBox();
         }
 
-        private Rectangle CalcBBox()
+        private RectangleF CalcBBox()
         {
             if (this.mSource == null || this.mDest == null)
                 return new Rectangle();
@@ -83,7 +84,7 @@ namespace ElasticNodes
             float w = Math.Abs(mDestPoint.X - mSourcePoint.X) + extra;
             float h = Math.Abs(mDestPoint.Y - mSourcePoint.Y) + extra;
 
-            return GraphHelpers.ToAlignedRect(x, y, w, h);
+            return new RectangleF(x, y, w, h);
         }
 
         protected override void OnDrawBackground(System.Windows.Forms.PaintEventArgs e)

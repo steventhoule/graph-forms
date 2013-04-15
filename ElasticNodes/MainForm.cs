@@ -20,7 +20,7 @@ namespace ElasticNodes
         {
             InitializeComponent();
             this.scene = new NodeScene();
-            this.scene.BoundingBox = new Rectangle(-200, -200, 400, 400);
+            this.scene.BoundingBox = new RectangleF(-200, -200, 400, 400);
             this.scene.Position = new PointF(200, 200);
             this.scene.AddView(this.graphPanel);
             //this.graphPanel.Scale(0.8f, 0.8f);
@@ -43,6 +43,7 @@ namespace ElasticNodes
             scene.AddItem(node7);
             scene.AddItem(node8);
             scene.AddItem(node9);
+
             scene.AddItem(new Edge(node1, node2));
             scene.AddItem(new Edge(node2, node3));
             scene.AddItem(new Edge(node2, centerNode));
@@ -54,7 +55,20 @@ namespace ElasticNodes
             scene.AddItem(new Edge(node6, node9));
             scene.AddItem(new Edge(node7, node4));
             scene.AddItem(new Edge(node8, node7));
-            scene.AddItem(new Edge(node9, node8));
+            scene.AddItem(new Edge(node9, node8));/* */
+
+            /*scene.AddItem(new Edge2(node1, node2));
+            scene.AddItem(new Edge2(node2, node3));
+            scene.AddItem(new Edge2(node2, centerNode));
+            scene.AddItem(new Edge2(node3, node6));
+            scene.AddItem(new Edge2(node4, node1));
+            scene.AddItem(new Edge2(node4, centerNode));
+            scene.AddItem(new Edge2(centerNode, node6));
+            scene.AddItem(new Edge2(centerNode, node8));
+            scene.AddItem(new Edge2(node6, node9));
+            scene.AddItem(new Edge2(node7, node4));
+            scene.AddItem(new Edge2(node8, node7));
+            scene.AddItem(new Edge2(node9, node8));/* */
 
             node1.Position = new PointF(-50, -50);
             node2.Position = new PointF(0, -50);

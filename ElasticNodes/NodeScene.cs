@@ -61,13 +61,43 @@ namespace ElasticNodes
             }
         }
 
+        private float lastMouseX, lastMouseY;
+
+        protected override void OnMouseDown(GraphMouseEventArgs e)
+        {
+            this.lastMouseX = e.SceneX;
+            this.lastMouseY = e.SceneY;
+            e.Handled = true;
+        }
+
+        protected override void OnMouseMove(GraphMouseEventArgs e)
+        {
+            PointF pos;
+            foreach (GraphElement item in this.Children)
+            {
+                Node node = item as Node;
+                if (node != null && node.MouseGrabbed)
+                {
+                    pos = node.Position;
+                    node.Position = new PointF(
+                        pos.X + e.SceneX - this.lastMouseX,
+                        pos.Y + e.SceneY - this.lastMouseY);
+                }
+            }
+            this.lastMouseX = e.SceneX;
+            this.lastMouseY = e.SceneY;
+            e.Handled = true;
+        }
+
         protected override void OnMouseUp(GraphMouseEventArgs e)
         {
             foreach (GraphElement item in this.Children)
             {
                 Node node = item as Node;
                 if (node != null)
+                {
                     node.MouseGrabbed = false;
+                }
             }
             e.Handled = true;
         }

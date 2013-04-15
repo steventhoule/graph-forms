@@ -34,7 +34,7 @@ namespace ElasticNodes
             nodeBrushRisen.SurroundColors = new Color[] { Color.FromArgb(0x80, 0x80, 0) };
 
             const int adjust = 2;
-            this.BoundingBox = new Rectangle(-10 - adjust, -10 - adjust, 25 + adjust, 25 + adjust);
+            this.BoundingBox = new RectangleF(-10 - adjust, -10 - adjust, 25 + adjust, 25 + adjust);
 
             this.scene = scene;
             this.Zvalue = -1;
@@ -142,7 +142,14 @@ namespace ElasticNodes
         public bool MouseGrabbed
         {
             get { return this.mouseGrabbed; }
-            set { this.mouseGrabbed = value; }
+            set
+            {
+                if (this.mouseGrabbed != value)
+                {
+                    this.mouseGrabbed = value;
+                    this.Invalidate();
+                }
+            }
         }
 
         protected override void OnMouseDown(GraphMouseEventArgs e)
@@ -150,20 +157,7 @@ namespace ElasticNodes
             if (!this.mouseGrabbed)
             {
                 this.mouseGrabbed = true;
-                this.lastMouseX = e.SceneX;
-                this.lastMouseY = e.SceneY;
-            }
-            e.Handled = true;
-        }
-
-        protected override void OnMouseMove(GraphMouseEventArgs e)
-        {
-            if (this.mouseGrabbed)
-            {
-                PointF pos = this.Position;
-                this.Position = new PointF(pos.X + e.SceneX - lastMouseX, pos.Y + e.SceneY - lastMouseY);
-                this.lastMouseX = e.SceneX;
-                this.lastMouseY = e.SceneY;
+                this.Invalidate();
             }
             e.Handled = true;
         }
@@ -173,6 +167,7 @@ namespace ElasticNodes
             if (this.mouseGrabbed)
             {
                 this.mouseGrabbed = false;
+                this.Invalidate();
                 e.Handled = true;
             }
         }

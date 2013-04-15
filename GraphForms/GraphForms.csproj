@@ -46,6 +46,23 @@
     <Compile Include="Algorithms\DirectionalGraph.cs" />
     <Compile Include="Algorithms\IAlgorithm.cs" />
     <Compile Include="Algorithms\IGraphEdge.cs" />
+    <Compile Include="Algorithms\Layout\ForceDirected\ElasticLayoutAlgorithm.cs" />
+    <Compile Include="Algorithms\Layout\ForceDirected\ElasticLayoutParameters.cs" />
+    <Compile Include="Algorithms\Layout\ForceDirected\ForceDirectedLayoutAlgorithm.cs" />
+    <Compile Include="Algorithms\Layout\ForceDirected\ForceDirectedLayoutParameters.cs" />
+    <Compile Include="Algorithms\Layout\ForceDirected\FRBoundedLayoutParameters.cs" />
+    <Compile Include="Algorithms\Layout\ForceDirected\FRFreeLayoutParameters.cs" />
+    <Compile Include="Algorithms\Layout\ForceDirected\FRLayoutAlgorithm.cs" />
+    <Compile Include="Algorithms\Layout\ForceDirected\FRLayoutParameters.cs" />
+    <Compile Include="Algorithms\Layout\ForceDirected\ISOMLayoutAlgorithm.cs" />
+    <Compile Include="Algorithms\Layout\ForceDirected\ISOMLayoutParameters.cs" />
+    <Compile Include="Algorithms\Layout\ForceDirected\KKLayoutAlgorithm.cs" />
+    <Compile Include="Algorithms\Layout\ForceDirected\KKLayoutParameters.cs" />
+    <Compile Include="Algorithms\Layout\ForceDirected\LinLogLayoutAlgorithm.cs" />
+    <Compile Include="Algorithms\Layout\ForceDirected\LinLogLayoutParameters.cs" />
+    <Compile Include="Algorithms\Layout\ILayoutNode.cs" />
+    <Compile Include="Algorithms\Layout\LayoutAlgorithm.cs" />
+    <Compile Include="Algorithms\Layout\LayoutParameters.cs" />
     <Compile Include="GraphElement.2.cs" />
     <Compile Include="GraphEventArgs.cs" />
     <Compile Include="GraphHelpers.cs" />
@@ -56,10 +73,16 @@
     <Compile Include="GraphScene.cs" />
     <Compile Include="IHasGraphScene.cs" />
     <Compile Include="IPropertyChangedListener.cs" />
+    <Compile Include="IUpdateable.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="GraphElement.cs" />
     <Compile Include="PropertyChangedNotifier.cs" />
     <Service Include="{94E38DFF-614B-4cbd-B67C-F211BB35CE8B}" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Algorithms\Layout\ForceDirected\IForceDirectedLayoutAlgorithm.cs" />
+    <Compile Include="Algorithms\Layout\ForceDirected\LinLogLayoutAlgorithm.QuadTree.cs" />
+    <Compile Include="Algorithms\Layout\ILayoutAlgorithm.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

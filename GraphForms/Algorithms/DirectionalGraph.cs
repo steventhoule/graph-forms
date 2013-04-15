@@ -15,7 +15,7 @@ namespace GraphForms.Algorithms
     /// vertices contained in this directional graph.</typeparam>
     public class DirectionalGraph<Node, Edge>
         where Node : class
-        where Edge : IGraphEdge<Node>
+        where Edge : class, IGraphEdge<Node>
     {
         /// <summary>
         /// This class is used to store an <typeparamref name="Edge"/> instance
@@ -117,12 +117,18 @@ namespace GraphForms.Algorithms
         /// </summary>
         public class GraphNode : IEquatable<GraphNode>
         {
-            private DirectionalGraph<Node, Edge> mGraph;
+            internal DirectionalGraph<Node, Edge> mGraph;
             /// <summary>
             /// The underlying data that this node represents.
             /// </summary>
             internal Node mData;
 
+            /// <summary>
+            /// Temporary storage for this node's index in its containing
+            /// directional graph's internal list of 
+            /// <see cref="P:DirectionalGraph`2{Node,Edge}.InternalNodes"/>.
+            /// </summary>
+            public int Index;
             /// <summary>
             /// Flags whether or not this <see cref="GraphNode"/> has already
             /// been visited by a breadth-first graph traversal algorithm.
@@ -791,6 +797,22 @@ namespace GraphForms.Algorithms
         }
 
         /// <summary>
+        /// Retrieves the <typeparamref name="Node"/> instance at the given
+        /// <paramref name="nodeIndex"/> in this directional graph's
+        /// internal list of <see cref="Nodes"/>.
+        /// </summary>
+        /// <param name="nodeIndex">The index of the <typeparamref name="Node"/>
+        /// instance to retrieve from this directional graph's internal list of
+        /// <see cref="Nodes"/>.</param>
+        /// <returns>The <typeparamref name="Node"/> instance at 
+        /// <paramref name="nodeIndex"/> in this directional graph's internal
+        /// list of <see cref="Nodes"/>.</returns>
+        public Node NodeAt(int nodeIndex)
+        {
+            return this.mNodes[nodeIndex].Data;
+        }
+
+        /// <summary>
         /// An array of all the <see cref="GraphNode"/> instances currently
         /// contained within this <see cref="T:DirectionalGraph`2{Node,Edge}"/>,
         /// in the same order as all functions with a <c>nodeIndex</c>
@@ -799,6 +821,22 @@ namespace GraphForms.Algorithms
         public GraphNode[] InternalNodes
         {
             get { return this.mNodes.ToArray(); }
+        }
+
+        /// <summary>
+        /// Retrieves the <see cref="GraphNode"/> instance at the given
+        /// <paramref name="nodeIndex"/> in this directional graph's
+        /// internal list of <see cref="InternalNodes"/>.
+        /// </summary>
+        /// <param name="nodeIndex">The index of the <see cref="GraphNode"/>
+        /// instance to retrieve from this directional graph's internal list of
+        /// <see cref="InternalNodes"/>.</param>
+        /// <returns>The <see cref="GraphNode"/> instance at 
+        /// <paramref name="nodeIndex"/> in this directional graph's internal
+        /// list of <see cref="InternalNodes"/>.</returns>
+        public GraphNode InternalNodeAt(int nodeIndex)
+        {
+            return this.mNodes[nodeIndex];
         }
         #endregion
 
@@ -1070,6 +1108,8 @@ namespace GraphForms.Algorithms
                     n = this.mNodes[i];
                     if (!orphans.Contains(n))
                         newNodes.Add(n);
+                    else
+                        n.mGraph = null;
                 }
                 this.mNodes = newNodes;
             }
@@ -1294,6 +1334,22 @@ namespace GraphForms.Algorithms
         }
 
         /// <summary>
+        /// Retrieves the <typeparamref name="Edge"/> instance at the given
+        /// <paramref name="edgeIndex"/> in this directional graph's
+        /// internal list of <see cref="Edges"/>.
+        /// </summary>
+        /// <param name="edgeIndex">The index of the <typeparamref name="Edge"/>
+        /// instance to retrieve from this directional graph's internal list of
+        /// <see cref="Edges"/>.</param>
+        /// <returns>The <typeparamref name="Edge"/> instance at 
+        /// <paramref name="edgeIndex"/> in this directional graph's internal
+        /// list of <see cref="Edges"/>.</returns>
+        public Edge EdgeAt(int edgeIndex)
+        {
+            return this.mEdges[edgeIndex].Data;
+        }
+
+        /// <summary>
         /// An array of all the <see cref="GraphEdge"/> instances currently
         /// contained within this <see cref="T:DirectionalGraph`2{Node,Edge}"/>,
         /// in the same order as all functions with an <c>edgeIndex</c>
@@ -1302,6 +1358,22 @@ namespace GraphForms.Algorithms
         public GraphEdge[] InternalEdges
         {
             get { return this.mEdges.ToArray(); }
+        }
+
+        /// <summary>
+        /// Retrieves the <see cref="GraphEdge"/> instance at the given
+        /// <paramref name="edgeIndex"/> in this directional graph's
+        /// internal list of <see cref="InternalEdges"/>.
+        /// </summary>
+        /// <param name="edgeIndex">The index of the <see cref="GraphEdge"/>
+        /// instance to retrieve from this directional graph's internal list of
+        /// <see cref="InternalEdges"/>.</param>
+        /// <returns>The <see cref="GraphEdge"/> instance at 
+        /// <paramref name="edgeIndex"/> in this directional graph's internal
+        /// list of <see cref="InternalEdges"/>.</returns>
+        public GraphEdge InternalEdgeAt(int edgeIndex)
+        {
+            return this.mEdges[edgeIndex];
         }
         #endregion
 

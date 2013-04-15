@@ -3,9 +3,9 @@
 namespace GraphForms.Algorithms
 {
     /// <summary>
-    /// Describes the state of the computation of an algorithm, primarily
-    /// <see cref="IAlgorithm"/> and classes that implement it.
-    /// </summary>
+    /// Describes the state of the computation of an algorithm, 
+    /// primarily <see cref="IAlgorithm"/> 
+    /// and classes that implement it. </summary>
     public enum ComputeState
     {
         /// <summary>

@@ -11,10 +11,10 @@ namespace GraphForms
     public abstract partial class GraphElement
     {
         #region Hit Testing
-        private int mBoundingX = 0;
-        private int mBoundingY = 0;
-        private int mBoundingW = 0;
-        private int mBoundingH = 0;
+        private float mBX = 0;
+        private float mBY = 0;
+        private float mBW = 0;
+        private float mBH = 0;
 
         /// <summary>
         /// This element's bounding box in its local coordinate system.
@@ -22,12 +22,11 @@ namespace GraphForms
         /// and quick hit testing before the more complex hit test
         /// functions are called.
         /// </summary>
-        public Rectangle BoundingBox
+        public RectangleF BoundingBox
         {
             get 
             { 
-                return new Rectangle(this.mBoundingX, this.mBoundingY, 
-                    this.mBoundingW, this.mBoundingH); 
+                return new RectangleF(this.mBX, this.mBY, this.mBW, this.mBH);
             }
             set
             {
@@ -37,12 +36,12 @@ namespace GraphForms
                         this.mCacheList[i].RefitCache(value);
                 }
 
-                Rectangle invalid = Rectangle.Union(this.BoundingBox, value);
+                RectangleF invalid = RectangleF.Union(this.BoundingBox, value);
 
-                this.mBoundingX = value.X;
-                this.mBoundingY = value.Y;
-                this.mBoundingW = value.Width;
-                this.mBoundingH = value.Height;
+                this.mBX = value.X;
+                this.mBY = value.Y;
+                this.mBW = value.Width;
+                this.mBH = value.Height;
 
                 this.Invalidate(invalid);
             }
@@ -56,8 +55,8 @@ namespace GraphForms
         {
             get
             {
-                RectangleF rect = new Rectangle(this.mBoundingX, 
-                    this.mBoundingY, this.mBoundingW, this.mBoundingH);
+                RectangleF rect = new RectangleF(this.mBX, this.mBY, 
+                    this.mBW, this.mBH);
                 GraphElement p = this;
                 while (p != null)
                 {
@@ -171,7 +170,7 @@ namespace GraphForms
                 {
                     this.bClipsToShape = value;
                     this.OnClipsToShapeChanged();
-                    this.Invalidate(this.BoundingBox);
+                    this.Invalidate();
                 }
             }
         }
@@ -462,11 +461,23 @@ namespace GraphForms
 
         #region Updating
         /// <summary>
+        /// Propagates this element's <see cref="BoundingBox"/> up its 
+        /// ancestry chain, adjusting it to the coordinate system of the 
+        /// parentless root (the scene element), which then calls its 
+        /// <see cref="InvalidateScene(Rectangle)"/>
+        /// function with the adjusted bounding box. Useful for completely
+        /// refreshing this element.</summary>
+        protected void Invalidate()
+        {
+            this.Invalidate(new RectangleF(this.mBX, this.mBY, this.mBW, this.mBH));
+        }
+
+        /// <summary>
         /// Propagates an invalid area in this element's 
         /// local coordinate system up its ancestry chain,
         /// adjusting it to the coordinate system of the parentless root
         /// (the scene element), which then calls its 
-        /// <see cref="InvalidateScene(System.Drawing.Rectangle)"/>
+        /// <see cref="InvalidateScene(Rectangle)"/>
         /// function with the adjusted area.</summary>
         /// <param name="rect">The invalid area in this element's
         /// local coordinate system to propagate up the ancestry chain.</param>
@@ -528,7 +539,7 @@ namespace GraphForms
         public void OnPaint(PaintEventArgs e)
         {
             bool drawItem = this.IsDrawn() &&
-                this.mBoundingW > 0 && this.mBoundingH > 0 &&
+                this.mBW > 0 && this.mBH > 0 &&
                 this.BoundingBox.IntersectsWith(e.ClipRectangle);
             Region clipShape = this.Shape();
             bool inShape = clipShape.IsVisible(e.ClipRectangle);
@@ -808,9 +819,11 @@ namespace GraphForms
                     }
                     SetFastGraphicsMode(e.Graphics);
                     Rectangle src = new Rectangle(
-                        e.ClipRectangle.X - mOwner.mBoundingX + mAdjustX,
-                        e.ClipRectangle.Y - mOwner.mBoundingY + mAdjustY,
+                        -(int)Math.Floor(this.mOwner.mBX),
+                        -(int)Math.Floor(this.mOwner.mBY),
                         e.ClipRectangle.Width, e.ClipRectangle.Height);
+                    src.Offset(e.ClipRectangle.X + this.mAdjustX,
+                               e.ClipRectangle.Y + this.mAdjustY);
                     e.Graphics.DrawImage(this.mCache,
                         e.ClipRectangle, src, GraphicsUnit.Pixel);
                 }
@@ -829,17 +842,18 @@ namespace GraphForms
             /// </summary>
             /// <param name="newBBox">The new bounding box for the
             /// <see cref="Owner"/> element.</param>
-            internal void RefitCache(Rectangle newBBox)
+            internal void RefitCache(RectangleF newBBox)
             {
                 // Try to crop cache image if it already exists,
                 // otherwise draw it.
                 if (this.mOwner != null && this.bCached && this.mCache != null
                     /*&& newBBox.Width > 0 && newBBox.Height > 0/* */)
                 {
-                    Rectangle crop = new Rectangle(
-                        newBBox.X - mOwner.mBoundingX + mAdjustX,
-                        newBBox.Y - mOwner.mBoundingY + mAdjustY,
+                    Rectangle crop = GraphHelpers.ToAlignedRect(
+                        newBBox.X - this.mOwner.mBX,
+                        newBBox.Y - this.mOwner.mBY,
                         newBBox.Width, newBBox.Height);
+                    crop.Offset(this.mAdjustX, this.mAdjustY);
                     if (crop.Width <= 0 || crop.Height <= 0)
                     {
                         // New bounding box is invalid, so dump cache
@@ -886,7 +900,7 @@ namespace GraphForms
             private bool RedrawCache()
             {
                 if (mOwner != null && 
-                    mOwner.mBoundingW > 0 && mOwner.mBoundingH > 0)
+                    mOwner.mBW > 0 && mOwner.mBH > 0)
                 {
                     if (this.mCache != null)
                     {
@@ -895,8 +909,11 @@ namespace GraphForms
                     }
                     try
                     {
-                        this.mCache = new Bitmap(mOwner.mBoundingW, 
-                            mOwner.mBoundingH, kCachePixelFormat);
+                        int w = (int)Math.Floor(this.mOwner.mBX);
+                        int h = (int)Math.Floor(this.mOwner.mBY);
+                        w = (int)Math.Ceiling(this.mOwner.mBX + this.mOwner.mBW) - w;
+                        h = (int)Math.Ceiling(this.mOwner.mBY + this.mOwner.mBH) - h;
+                        this.mCache = new Bitmap(w, h, kCachePixelFormat);
                     }
                     catch
                     {
@@ -904,7 +921,7 @@ namespace GraphForms
                         return false;
                     }
                     Graphics g = Graphics.FromImage(this.mCache);
-                    g.TranslateTransform(-mOwner.mBoundingX, -mOwner.mBoundingY);
+                    g.TranslateTransform(-mOwner.mBX, -mOwner.mBY);
                     this.UserDraw(g);
                     g.Dispose();
                     return true;
@@ -1054,18 +1071,18 @@ namespace GraphForms
             {
                 GraphElement child;
                 GraphElement[] children = this.Children;
+                GraphMouseEventArgs ce;
                 int i = children.Length - 1;
                 for (; i >= 0; i--)
                 {
                     child = children[i];
                     if (child.bStacksBehindParent)
                         break;
-                    if (child.FireMouseEvent(trigger, 
-                        child.FixMouseEventArgs(e)) &&
-                        e.Handled)
+                    ce = child.FixMouseEventArgs(e);
+                    if (child.FireMouseEvent(trigger, ce) && ce.Handled)
                         return true;
                 }
-                if (this.BoundingBox.Contains(e.Location) && inShape)
+                if (this.BoundingBox.Contains(e.X, e.Y) && inShape)
                     //(inShape || !this.bClipsToShape))
                 {
                     trigger.Trigger(this, e);
@@ -1075,13 +1092,12 @@ namespace GraphForms
                 for (; i >= 0; i--)
                 {
                     child = children[i];
-                    if (child.FireMouseEvent(trigger, 
-                        child.FixMouseEventArgs(e))&& 
-                        e.Handled)
+                    ce = child.FixMouseEventArgs(e);
+                    if (child.FireMouseEvent(trigger, ce) && ce.Handled)
                         return true;
                 }
             }
-            if (this.BoundingBox.Contains(e.Location) && inShape)
+            if (this.BoundingBox.Contains(e.X, e.Y) && inShape)
                 //(inShape || !this.bClipsToShape))
             {
                 trigger.Trigger(this, e);
@@ -1100,7 +1116,7 @@ namespace GraphForms
         /// <param name="e">The mouse event data of this event.</param>
         protected virtual void OnMouseClick(GraphMouseEventArgs e)
         {
-            e.Handled = true;
+            //e.Handled = true;
         }
 
         private class MouseClickTrigger : MouseEventTrigger
@@ -1138,7 +1154,7 @@ namespace GraphForms
         /// <param name="e">The mouse event data of this event.</param>
         protected virtual void OnMouseDoubleClick(GraphMouseEventArgs e)
         {
-            e.Handled = true;
+            //e.Handled = true;
         }
 
         private class MouseDoubleClickTrigger : MouseEventTrigger
@@ -1177,7 +1193,7 @@ namespace GraphForms
         /// <param name="e">The mouse event data of this event.</param>
         protected virtual void OnMouseDown(GraphMouseEventArgs e)
         {
-            e.Handled = true;
+            //e.Handled = true;
         }
 
         private class MouseDownTrigger : MouseEventTrigger
@@ -1215,7 +1231,7 @@ namespace GraphForms
         /// <param name="e">The mouse event data of this event.</param>
         protected virtual void OnMouseMove(GraphMouseEventArgs e)
         {
-            e.Handled = true;
+            //e.Handled = true;
         }
 
         private class MouseMoveTrigger : MouseEventTrigger
@@ -1254,7 +1270,7 @@ namespace GraphForms
         /// <param name="e">The mouse event data of this event.</param>
         protected virtual void OnMouseUp(GraphMouseEventArgs e)
         {
-            e.Handled = true;
+            //e.Handled = true;
         }
 
         private class MouseUpTrigger : MouseEventTrigger
@@ -1293,7 +1309,7 @@ namespace GraphForms
         /// <param name="e">The mouse event data of this event.</param>
         protected virtual void OnMouseWheel(GraphMouseEventArgs e)
         {
-            e.Handled = true;
+            //e.Handled = true;
         }
 
         private class MouseWheelTrigger : MouseEventTrigger

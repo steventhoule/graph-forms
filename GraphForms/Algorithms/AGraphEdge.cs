@@ -84,6 +84,6 @@ namespace GraphForms.Algorithms
         /// but with the given source and destination nodes.</returns>
         /// <seealso cref="M:DirectionalGraph`2{Node,Edge}.Replace(Node,Node)"/>
         public abstract Edge Copy<Edge>(Node srcNode, Node dstNode)
-            where Edge : IGraphEdge<Node>;
+            where Edge : class, IGraphEdge<Node>;
     }
 }

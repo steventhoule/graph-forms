@@ -233,7 +233,7 @@ namespace GraphForms
         {
             public int Compare(GraphElement x, GraphElement y)
             {
-                return ClosestLeaf(x, y) ? 1 : -1;
+                return x == y ? 0 : ClosestLeaf(x, y) ? 1 : -1;
             }
         }
         private static ChildSorter sChildSorter = new ChildSorter();
@@ -390,7 +390,7 @@ namespace GraphForms
                         this.parent.needSortChildren = true;
 
                     this.OnStacksBehindParentChanged();
-                    this.Invalidate(this.BoundingBox);
+                    this.Invalidate();
                 }
             }
         }
@@ -455,7 +455,7 @@ namespace GraphForms
                         this.StacksBehindParent = this.z < 0f;
 
                     this.OnZvalueChanged();
-                    this.Invalidate(this.BoundingBox);
+                    this.Invalidate();
                 }
             }
         }

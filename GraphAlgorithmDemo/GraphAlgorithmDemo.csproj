@@ -40,6 +40,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AlgorithmBase.cs" />
+    <Compile Include="ArrowEdge.cs" />
+    <Compile Include="CircleNode.cs" />
+    <Compile Include="CircleNodeScene.cs" />
     <Compile Include="DemoForm.cs">
       <SubType>Form</SubType>
     </Compile>
