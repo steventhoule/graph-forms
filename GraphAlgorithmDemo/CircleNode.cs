@@ -44,6 +44,8 @@ namespace GraphAlgorithmDemo
 
             this.Radius = radius;
             this.Zvalue = -1;
+
+            this.mScene.AddItem(this);
         }
 
         public float Radius

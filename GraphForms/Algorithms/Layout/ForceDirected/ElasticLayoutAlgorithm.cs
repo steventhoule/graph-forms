@@ -66,7 +66,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                         vec = node.ItemTranslate(n);
                         dx = vec.Width;
                         dy = vec.Height;
-                        factor = dx * dx + dy * dy;
+                        factor = Math.Max(dx * dx + dy * dy, float.Epsilon);
                         xvel += this.mForceMult * dx / factor;
                         yvel += this.mForceMult * dy / factor;
                     }

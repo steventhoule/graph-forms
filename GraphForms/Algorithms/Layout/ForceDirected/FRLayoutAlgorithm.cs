@@ -111,20 +111,18 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                     continue;
                 nodes[i].Index = i;
                 forceX = 0; forceY = 0;
-                edges = nodes[i].InternalDstEdges;
-                for (j = 0; j < edges.Length; j++)
+                for (j = 0; j < nodes.Length; j++)
                 {
-                    u = edges[j].DstNode.Data;
                     // doesn't repulse itself
-                    if (u != v)
+                    if (j != i)
                     {
                         // calculating repulsive force
+                        u = nodes[j].mData;
                         delta = v.ItemTranslate(u);
                         dx = delta.Width;
                         dy = delta.Height;
-                        length = Math.Max(dx * dx + dy * dy, double.Epsilon);
-                        factor = edges[j].Data.Weight;
-                        factor = this.mCoR * factor * factor / length;
+                        length = Math.Max(dx * dx + dy * dy, 0.000001);
+                        factor = this.mCoR / length;
 
                         forceX += dx * factor;
                         forceY += dy * factor;
@@ -153,7 +151,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                 dy = delta.Height;
                 length = Math.Sqrt(dx * dx + dy * dy);
                 factor = edges[i].Data.Weight;
-                factor = Math.Max(length / this.mCoA * factor, double.Epsilon);
+                factor = Math.Max(length / this.mCoA * factor, 0.000001);
 
                 //v.NewX = v.NewX - (float)(dx * factor);
                 //v.NewY = v.NewY - (float)(dy * factor);
@@ -179,7 +177,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                 //dy = v.NewY;
                 dx = newXs[i];
                 dy = newYs[i];
-                length = Math.Min(Math.Sqrt(dx * dx + dy * dy), double.Epsilon);
+                length = Math.Max(Math.Sqrt(dx * dx + dy * dy), 0.000001);
                 factor = Math.Min(length, this.mTemperature) / length;
 
                 // Add the force to the old position

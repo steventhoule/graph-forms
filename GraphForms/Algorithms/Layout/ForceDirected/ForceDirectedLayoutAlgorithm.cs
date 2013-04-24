@@ -125,6 +125,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             this.mMaxIterations = this.Parameters.MaxIterations;
             this.bResetting = true;
             this.bItemMoved = true;
+            this.mIter = 0;
             this.InitializeAlgorithm();
             base.OnStarted();
         }

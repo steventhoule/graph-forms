@@ -35,12 +35,12 @@ namespace GraphAlgorithmDemo
         }
     }
 
-    public class FRLayoutForCircles
+    public class FRFreeLayoutForCircles
         : FRLayoutAlgorithm<CircleNode, ArrowEdge>
     {
         private CircleNodeScene mScene;
 
-        public FRLayoutForCircles(CircleNodeScene scene)
+        public FRFreeLayoutForCircles(CircleNodeScene scene)
             : base(scene.Graph, null)
         {
             this.mScene = scene;
@@ -62,6 +62,41 @@ namespace GraphAlgorithmDemo
         public override string ToString()
         {
             return "Fruchterman-Reingold";
+        }
+    }
+
+    public class FRBoundedLayoutForCircles
+        : FRLayoutAlgorithm<CircleNode, ArrowEdge>
+    {
+        private CircleNodeScene mScene;
+
+        public FRBoundedLayoutForCircles(CircleNodeScene scene)
+            : base(scene.Graph, null)
+        {
+            this.mScene = scene;
+        }
+
+        protected override FRLayoutParameters DefaultParameters
+        {
+            get { return new FRBoundedLayoutParameters(); }
+        }
+
+        protected override bool OnIterationEnded(int iteration, double statusInPercent,
+            double distanceChange, double maxDistanceChange, string message)
+        {
+            bool keep = false;
+            if (base.OnIterationEnded(iteration, statusInPercent,
+                distanceChange, maxDistanceChange, message))
+            {
+                keep = this.mScene.OnLayoutIterEnded(iteration, statusInPercent,
+                    distanceChange, maxDistanceChange, message);
+            }
+            return keep;
+        }
+
+        public override string ToString()
+        {
+            return "Bounded Fruchterman-Reingold";
         }
     }
 

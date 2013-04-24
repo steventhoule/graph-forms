@@ -31,18 +31,22 @@
             this.layoutAlgCMB = new System.Windows.Forms.ComboBox();
             this.layoutAlgLBL = new System.Windows.Forms.Label();
             this.layoutGRP = new System.Windows.Forms.GroupBox();
-            this.layoutStartStopBTN = new System.Windows.Forms.Button();
-            this.layoutShuffleBTN = new System.Windows.Forms.Button();
-            this.layoutOnNodeMovedCHK = new System.Windows.Forms.CheckBox();
             this.layoutPausedCHK = new System.Windows.Forms.CheckBox();
+            this.layoutOnNodeMovedCHK = new System.Windows.Forms.CheckBox();
+            this.layoutShuffleBTN = new System.Windows.Forms.Button();
+            this.layoutStartStopBTN = new System.Windows.Forms.Button();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
             this.graphPanel = new GraphForms.GraphPanel();
-            this.layoutParamsGrid = new System.Windows.Forms.PropertyGrid();
             this.layoutParamsLBL = new System.Windows.Forms.Label();
+            this.layoutParamsGrid = new System.Windows.Forms.PropertyGrid();
+            this.styleAlgGRP = new System.Windows.Forms.GroupBox();
+            this.styleAlgTestBTN = new System.Windows.Forms.Button();
+            this.styleAlgCMB = new System.Windows.Forms.ComboBox();
             this.layoutGRP.SuspendLayout();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
             this.splitContainer1.SuspendLayout();
+            this.styleAlgGRP.SuspendLayout();
             this.SuspendLayout();
             // 
             // layoutAlgCMB
@@ -50,7 +54,7 @@
             this.layoutAlgCMB.FormattingEnabled = true;
             this.layoutAlgCMB.Location = new System.Drawing.Point(100, 13);
             this.layoutAlgCMB.Name = "layoutAlgCMB";
-            this.layoutAlgCMB.Size = new System.Drawing.Size(135, 21);
+            this.layoutAlgCMB.Size = new System.Drawing.Size(175, 21);
             this.layoutAlgCMB.TabIndex = 1;
             this.layoutAlgCMB.SelectedIndexChanged += new System.EventHandler(this.layoutAlgSelectedIndexChanged);
             // 
@@ -73,48 +77,16 @@
             this.layoutGRP.Controls.Add(this.layoutAlgCMB);
             this.layoutGRP.Location = new System.Drawing.Point(12, 12);
             this.layoutGRP.Name = "layoutGRP";
-            this.layoutGRP.Size = new System.Drawing.Size(538, 43);
+            this.layoutGRP.Size = new System.Drawing.Size(583, 43);
             this.layoutGRP.TabIndex = 3;
             this.layoutGRP.TabStop = false;
             this.layoutGRP.Text = "Layout Settings";
             // 
-            // layoutStartStopBTN
-            // 
-            this.layoutStartStopBTN.Location = new System.Drawing.Point(437, 11);
-            this.layoutStartStopBTN.Name = "layoutStartStopBTN";
-            this.layoutStartStopBTN.Size = new System.Drawing.Size(37, 23);
-            this.layoutStartStopBTN.TabIndex = 3;
-            this.layoutStartStopBTN.Text = "Start";
-            this.layoutStartStopBTN.UseVisualStyleBackColor = true;
-            this.layoutStartStopBTN.Click += new System.EventHandler(this.layoutStartStopClick);
-            // 
-            // layoutShuffleBTN
-            // 
-            this.layoutShuffleBTN.Location = new System.Drawing.Point(480, 11);
-            this.layoutShuffleBTN.Name = "layoutShuffleBTN";
-            this.layoutShuffleBTN.Size = new System.Drawing.Size(50, 23);
-            this.layoutShuffleBTN.TabIndex = 4;
-            this.layoutShuffleBTN.Text = "Shuffle";
-            this.layoutShuffleBTN.UseVisualStyleBackColor = true;
-            this.layoutShuffleBTN.Click += new System.EventHandler(this.layoutShuffleClick);
-            // 
-            // layoutOnNodeMovedCHK
-            // 
-            this.layoutOnNodeMovedCHK.AutoSize = true;
-            this.layoutOnNodeMovedCHK.Checked = true;
-            this.layoutOnNodeMovedCHK.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.layoutOnNodeMovedCHK.Location = new System.Drawing.Point(241, 15);
-            this.layoutOnNodeMovedCHK.Name = "layoutOnNodeMovedCHK";
-            this.layoutOnNodeMovedCHK.Size = new System.Drawing.Size(128, 17);
-            this.layoutOnNodeMovedCHK.TabIndex = 6;
-            this.layoutOnNodeMovedCHK.Text = "Start on Node Moved";
-            this.layoutOnNodeMovedCHK.UseVisualStyleBackColor = true;
-            this.layoutOnNodeMovedCHK.CheckedChanged += new System.EventHandler(this.layoutOnNodeMovedCheckedChanged);
-            // 
             // layoutPausedCHK
             // 
+            this.layoutPausedCHK.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.layoutPausedCHK.AutoSize = true;
-            this.layoutPausedCHK.Location = new System.Drawing.Point(375, 15);
+            this.layoutPausedCHK.Location = new System.Drawing.Point(420, 15);
             this.layoutPausedCHK.Name = "layoutPausedCHK";
             this.layoutPausedCHK.Size = new System.Drawing.Size(56, 17);
             this.layoutPausedCHK.TabIndex = 7;
@@ -122,11 +94,47 @@
             this.layoutPausedCHK.UseVisualStyleBackColor = true;
             this.layoutPausedCHK.CheckedChanged += new System.EventHandler(this.layoutPausedCheckedChanged);
             // 
+            // layoutOnNodeMovedCHK
+            // 
+            this.layoutOnNodeMovedCHK.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.layoutOnNodeMovedCHK.AutoSize = true;
+            this.layoutOnNodeMovedCHK.Checked = true;
+            this.layoutOnNodeMovedCHK.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.layoutOnNodeMovedCHK.Location = new System.Drawing.Point(286, 15);
+            this.layoutOnNodeMovedCHK.Name = "layoutOnNodeMovedCHK";
+            this.layoutOnNodeMovedCHK.Size = new System.Drawing.Size(128, 17);
+            this.layoutOnNodeMovedCHK.TabIndex = 6;
+            this.layoutOnNodeMovedCHK.Text = "Start on Node Moved";
+            this.layoutOnNodeMovedCHK.UseVisualStyleBackColor = true;
+            this.layoutOnNodeMovedCHK.CheckedChanged += new System.EventHandler(this.layoutOnNodeMovedCheckedChanged);
+            // 
+            // layoutShuffleBTN
+            // 
+            this.layoutShuffleBTN.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.layoutShuffleBTN.Location = new System.Drawing.Point(525, 11);
+            this.layoutShuffleBTN.Name = "layoutShuffleBTN";
+            this.layoutShuffleBTN.Size = new System.Drawing.Size(50, 23);
+            this.layoutShuffleBTN.TabIndex = 4;
+            this.layoutShuffleBTN.Text = "Shuffle";
+            this.layoutShuffleBTN.UseVisualStyleBackColor = true;
+            this.layoutShuffleBTN.Click += new System.EventHandler(this.layoutShuffleClick);
+            // 
+            // layoutStartStopBTN
+            // 
+            this.layoutStartStopBTN.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.layoutStartStopBTN.Location = new System.Drawing.Point(482, 11);
+            this.layoutStartStopBTN.Name = "layoutStartStopBTN";
+            this.layoutStartStopBTN.Size = new System.Drawing.Size(37, 23);
+            this.layoutStartStopBTN.TabIndex = 3;
+            this.layoutStartStopBTN.Text = "Start";
+            this.layoutStartStopBTN.UseVisualStyleBackColor = true;
+            this.layoutStartStopBTN.Click += new System.EventHandler(this.layoutStartStopClick);
+            // 
             // splitContainer1
             // 
             this.splitContainer1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
                         | System.Windows.Forms.AnchorStyles.Right)));
-            this.splitContainer1.Location = new System.Drawing.Point(12, 62);
+            this.splitContainer1.Location = new System.Drawing.Point(12, 125);
             this.splitContainer1.Name = "splitContainer1";
             // 
             // splitContainer1.Panel1
@@ -150,6 +158,15 @@
             this.graphPanel.Size = new System.Drawing.Size(414, 400);
             this.graphPanel.TabIndex = 0;
             // 
+            // layoutParamsLBL
+            // 
+            this.layoutParamsLBL.AutoSize = true;
+            this.layoutParamsLBL.Location = new System.Drawing.Point(3, 4);
+            this.layoutParamsLBL.Name = "layoutParamsLBL";
+            this.layoutParamsLBL.Size = new System.Drawing.Size(98, 13);
+            this.layoutParamsLBL.TabIndex = 1;
+            this.layoutParamsLBL.Text = "Layout Parameters:";
+            // 
             // layoutParamsGrid
             // 
             this.layoutParamsGrid.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
@@ -160,20 +177,42 @@
             this.layoutParamsGrid.Size = new System.Drawing.Size(222, 384);
             this.layoutParamsGrid.TabIndex = 0;
             // 
-            // layoutParamsLBL
+            // styleAlgGRP
             // 
-            this.layoutParamsLBL.AutoSize = true;
-            this.layoutParamsLBL.Location = new System.Drawing.Point(3, 4);
-            this.layoutParamsLBL.Name = "layoutParamsLBL";
-            this.layoutParamsLBL.Size = new System.Drawing.Size(98, 13);
-            this.layoutParamsLBL.TabIndex = 1;
-            this.layoutParamsLBL.Text = "Layout Parameters:";
+            this.styleAlgGRP.Controls.Add(this.styleAlgTestBTN);
+            this.styleAlgGRP.Controls.Add(this.styleAlgCMB);
+            this.styleAlgGRP.Location = new System.Drawing.Point(13, 62);
+            this.styleAlgGRP.Name = "styleAlgGRP";
+            this.styleAlgGRP.Size = new System.Drawing.Size(218, 49);
+            this.styleAlgGRP.TabIndex = 5;
+            this.styleAlgGRP.TabStop = false;
+            this.styleAlgGRP.Text = "Style Algorithm";
+            // 
+            // styleAlgTestBTN
+            // 
+            this.styleAlgTestBTN.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.styleAlgTestBTN.Location = new System.Drawing.Point(170, 17);
+            this.styleAlgTestBTN.Name = "styleAlgTestBTN";
+            this.styleAlgTestBTN.Size = new System.Drawing.Size(37, 23);
+            this.styleAlgTestBTN.TabIndex = 1;
+            this.styleAlgTestBTN.Text = "Test";
+            this.styleAlgTestBTN.UseVisualStyleBackColor = true;
+            this.styleAlgTestBTN.Click += new System.EventHandler(this.colorAlgTestClick);
+            // 
+            // styleAlgCMB
+            // 
+            this.styleAlgCMB.FormattingEnabled = true;
+            this.styleAlgCMB.Location = new System.Drawing.Point(6, 19);
+            this.styleAlgCMB.Name = "styleAlgCMB";
+            this.styleAlgCMB.Size = new System.Drawing.Size(157, 21);
+            this.styleAlgCMB.TabIndex = 0;
             // 
             // DemoForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(678, 546);
+            this.Controls.Add(this.styleAlgGRP);
             this.Controls.Add(this.splitContainer1);
             this.Controls.Add(this.layoutGRP);
             this.Name = "DemoForm";
@@ -185,6 +224,7 @@
             this.splitContainer1.Panel2.ResumeLayout(false);
             this.splitContainer1.Panel2.PerformLayout();
             this.splitContainer1.ResumeLayout(false);
+            this.styleAlgGRP.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
@@ -202,6 +242,9 @@
         private GraphForms.GraphPanel graphPanel;
         private System.Windows.Forms.PropertyGrid layoutParamsGrid;
         private System.Windows.Forms.Label layoutParamsLBL;
+        private System.Windows.Forms.GroupBox styleAlgGRP;
+        private System.Windows.Forms.Button styleAlgTestBTN;
+        private System.Windows.Forms.ComboBox styleAlgCMB;
     }
 }
 

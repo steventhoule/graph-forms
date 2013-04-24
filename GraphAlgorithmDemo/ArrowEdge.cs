@@ -31,26 +31,62 @@ namespace GraphAlgorithmDemo
             sLinePen.LineJoin = LineJoin.Round;
         }
 
+        private Color mLineColor = Color.Black;
+
+        public Color LineColor
+        {
+            get { return this.mLineColor; }
+            set
+            {
+                if (this.mLineColor != value)
+                {
+                    this.mLineColor = value;
+                    this.Invalidate();
+                }
+            }
+        }
+
+        private DashStyle mLineDashStyle = DashStyle.Solid;
+
+        public DashStyle LineDashStyle
+        {
+            get { return this.mLineDashStyle; }
+            set
+            {
+                if (this.mLineDashStyle != value)
+                {
+                    this.mLineDashStyle = value;
+                    this.Invalidate();
+                }
+            }
+        }
+
         private CircleNode mSrcNode;
         private CircleNode mDstNode;
+        private CircleNodeScene mScene;
         private float mWeight;
 
         private double mAngle;
         private PointF mSrcPoint;
         private PointF mDstPoint;
 
-        public ArrowEdge(CircleNode srcNode, CircleNode dstNode)
-            : this(srcNode, dstNode, 1, 30)
+        public ArrowEdge(CircleNode srcNode, CircleNode dstNode,
+            CircleNodeScene scene)
+            : this(srcNode, dstNode, scene, 1, 30)
         {
         }
 
         public ArrowEdge(CircleNode srcNode, CircleNode dstNode, 
-            float weight, double angle)
+            CircleNodeScene scene, float weight, double angle)
         {
             this.mSrcNode = srcNode;
             this.mDstNode = dstNode;
             this.mWeight = weight;
             this.mAngle = angle * Math.PI / 180.0;
+
+            this.mScene = scene;
+            this.mScene.AddItem(this);
+            this.mScene.Graph.AddEdge(this, false);
             this.Update();
         }
 
@@ -88,7 +124,7 @@ namespace GraphAlgorithmDemo
         {
             if (typeof(ArrowEdge).Equals(typeof(Edge)))
             {
-                ArrowEdge aEdge = new ArrowEdge(srcNode, dstNode, 
+                ArrowEdge aEdge = new ArrowEdge(srcNode, dstNode, this.mScene, 
                     this.mWeight, this.mAngle * 180.0 / Math.PI);
                 return aEdge as Edge;
             }
@@ -137,6 +173,8 @@ namespace GraphAlgorithmDemo
         {
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
+            sLinePen.Color = this.mLineColor;
+            sLinePen.DashStyle = this.mLineDashStyle;
             e.Graphics.DrawLine(sLinePen, this.mSrcPoint, this.mDstPoint);
         }
     }

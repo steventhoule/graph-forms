@@ -4,6 +4,8 @@ using System.Drawing;
 
 namespace GraphForms.Algorithms.Layout.ForceDirected
 {
+    // Copied from Graph#, which was copied from this:
+    // https://code.google.com/p/linloglayout/source/browse/trunk/src/MinimizerBarnesHut.java
     public partial class LinLogLayoutAlgorithm<Node, Edge>
         : ForceDirectedLayoutAlgorithm<Node, Edge, LinLogLayoutParameters>
         where Node : GraphElement, ILayoutNode
@@ -144,8 +146,8 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                 bestDir.Y = bestDir.Y / 32;
                 // small movements, in the best case definition
                 for (multiple = 32; multiple >= 1 &&
-                    (bestMultiple == 0 || bestMultiple >> 1 == multiple);
-                    multiple >>= 1)
+                    (bestMultiple == 0 || bestMultiple / 2 == multiple);
+                    multiple /= 2)
                 {
                     n.Position.X = oldPos.X + bestDir.X * multiple;
                     n.Position.Y = oldPos.Y + bestDir.Y * multiple;
@@ -159,7 +161,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
 
                 // if there is a large movement on the right solution?
                 for (multiple = 64; multiple <= 128 &&
-                    bestMultiple == multiple >> 1; multiple <<= 1)
+                    bestMultiple == multiple / 2; multiple *= 2)
                 {
                     n.Position.X = oldPos.X + bestDir.X * multiple;
                     n.Position.Y = oldPos.Y + bestDir.Y * multiple;
@@ -208,7 +210,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                 dir[0] = dir[0] / dir2;
                 dir[1] = dir[1] / dir2;
 
-                double length = Math.Sqrt(dir[0] * dir[0] + dir[1] * dir[1]);
+                double length = Math.Max(Math.Sqrt(dir[0] * dir[0] + dir[1] * dir[1]), 0.000001);
                 if (length > quadTree.Width / 8)
                 {
                     length /= quadTree.Width / 8;
@@ -225,7 +227,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             LinLogNode n = this.mNodes[index];
             double gravX = this.mBarycenter.X - n.Position.X;
             double gravY = this.mBarycenter.Y - n.Position.Y;
-            double dist = Math.Sqrt(gravX * gravX + gravY * gravY);
+            double dist = Math.Max(Math.Sqrt(gravX * gravX + gravY * gravY), 0.000001);
             double tmp = this.mGravitationMultiplier * this.mRepulsionMultiplier *
                 Math.Max(n.RepulsionWeight, 1) * Math.Pow(dist, this.mAttrExponent - 2);
             dir[0] = dir[0] + gravX * tmp;
@@ -353,7 +355,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             LinLogNode n = this.mNodes[index];
             double dx = n.Position.X - tree.Position.X;
             double dy = n.Position.Y - tree.Position.Y;
-            double dist = Math.Sqrt(dx * dx + dy * dy);
+            double dist = Math.Max(Math.Sqrt(dx * dx + dy * dy), 0.000001);
             if (tree.Index < 0 && dist < (2 * tree.Width))
             {
                 double energy = 0.0;

@@ -16,7 +16,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             }
         }
 
-        private float mRepulsiveExponent = 1;
+        private float mRepulsiveExponent = 0;
 
         public float RepulsiveExponent
         {

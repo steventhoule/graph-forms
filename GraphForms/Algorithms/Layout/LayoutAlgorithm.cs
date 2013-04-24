@@ -241,44 +241,6 @@ namespace GraphForms.Algorithms.Layout
             }
         }
 
-        /*/// <summary>
-        /// Initializes extra data associated with values in this algorithm's
-        /// <see cref="Parameters"/>. This is called before the extra node and
-        /// edge data is initialized in case they depend on the parameters.
-        /// </summary><remarks>
-        /// This is called before <see cref="InitNodeData()"/> and 
-        /// <see cref="InitEdgeData()"/>, but the other functions are only 
-        /// called whenever their respective data needs re-initialization.
-        /// </remarks>
-        protected virtual void InitParameters()
-        {
-        }
-
-        /// <summary>
-        /// Initialize extra data for each <typeparamref name="Node"/> instance
-        /// in this algorithm's graph. This is called after the parameters have
-        /// been initialized, but before the extra edge data is initialized.
-        /// </summary><remarks>
-        /// This is called after <see cref="InitParameters()"/> and before <see
-        /// cref="InitEdgeData()"/>, but the other functions are only called
-        /// whenever their respective data needs re-initialization.
-        /// </remarks>
-        protected virtual void InitNodeData()
-        {
-        }
-
-        /// <summary>
-        /// Initialize extra data for each <typeparamref name="Edge"/> instance
-        /// in this algorithm's graph.
-        /// </summary><remarks>
-        /// This is called after <see cref="InitParameters()"/> and <see 
-        /// cref="InitNodeData()"/>, but the other functions are only called
-        /// whenever their respective data needs re-initialization.
-        /// </remarks>
-        protected virtual void InitEdgeData()
-        {
-        }/* */
-
         /// <summary>
         /// Begins an iteration by re-initializing any localized data with
         /// a source which has changed since the last time an iteration began,
@@ -292,18 +254,6 @@ namespace GraphForms.Algorithms.Layout
                 this.mNewXs = new float[nodeCount];
                 this.mNewYs = new float[nodeCount];
             }
-            /*if (this.mParamsDirty)
-            {
-                this.InitParameters();
-            }
-            if (nodeCount != this.mLastNodeCount)
-            {
-                this.InitNodeData();
-            }
-            if (this.mGraph.EdgeCount != this.mLastEdgeCount)
-            {
-                this.InitEdgeData();
-            }/* */
             if (!this.OnBeginIteration(this.mParamsDirty,
                 this.mLastNodeCount, this.mLastEdgeCount))
             {
@@ -364,7 +314,6 @@ namespace GraphForms.Algorithms.Layout
                 {
                     this.Abort();
                 }
-
             }
             DirectionalGraph<Node, Edge>.GraphNode[] nodes 
                 = this.mGraph.InternalNodes;
@@ -415,24 +364,6 @@ namespace GraphForms.Algorithms.Layout
             }
             if (nodeMoved)
             {
-                // Mark edges attached to nodes that have moved
-                /*bool[] dirtyEdge = new bool[edges.Length];
-                for (i = 0; i < edges.Length; i++)
-                {
-                    /*node = edges[i].SrcNode;
-                    if (node.X != node.NewX || node.Y != node.NewY)
-                    {
-                        dirtyEdge[i] = true;
-                        continue;
-                    }
-                    node = edges[i].DstNode;
-                    if (node.X != node.NewX || node.Y != node.NewY)
-                    {
-                        dirtyEdge[i] = true;
-                        continue;
-                    }
-                    dirtyEdge[i] = false;
-                }/* */
                 // Move nodes to their new positions
                 for (i = 0; i < nodes.Length; i++)
                 {

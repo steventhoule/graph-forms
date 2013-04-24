@@ -38,7 +38,13 @@ namespace GraphForms.Algorithms
             /// The underlying data that this edge represents.
             /// </summary>
             internal Edge mData;
-            
+            /// <summary>
+            /// Marks the state of visitation of this <see cref="GraphEdge"/>
+            /// instance when it is being traversed by a search algorithm or
+            /// some other manner of data processing.
+            /// </summary>
+            public GraphColor Color;
+
             /// <summary>
             /// Initializes a new <see cref="GraphEdge"/> instance with the 
             /// given source and destination <see cref="GraphNode"/> instances
@@ -130,8 +136,14 @@ namespace GraphForms.Algorithms
             /// </summary>
             public int Index;
             /// <summary>
+            /// Marks the state of visitation of this <see cref="GraphNode"/>
+            /// instance when it is being traversed by a search algorithm or
+            /// some other manner of data processing.
+            /// </summary>
+            public GraphColor Color;
+            /// <summary>
             /// Flags whether or not this <see cref="GraphNode"/> has already
-            /// been visited by a breadth-first graph traversal algorithm.
+            /// been visited by a graph traversal algorithm.
             /// </summary>
             public bool Visited;
             /// <summary>
@@ -286,6 +298,103 @@ namespace GraphForms.Algorithms
             }
             #endregion
 
+            #region Undirected Traversal
+            /// <summary>
+            /// A combined array of both <see cref="SrcEdges"/> and
+            /// <see cref="DstEdges"/>, ordered by the given 
+            /// <paramref name="srcFirst"/> flag.
+            /// </summary>
+            /// <param name="srcFirst">Whether <see cref="SrcEdges"/> comes 
+            /// before <see cref="DstEdges"/> in the returned array.</param>
+            /// <returns>A union of the <see cref="SrcEdges"/> and 
+            /// <see cref="DstEdges"/> arrays.</returns>
+            public Edge[] AllEdges(bool srcFirst)
+            {
+                int i;
+                int srcCount = this.mSrcEdges.Count;
+                int dstCount = this.mDstEdges.Count;
+                Edge[] edges = new Edge[srcCount + dstCount];
+                if (srcFirst)
+                {
+                    for (i = 0; i < srcCount; i++)
+                        edges[i] = this.mSrcEdges[i].mData;
+                    for (i = 0; i < dstCount; i++)
+                        edges[i + srcCount] = this.mDstEdges[i].mData;
+                }
+                else
+                {
+                    for (i = 0; i < dstCount; i++)
+                        edges[i] = this.mDstEdges[i].mData;
+                    for (i = 0; i < srcCount; i++)
+                        edges[i + dstCount] = this.mSrcEdges[i].mData;
+                }
+                return edges;
+            }
+
+            /// <summary>
+            /// A combined array of both <see cref="InternalSrcEdges"/> and
+            /// <see cref="InternalDstEdges"/>, ordered by the given
+            /// <paramref name="srcFirst"/> flag.
+            /// </summary>
+            /// <param name="srcFirst">Whether <see cref="InternalSrcEdges"/>
+            /// comes before <see cref="InternalDstEdges"/> in the returned
+            /// array.</param>
+            /// <returns>A union of the <see cref="InternalSrcEdges"/> and 
+            /// <see cref="InternalDstEdges"/> arrays.</returns>
+            public GraphEdge[] AllInternalEdges(bool srcFirst)
+            {
+                GraphEdge[] edges = new GraphEdge[this.mSrcEdges.Count
+                    + this.mDstEdges.Count];
+                if (srcFirst)
+                {
+                    Array.Copy(this.mSrcEdges.ToArray(), 0,
+                        edges, 0, this.mSrcEdges.Count);
+                    Array.Copy(this.mDstEdges.ToArray(), 0,
+                        edges, this.mSrcEdges.Count, this.mDstEdges.Count);
+                }
+                else
+                {
+                    Array.Copy(this.mDstEdges.ToArray(), 0,
+                        edges, 0, this.mDstEdges.Count);
+                    Array.Copy(this.mSrcEdges.ToArray(), 0,
+                        edges, this.mDstEdges.Count, this.mSrcEdges.Count);
+                }
+                return edges;
+            }
+
+            /// <summary>
+            /// A combined array of both <see cref="SrcNodes"/> and
+            /// <see cref="DstNodes"/>, ordered by the given 
+            /// <paramref name="srcFirst"/> flag.
+            /// </summary>
+            /// <param name="srcFirst">Whether <see cref="SrcNodes"/> comes 
+            /// before <see cref="DstNodes"/> in the returned array.</param>
+            /// <returns>A union of the <see cref="SrcNodes"/> and 
+            /// <see cref="DstNodes"/> arrays.</returns>
+            public GraphNode[] AllNodes(bool srcFirst)
+            {
+                int i;
+                int srcCount = this.mSrcEdges.Count;
+                int dstCount = this.mDstEdges.Count;
+                GraphNode[] nodes = new GraphNode[srcCount + dstCount];
+                if (srcFirst)
+                {
+                    for (i = 0; i < srcCount; i++)
+                        nodes[i] = this.mSrcEdges[i].mSrcNode;
+                    for (i = 0; i < dstCount; i++)
+                        nodes[i + srcCount] = this.mDstEdges[i].mDstNode;
+                }
+                else
+                {
+                    for (i = 0; i < dstCount; i++)
+                        nodes[i] = this.mDstEdges[i].mDstNode;
+                    for (i = 0; i < srcCount; i++)
+                        nodes[i + dstCount] = this.mSrcEdges[i].mSrcNode;
+                }
+                return nodes;
+            }
+            #endregion
+
             #endregion
 
             /// <summary>
@@ -357,8 +466,34 @@ namespace GraphForms.Algorithms
             }
         }
 
-        private List<GraphNode> mNodes = new List<GraphNode>();
-        private List<GraphEdge> mEdges = new List<GraphEdge>();
+        private List<GraphNode> mNodes;
+        private List<GraphEdge> mEdges;
+
+        /// <summary>
+        /// Initializes a new <see cref="T:DirectionalGraph`2{Node,Edge}"/>
+        /// instance that is empty and has the default initial capacities
+        /// for its internal node and edge lists.
+        /// </summary>
+        public DirectionalGraph()
+        {
+            this.mNodes = new List<GraphNode>();
+            this.mEdges = new List<GraphEdge>();
+        }
+
+        /// <summary>
+        /// Initializes a new <see cref="T:DirectionalGraph`2{Node,Edge}"/>
+        /// instance that is empty and has the specified initial capacities
+        /// for its internal node and edge lists.
+        /// </summary>
+        /// <param name="nodeCapacity">The number of nodes that the new graph
+        /// can initially store.</param>
+        /// <param name="edgeCapacity">The number of edges that the new graph
+        /// can initially store.</param>
+        public DirectionalGraph(int nodeCapacity, int edgeCapacity)
+        {
+            this.mNodes = new List<GraphNode>(nodeCapacity);
+            this.mEdges = new List<GraphEdge>(edgeCapacity);
+        }
 
         #region Graph Traversal
 
@@ -648,7 +783,7 @@ namespace GraphForms.Algorithms
             for (i = 0; i < count; i++)
             {
                 current = this.mNodes[i];
-                current.Visited = false;
+                current.Color = GraphColor.White;
                 current.Distance = float.MaxValue;
             }
             Queue<GraphNode> queue = new Queue<GraphNode>(count);
@@ -656,7 +791,7 @@ namespace GraphForms.Algorithms
             {
                 current = this.mNodes[index];
                 current.Distance = 0f;
-                current.Visited = false;
+                current.Color = GraphColor.Gray;
                 queue.Enqueue(current);
                 while (queue.Count > 0)
                 {
@@ -667,9 +802,9 @@ namespace GraphForms.Algorithms
                         n = current.mDstEdges[i].mDstNode;
                         distance = current.Distance
                             + current.mDstEdges[i].mData.Weight;
-                        if (!n.Visited)
+                        if (n.Color == GraphColor.White)
                         {
-                            n.Visited = true;
+                            n.Color = GraphColor.Gray;
                             n.Distance = distance;
                             queue.Enqueue(n);
                         }
@@ -684,6 +819,14 @@ namespace GraphForms.Algorithms
                 count = this.mNodes.Count;
                 for (i = 0; i < count; i++)
                     distances[index, i] = this.mNodes[i].Distance;
+            }
+            for (index = 0; index < count; index++)
+            {
+                for (i = 0; i < count; i++)
+                {
+                    if (i != index && distances[index, i] == 0)
+                        distances[index, i] = distances[i, index];
+                }
             }
             return distances;
         }
@@ -776,6 +919,24 @@ namespace GraphForms.Algorithms
         public int NodeCount
         {
             get { return this.mNodes.Count; }
+        }
+
+        /// <summary>
+        /// Gets or sets the total number of nodes this graph's 
+        /// internal node list can hold without resizing.
+        /// </summary><value>
+        /// The number of nodes that this graph can contain 
+        /// before resizing is required.
+        /// </value><exception cref="ArgumentOutOfRangeException">
+        /// <see cref="NodeCapacity"/> is set to a value that is 
+        /// less than <see cref="NodeCount"/>.
+        /// </exception><exception cref="OutOfMemoryException">
+        /// There is not enough memory available on the system.
+        /// </exception>
+        public int NodeCapacity
+        {
+            get { return this.mNodes.Capacity; }
+            set { this.mNodes.Capacity = value; }
         }
 
         /// <summary>
@@ -919,12 +1080,24 @@ namespace GraphForms.Algorithms
             if (nodes == null || nodes.Length == 0)
                 return 0;
             // Don't allow duplicates
+            Node node;
             List<GraphNode> gNodes = new List<GraphNode>(nodes.Length + 1);
-            for (int i = 0; i < nodes.Length; i++)
+            int i, j, index;
+            for (i = 0; i < nodes.Length; i++)
             {
-                if (this.IndexOfNode(nodes[i]) < 0)
+                node = nodes[i];
+                if (this.IndexOfNode(node) < 0)
                 {
-                    gNodes.Add(new GraphNode(this, nodes[i]));
+                    index = -1;
+                    for (j = 0; j < gNodes.Count && index < 0; j++)
+                    {
+                        if (gNodes[j].mData == node)
+                            index = j;
+                    }
+                    if (index < 0)
+                    {
+                        gNodes.Add(new GraphNode(this, nodes[i]));
+                    }
                 }
             }
             this.mNodes.AddRange(gNodes);
@@ -1313,6 +1486,24 @@ namespace GraphForms.Algorithms
         public int EdgeCount
         {
             get { return this.mEdges.Count; }
+        }
+
+        /// <summary>
+        /// Gets or sets the total number of edges this graph's 
+        /// internal edge list can hold without resizing.
+        /// </summary><value>
+        /// The number of edges that this graph can contain 
+        /// before resizing is required.
+        /// </value><exception cref="ArgumentOutOfRangeException">
+        /// <see cref="EdgeCapacity"/> is set to a value that is 
+        /// less than <see cref="EdgeCount"/>.
+        /// </exception><exception cref="OutOfMemoryException">
+        /// There is not enough memory available on the system.
+        /// </exception>
+        public int EdgeCapacity
+        {
+            get { return this.mEdges.Capacity; }
+            set { this.mEdges.Capacity = value; }
         }
 
         /// <summary>

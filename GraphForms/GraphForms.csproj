@@ -80,9 +80,26 @@
     <Service Include="{94E38DFF-614B-4cbd-B67C-F211BB35CE8B}" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Algorithms\ARootedAlgorithm.cs" />
+    <Compile Include="Algorithms\ConnectedComponents\BCCAlgorithm.cs" />
+    <Compile Include="Algorithms\GraphColor.cs" />
     <Compile Include="Algorithms\Layout\ForceDirected\IForceDirectedLayoutAlgorithm.cs" />
     <Compile Include="Algorithms\Layout\ForceDirected\LinLogLayoutAlgorithm.QuadTree.cs" />
     <Compile Include="Algorithms\Layout\ILayoutAlgorithm.cs" />
+    <Compile Include="Algorithms\Layout\LayoutDirection.cs" />
+    <Compile Include="Algorithms\Layout\Tree\BalloonTreeLayoutAlgorithm.cs" />
+    <Compile Include="Algorithms\Layout\Tree\BalloonTreeLayoutParameters.cs" />
+    <Compile Include="Algorithms\Layout\Circular\CircularLayoutAlgorithm.cs" />
+    <Compile Include="Algorithms\Layout\Circular\CircularLayoutParameters.cs" />
+    <Compile Include="Algorithms\Layout\Tree\SimpleTreeLayoutAlgorithm.cs" />
+    <Compile Include="Algorithms\Layout\Tree\SimpleTreeLayoutParameters.cs" />
+    <Compile Include="Algorithms\Search\BreadthFirstSearchAlgorithm.cs" />
+    <Compile Include="Algorithms\Search\DepthFirstSearchAlgorithm.cs" />
+    <Compile Include="Algorithms\Search\AGraphTraversalAlgorithm.cs" />
+    <Compile Include="Algorithms\Search\SearchMethod.cs" />
+    <Compile Include="Algorithms\SpanningTree\BFSpanningTreeAlgorithm.cs" />
+    <Compile Include="Algorithms\SpanningTree\DFSpanningTreeAlgorithm.cs" />
+    <Compile Include="Algorithms\SpanningTree\ISpanningTreeAlgorithm.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

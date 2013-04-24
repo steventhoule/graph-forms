@@ -298,7 +298,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                     dy = this.mYPositions[m] - this.mYPositions[i];
 
                     //distance between the points
-                    d = Math.Sqrt(dx * dx + dy * dy);
+                    d = Math.Max(Math.Sqrt(dx * dx + dy * dy), 0.000001);
                     ddd = d * d * d;
 
                     dxm += k * (1 - l / d) * dx;
@@ -342,7 +342,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                 dy = this.mYPositions[m] - this.mYPositions[i];
 
                 //distances of the two vertex (by positions)
-                d = Math.Sqrt(dx * dx + dy * dy);
+                d = Math.Max(Math.Sqrt(dx * dx + dy * dy), 0.000001);
 #if KKExtraCache
                 factor = this.mSpringConstants[m, i] * (1 - this.mEdgeLengths[m, i] / d);
 #else
