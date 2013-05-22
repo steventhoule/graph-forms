@@ -83,6 +83,8 @@
     <Compile Include="Algorithms\ARootedAlgorithm.cs" />
     <Compile Include="Algorithms\ConnectedComponents\BCCAlgorithm.cs" />
     <Compile Include="Algorithms\GraphColor.cs" />
+    <Compile Include="Algorithms\Layout\Circular\FDSingleCircleLayoutAlgorithm.cs" />
+    <Compile Include="Algorithms\Layout\Circular\FDSingleCircleLayoutParameters.cs" />
     <Compile Include="Algorithms\Layout\ForceDirected\IForceDirectedLayoutAlgorithm.cs" />
     <Compile Include="Algorithms\Layout\ForceDirected\LinLogLayoutAlgorithm.QuadTree.cs" />
     <Compile Include="Algorithms\Layout\ILayoutAlgorithm.cs" />

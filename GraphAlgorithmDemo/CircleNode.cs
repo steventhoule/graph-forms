@@ -63,12 +63,35 @@ namespace GraphAlgorithmDemo
             }
         }
 
-        /*public override bool Contains(PointF point)
+        private SolidBrush mMarkerBrush = new SolidBrush(Color.Transparent);
+
+        public Color MarkerColor
         {
-            float dx = point.X - this.X;
-            float dy = point.Y - this.Y;
-            return Math.Sqrt(dx * dx + dy * dy) <= this.mRadius;
-        }/* */
+            get { return this.mMarkerBrush.Color; }
+            set
+            {
+                if (this.mMarkerBrush.Color != value)
+                {
+                    this.mMarkerBrush.Color = value;
+                    this.Invalidate();
+                }
+            }
+        }
+
+        private Pen mBorderPen = new Pen(Color.Black, 1f);
+
+        public Color BorderColor
+        {
+            get { return this.mBorderPen.Color; }
+            set
+            {
+                if (this.mBorderPen.Color != value)
+                {
+                    this.mBorderPen.Color = value;
+                    this.Invalidate();
+                }
+            }
+        }
 
         public override Region Shape()
         {
@@ -93,8 +116,11 @@ namespace GraphAlgorithmDemo
             e.Graphics.FillEllipse(
                 this.bMouseGrabbed ? sNodeBrushSunken : sNodeBrushRisen, 
                 -mRadius, -mRadius, 2 * mRadius, 2 * mRadius);
-            e.Graphics.DrawEllipse(Pens.Black, -mRadius, -mRadius, 
+            e.Graphics.DrawEllipse(this.mBorderPen, -mRadius, -mRadius, 
                 2 * mRadius, 2 * mRadius);
+
+            e.Graphics.FillEllipse(this.mMarkerBrush,
+                -mRadius / 2, -mRadius / 2, mRadius, mRadius);
         }
 
         private bool bMouseGrabbed = false;

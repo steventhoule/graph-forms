@@ -713,6 +713,30 @@ namespace GraphForms.Algorithms
         }
         #endregion
 
+        /// <summary>
+        /// Retrieves all <typeparamref name="Edge"/> instances that have
+        /// <paramref name="node"/> as either their <see 
+        /// cref="P:IGraphEdge`1{Node}.DstNode"/> or their <see 
+        /// cref="P:IGraphEdge`1{Node}.SrcNode"/>.</summary>
+        /// <param name="node">A <typeparamref name="Node"/> instance to 
+        /// retrieve all source and destination edges of.</param>
+        /// <param name="srcFirst">Whether the <typeparamref name="Edge"/>
+        /// instances that have <paramref name="node"/> as their <see 
+        /// cref="P:IGraphEdge`1{Node}.DstNode"/> come before instances that
+        /// have it as their <see cref="P:IGraphEdge`1{Node}.SrcNode"/> in the
+        /// returned array.</param>
+        /// <returns>An array of all <typeparamref name="Edge"/> instances
+        /// that have <paramref name="node"/> as their source or destination,  
+        /// or null if <paramref name="node"/> isn't contained in this
+        /// <see cref="T:DirectionalGraph`2{Node,Edge}"/>.</returns>
+        public Edge[] GetAllEdges(Node node, bool srcFirst)
+        {
+            int index = this.IndexOfNode(node);
+            if (index < 0)
+                return null;
+            return this.mNodes[index].AllEdges(srcFirst);
+        }
+
         #endregion
 
         #region Theoretical Distances
@@ -998,6 +1022,25 @@ namespace GraphForms.Algorithms
         public GraphNode InternalNodeAt(int nodeIndex)
         {
             return this.mNodes[nodeIndex];
+        }
+
+        /// <summary>
+        /// A convenience function that retrieves the <see cref="GraphNode"/>
+        /// instance that corresponds to and contains the given
+        /// <paramref name="node"/>.  If <paramref name="node"/> is not in
+        /// this graph, null is returned.
+        /// </summary>
+        /// <param name="node">The <typeparamref name="Node"/> instance to
+        /// find the corresponding <see cref="GraphNode"/> instance.</param>
+        /// <returns>The <see cref="GraphNode"/> instance corresponding to
+        /// <paramref name="node"/>, or null if <paramref name="node"/> is not
+        /// in this graph.</returns>
+        public GraphNode InternalNodeFor(Node node)
+        {
+            int index = this.IndexOfNode(node);
+            if (index < 0)
+                return null;
+            return this.mNodes[index];
         }
         #endregion
 

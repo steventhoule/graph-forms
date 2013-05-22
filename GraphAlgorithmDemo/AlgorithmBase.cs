@@ -2,6 +2,7 @@
 using GraphForms;
 using GraphForms.Algorithms;
 using GraphForms.Algorithms.Layout.ForceDirected;
+using GraphForms.Algorithms.Layout.Circular;
 
 namespace GraphAlgorithmDemo
 {
@@ -187,6 +188,36 @@ namespace GraphAlgorithmDemo
         public override string ToString()
         {
             return "Lin-Log";
+        }
+    }
+
+    public class FDSingleCircleLayoutForCircles
+        : FDSingleCircleLayoutAlgorithm<CircleNode, ArrowEdge>
+    {
+        private CircleNodeScene mScene;
+
+        public FDSingleCircleLayoutForCircles(CircleNodeScene scene)
+            : base(scene.Graph, null)
+        {
+            this.mScene = scene;
+        }
+
+        protected override bool OnIterationEnded(int iteration, double statusInPercent, 
+            double distanceChange, double maxDistanceChange, string message)
+        {
+            bool keep = false;
+            if (base.OnIterationEnded(iteration, statusInPercent, 
+                distanceChange, maxDistanceChange, message))
+            {
+                keep = this.mScene.OnLayoutIterEnded(iteration, statusInPercent, 
+                    distanceChange, maxDistanceChange, message);
+            }
+            return keep;
+        }
+
+        public override string ToString()
+        {
+            return "Single Circle";
         }
     }
 }

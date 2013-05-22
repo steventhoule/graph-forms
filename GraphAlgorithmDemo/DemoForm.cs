@@ -33,7 +33,8 @@ namespace GraphAlgorithmDemo
                 new FRBoundedLayoutForCircles(this.mScene),
                 new ISOMLayoutForCircles(this.mScene),
                 new KKLayoutForCircles(this.mScene),
-                new LinLogLayoutForCircles(this.mScene)
+                new LinLogLayoutForCircles(this.mScene),
+                new FDSingleCircleLayoutForCircles(this.mScene)
             };
             this.layoutAlgCMB.Items.AddRange(this.mLayouts);
             this.mPrevLayoutIndex = this.layoutAlgCMB.SelectedIndex;
@@ -49,6 +50,7 @@ namespace GraphAlgorithmDemo
 
             //this.GenerateRandomGraph();
             this.GenerateGraph1();
+            //this.GenerateWagonWheelGraph(15);
             this.mScene.Layout.ShuffleNodePositions();
 
             this.mScene.NodeMoved += new Action<CircleNode>(sceneNodeMoved);
@@ -153,6 +155,27 @@ namespace GraphAlgorithmDemo
             ArrowEdge e31 = new ArrowEdge(n13, n10, this.mScene);
 
             ArrowEdge e32 = new ArrowEdge(n14, n11, this.mScene);/* */
+        }
+
+        private void GenerateWagonWheelGraph(int spokeCount)
+        {
+            ArrowEdge edge;
+            CircleNode center = new CircleNode(this.mScene);
+            CircleNode first = new CircleNode(this.mScene);
+            edge = new ArrowEdge(first, center, this.mScene);
+            //edge = new ArrowEdge(center, first, this.mScene);
+            CircleNode curr, prev = first;
+            for (int i = 1; i < spokeCount; i++)
+            {
+                curr = new CircleNode(this.mScene);
+                edge = new ArrowEdge(prev, curr, this.mScene);
+                //edge = new ArrowEdge(curr, prev, this.mScene);
+                edge = new ArrowEdge(curr, center, this.mScene);
+                //edge = new ArrowEdge(center, curr, this.mScene);
+                prev = curr;
+            }
+            edge = new ArrowEdge(prev, first, this.mScene);
+            //edge = new ArrowEdge(first, prev, this.mScene);
         }
 
         private void DemoForm_Load(object sender, EventArgs e)

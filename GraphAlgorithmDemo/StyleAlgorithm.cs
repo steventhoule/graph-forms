@@ -29,7 +29,7 @@ namespace GraphAlgorithmDemo
             Color.Yellow, Color.Magenta, Color.Cyan
         };
 
-        private BCCAlgorithm2<CircleNode, ArrowEdge> mAlg;
+        private BCCAlgorithm<CircleNode, ArrowEdge> mAlg;
 
         public BCCStyleAlgorithm(CircleNodeScene scene)
             : base(scene)
@@ -38,7 +38,7 @@ namespace GraphAlgorithmDemo
 
         public override void Compute()
         {
-            this.mAlg = new BCCAlgorithm2<CircleNode, ArrowEdge>(
+            this.mAlg = new BCCAlgorithm<CircleNode, ArrowEdge>(
                 this.mScene.Graph);
             this.mAlg.Compute();
             ArrowEdge[] comp;
@@ -50,6 +50,21 @@ namespace GraphAlgorithmDemo
                 for (j = 0; j < comp.Length; j++)
                 {
                     comp[j].LineColor = sLineColors[i % sC];
+                }
+            }
+            CircleNode[] nodes = this.mAlg.ArticulationNodes;
+            for (i = 0; i < nodes.Length; i++)
+            {
+                nodes[i].MarkerColor = sLineColors[0];
+            }
+            this.mAlg.ArticulateToLargerCompactGroups();
+            CircleNode[][] cGrps = this.mAlg.CompactGroups;
+            for (i = 0; i < cGrps.Length; i++)
+            {
+                nodes = cGrps[i];
+                for (j = 0; j < nodes.Length; j++)
+                {
+                    nodes[j].BorderColor = sLineColors[i % sC];
                 }
             }
         }
@@ -145,6 +160,13 @@ namespace GraphAlgorithmDemo
             {
                 edges[i].Data.LineColor = Color.Black;
                 edges[i].Data.LineDashStyle = DashStyle.Solid;
+            }
+            DirectionalGraph<CircleNode, ArrowEdge>.GraphNode[] nodes
+                = this.mScene.Graph.InternalNodes;
+            for (int j = 0; j < nodes.Length; j++)
+            {
+                nodes[j].Data.MarkerColor = Color.Transparent;
+                nodes[j].Data.BorderColor = Color.Black;
             }
         }
 

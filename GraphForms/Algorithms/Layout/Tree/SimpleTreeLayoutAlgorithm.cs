@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Text;
 using GraphForms.Algorithms.Search;
+using GraphForms.Algorithms.SpanningTree;
 
 namespace GraphForms.Algorithms.Layout.Tree
 {
@@ -114,113 +115,20 @@ namespace GraphForms.Algorithms.Layout.Tree
             this.AssignPositions();
         }
 
-        private class EdgeCountComparer 
-            : IComparer<DirectionalGraph<Node, Edge>.GraphNode>
-        {
-            public int Compare(DirectionalGraph<Node, Edge>.GraphNode x, 
-                               DirectionalGraph<Node, Edge>.GraphNode y)
-            {
-                int diff = x.SrcEdgeCount - y.SrcEdgeCount;
-                return diff == 0 ? x.DstEdgeCount - y.DstEdgeCount : diff;
-            }
-        }
-        private static EdgeCountComparer sComparer = new EdgeCountComparer();
-
         private void GenerateSpanningTree()
         {
-            DirectionalGraph<Node, Edge>.GraphNode[] nodes 
-                = this.mGraph.InternalNodes;
-            int i;
-            // Initialize the search algorithm variables
-            for (i = 0; i < nodes.Length; i++)
-            {
-                nodes[i].Index = i;
-                nodes[i].Visited = false;
-            }
-            // Sort the copy of mGraph's nodes by number of src edges
-            // This should be sorted so that orphaned nodes are first
-            Array.Sort<DirectionalGraph<Node, Edge>.GraphNode>(
-                nodes, 0, nodes.Length, sComparer);
-            // Increment i until a non-orphan node is found.
-            for (i = 0; i < nodes.Length; i++)
-            {
-                if (nodes[i].DstEdgeCount > 0)
-                    break;
-            }
-            // Initialize and fill the spanning tree with all non-orphan nodes
-            this.mSpanningTree = new DirectionalGraph<Node, Edge>();
-            DirectionalGraph<Node, Edge>.GraphNode node;
-            for (; i < nodes.Length; i++)
-            {
-                this.mSpanningTree.AddNode(nodes[i].Data);
-                node = this.mSpanningTree.InternalNodeAt(i);
-                node.Index = nodes[i].Index;
-                node.Visited = false;
-            }
-            // fill the spanning tree with edges using traversal algorithm
+            ISpanningTreeAlgorithm<Node, Edge> alg = null;
             switch (this.mSpanTreeGen)
             {
                 case SearchMethod.BFS:
-                    Queue<DirectionalGraph<Node, Edge>.GraphNode> queue
-                        = new Queue<DirectionalGraph<Node, Edge>.GraphNode>(
-                            nodes.Length + 1);
-                    nodes[i].Visited = true;
-                    queue.Enqueue(nodes[i]);
-                    for (; i < nodes.Length; i++)
-                    {
-                        if (nodes[i].SrcEdgeCount == 0)
-                        {
-                            queue.Enqueue(nodes[i]);
-                            nodes[i].Visited = true;
-                        }
-                    }
-                    this.CreateBFSpanningTree(queue);
+                    alg = new BFSpanningTreeAlgorithm<Node, Edge>(this.mGraph);
                     break;
                 case SearchMethod.DFS:
-                    for (; i < nodes.Length; i++)
-                    {
-                        this.CreateDFSpanningTree(nodes[i]);
-                    }
+                    alg = new DFSpanningTreeAlgorithm<Node, Edge>(this.mGraph);
                     break;
             }
-        }
-
-        private void CreateBFSpanningTree(Queue<DirectionalGraph<Node, Edge>.GraphNode> queue)
-        {
-            DirectionalGraph<Node, Edge>.GraphNode current, n;
-            DirectionalGraph<Node, Edge>.GraphEdge[] edges;
-            int i;
-            while (queue.Count > 0)
-            {
-                current = queue.Dequeue();
-                edges = current.InternalDstEdges;
-                for (i = 0; i < edges.Length; i++)
-                {
-                    n = edges[i].DstNode;
-                    if (!n.Visited)
-                    {
-                        this.mSpanningTree.AddEdge(edges[i].Data);
-                        n.Visited = true;
-                        queue.Enqueue(n);
-                    }
-                }
-            }
-        }
-
-        private void CreateDFSpanningTree(DirectionalGraph<Node, Edge>.GraphNode root)
-        {
-            root.Visited = true;
-            DirectionalGraph<Node, Edge>.GraphNode n;
-            DirectionalGraph<Node, Edge>.GraphEdge[] edges = root.InternalDstEdges;
-            for (int i = 0; i < edges.Length; i++)
-            {
-                n = edges[i].DstNode;
-                if (!n.Visited)
-                {
-                    this.mSpanningTree.AddEdge(edges[i].Data);
-                    this.CreateDFSpanningTree(n);
-                }
-            }
+            alg.Compute();
+            this.mSpanningTree = alg.SpanningTree;
         }
 
         private double CalculatePosition(DirectionalGraph<Node, Edge>.GraphNode n,
