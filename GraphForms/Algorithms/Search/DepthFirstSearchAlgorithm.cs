@@ -13,13 +13,13 @@ namespace GraphForms.Algorithms.Search
         private int mMaxDepth = int.MaxValue;
 
         public DepthFirstSearchAlgorithm(DirectionalGraph<Node, Edge> graph)
-            : base(graph)
+            : base(graph, true, false)
         {
         }
 
         public DepthFirstSearchAlgorithm(DirectionalGraph<Node, Edge> graph,
-            bool undirected, bool reversed)
-            : base(graph, undirected, reversed)
+            bool directed, bool reversed)
+            : base(graph, directed, reversed)
         {
         }
 
@@ -56,16 +56,6 @@ namespace GraphForms.Algorithms.Search
             int srcIndex, int dstIndex, bool reversed)
         {
         }
-
-        protected virtual void OnBackEdge(Edge e, 
-            int srcIndex, int dstIndex, bool reversed)
-        {
-        }
-
-        protected virtual void OnForwardOrCrossEdge(Edge e,
-            int srcIndex, int dstIndex, bool reversed)
-        {
-        }
         #endregion
 
         protected override void InternalCompute()
@@ -78,10 +68,9 @@ namespace GraphForms.Algorithms.Search
 
             DirectionalGraph<Node, Edge>.GraphNode node;
 
-            // if there is a starting vertex, start with it
+            // if there is a starting node, start with it
             if (this.HasRoot)
             {
-                // equeue select root only
                 int index = this.mGraph.IndexOfNode(this.TryGetRoot());
                 if (index >= 0)
                 {
@@ -215,11 +204,13 @@ namespace GraphForms.Algorithms.Search
                             this.OnDiscoverNode(u.mData, u.Index);
                             break;
                         case GraphColor.Gray:
-                            this.OnBackEdge(e.mData, e.mSrcNode.Index,
+                            // OnBackEdge
+                            this.OnGrayEdge(e.mData, e.mSrcNode.Index,
                                 e.mDstNode.Index, rev);
                             break;
                         case GraphColor.Black:
-                            this.OnForwardOrCrossEdge(e.mData, e.mSrcNode.Index,
+                            // OnForwardOrCrossEdge
+                            this.OnBlackEdge(e.mData, e.mSrcNode.Index,
                                 e.mDstNode.Index, rev);
                             break;
                     }
@@ -275,11 +266,13 @@ namespace GraphForms.Algorithms.Search
                             e.mDstNode.Index, reversed);
                         break;
                     case GraphColor.Gray:
-                        this.OnBackEdge(e.mData, e.mSrcNode.Index, 
+                        // OnBackEdge
+                        this.OnGrayEdge(e.mData, e.mSrcNode.Index, 
                             e.mDstNode.Index, reversed);
                         break;
                     case GraphColor.Black:
-                        this.OnForwardOrCrossEdge(e.mData, e.mSrcNode.Index, 
+                        // OnForwardOrCrossEdge
+                        this.OnBlackEdge(e.mData, e.mSrcNode.Index, 
                             e.mDstNode.Index, reversed);
                         break;
                 }

@@ -22,8 +22,8 @@ namespace GraphForms.Algorithms.SpanningTree
         }
 
         public BFSpanningTreeAlgorithm(DirectionalGraph<Node, Edge> graph,
-            bool undirected, bool reversed)
-            : base(graph, undirected, reversed)
+            bool directed, bool reversed)
+            : base(graph, directed, reversed)
         {
             this.mSpanningTree = new DirectionalGraph<Node, Edge>(
                 graph.NodeCount, graph.EdgeCount / 2);

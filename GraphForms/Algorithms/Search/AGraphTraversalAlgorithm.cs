@@ -24,18 +24,18 @@ namespace GraphForms.Algorithms.Search
         /// </summary>
         protected readonly bool bReversed;
 
-        public AGraphTraversalAlgorithm(DirectionalGraph<Node, Edge> graph)
+        /*public AGraphTraversalAlgorithm(DirectionalGraph<Node, Edge> graph)
         {
             this.mGraph = graph;
-            this.bUndirected = false;
+            this.bDirected = true;
             this.bReversed = false;
-        }
+        }/* */
 
         public AGraphTraversalAlgorithm(DirectionalGraph<Node, Edge> graph,
-            bool undirected, bool reversed)
+            bool directed, bool reversed)
         {
             this.mGraph = graph;
-            this.bUndirected = undirected;
+            this.bUndirected = !directed;
             this.bReversed = reversed;
         }
 
@@ -49,14 +49,14 @@ namespace GraphForms.Algorithms.Search
         }
 
         /// <summary>
-        /// If true, the graph is traversed from both the source edges and
+        /// If false, the graph is traversed from both the source edges and
         /// destination edges of each node instead of just one or the other,
         /// but <see cref="Reversed"/> still determines which edge list is
         /// traversed first on each node.
         /// </summary>
-        public bool Undirected
+        public bool Directed
         {
-            get { return this.bUndirected; }
+            get { return !this.bUndirected; }
         }
 
         #region Events
@@ -84,6 +84,18 @@ namespace GraphForms.Algorithms.Search
         protected virtual void OnTreeEdge(Edge e, 
             int srcIndex, int dstIndex, bool reversed)
         {
+        }
+
+        protected virtual void OnGrayEdge(Edge e,
+            int srcIndex, int dstIndex, bool reversed)
+        {
+        }
+
+        protected virtual void OnBlackEdge(Edge e,
+            int srcIndex, int dstIndex, bool reversed)
+        {
+            // TODO (For certain descendant classes):
+            // Is this ever called in an undirected DFS?
         }
         #endregion
 

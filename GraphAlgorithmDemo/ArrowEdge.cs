@@ -70,19 +70,34 @@ namespace GraphAlgorithmDemo
         private PointF mSrcPoint;
         private PointF mDstPoint;
 
+        private string mAName;
+
         public ArrowEdge(CircleNode srcNode, CircleNode dstNode,
             CircleNodeScene scene)
-            : this(srcNode, dstNode, scene, 1, 30)
+            : this(srcNode, dstNode, scene, 1, 30, null)
+        {
+        }
+
+        public ArrowEdge(CircleNode srcNode, CircleNode dstNode,
+            CircleNodeScene scene, float weight)
+            : this(srcNode, dstNode, scene, weight, 30, null)
+        {
+        }
+
+        public ArrowEdge(CircleNode srcNode, CircleNode dstNode,
+            CircleNodeScene scene, float weight, string aName)
+            : this(srcNode, dstNode, scene, weight, 30, aName)
         {
         }
 
         public ArrowEdge(CircleNode srcNode, CircleNode dstNode, 
-            CircleNodeScene scene, float weight, double angle)
+            CircleNodeScene scene, float weight, double angle, string aName)
         {
             this.mSrcNode = srcNode;
             this.mDstNode = dstNode;
             this.mWeight = weight;
             this.mAngle = angle * Math.PI / 180.0;
+            this.mAName = aName;
 
             this.mScene = scene;
             this.mScene.AddItem(this);
@@ -119,13 +134,19 @@ namespace GraphAlgorithmDemo
             }
         }
 
+        public string AName
+        {
+            get { return this.mAName; }
+            set { this.mAName = value; }
+        }
+
         public Edge Copy<Edge>(CircleNode srcNode, CircleNode dstNode) 
             where Edge : class, IGraphEdge<CircleNode>
         {
             if (typeof(ArrowEdge).Equals(typeof(Edge)))
             {
                 ArrowEdge aEdge = new ArrowEdge(srcNode, dstNode, this.mScene, 
-                    this.mWeight, this.mAngle * 180.0 / Math.PI);
+                    this.mWeight, this.mAngle * 180.0 / Math.PI, this.mAName);
                 return aEdge as Edge;
             }
             return null;

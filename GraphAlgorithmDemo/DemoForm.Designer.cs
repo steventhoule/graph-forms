@@ -40,6 +40,8 @@
             this.layoutParamsLBL = new System.Windows.Forms.Label();
             this.layoutParamsGrid = new System.Windows.Forms.PropertyGrid();
             this.styleAlgGRP = new System.Windows.Forms.GroupBox();
+            this.styleAlgReversedCHK = new System.Windows.Forms.CheckBox();
+            this.styleAlgDirectedCHK = new System.Windows.Forms.CheckBox();
             this.styleAlgTestBTN = new System.Windows.Forms.Button();
             this.styleAlgCMB = new System.Windows.Forms.ComboBox();
             this.layoutGRP.SuspendLayout();
@@ -179,33 +181,60 @@
             // 
             // styleAlgGRP
             // 
+            this.styleAlgGRP.Controls.Add(this.styleAlgReversedCHK);
+            this.styleAlgGRP.Controls.Add(this.styleAlgDirectedCHK);
             this.styleAlgGRP.Controls.Add(this.styleAlgTestBTN);
             this.styleAlgGRP.Controls.Add(this.styleAlgCMB);
             this.styleAlgGRP.Location = new System.Drawing.Point(13, 62);
             this.styleAlgGRP.Name = "styleAlgGRP";
-            this.styleAlgGRP.Size = new System.Drawing.Size(218, 49);
+            this.styleAlgGRP.Size = new System.Drawing.Size(390, 49);
             this.styleAlgGRP.TabIndex = 5;
             this.styleAlgGRP.TabStop = false;
             this.styleAlgGRP.Text = "Style Algorithm";
             // 
+            // styleAlgReversedCHK
+            // 
+            this.styleAlgReversedCHK.AutoSize = true;
+            this.styleAlgReversedCHK.Enabled = false;
+            this.styleAlgReversedCHK.Location = new System.Drawing.Point(266, 21);
+            this.styleAlgReversedCHK.Name = "styleAlgReversedCHK";
+            this.styleAlgReversedCHK.Size = new System.Drawing.Size(72, 17);
+            this.styleAlgReversedCHK.TabIndex = 3;
+            this.styleAlgReversedCHK.Text = "Reversed";
+            this.styleAlgReversedCHK.UseVisualStyleBackColor = true;
+            this.styleAlgReversedCHK.CheckedChanged += new System.EventHandler(this.styleAlgReversedCheckedChanged);
+            // 
+            // styleAlgDirectedCHK
+            // 
+            this.styleAlgDirectedCHK.AutoSize = true;
+            this.styleAlgDirectedCHK.Enabled = false;
+            this.styleAlgDirectedCHK.Location = new System.Drawing.Point(194, 21);
+            this.styleAlgDirectedCHK.Name = "styleAlgDirectedCHK";
+            this.styleAlgDirectedCHK.Size = new System.Drawing.Size(66, 17);
+            this.styleAlgDirectedCHK.TabIndex = 2;
+            this.styleAlgDirectedCHK.Text = "Directed";
+            this.styleAlgDirectedCHK.UseVisualStyleBackColor = true;
+            this.styleAlgDirectedCHK.CheckedChanged += new System.EventHandler(this.styleAlgUndirectedCheckedChanged);
+            // 
             // styleAlgTestBTN
             // 
             this.styleAlgTestBTN.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.styleAlgTestBTN.Location = new System.Drawing.Point(170, 17);
+            this.styleAlgTestBTN.Location = new System.Drawing.Point(342, 17);
             this.styleAlgTestBTN.Name = "styleAlgTestBTN";
             this.styleAlgTestBTN.Size = new System.Drawing.Size(37, 23);
             this.styleAlgTestBTN.TabIndex = 1;
             this.styleAlgTestBTN.Text = "Test";
             this.styleAlgTestBTN.UseVisualStyleBackColor = true;
-            this.styleAlgTestBTN.Click += new System.EventHandler(this.colorAlgTestClick);
+            this.styleAlgTestBTN.Click += new System.EventHandler(this.styleAlgTestClick);
             // 
             // styleAlgCMB
             // 
             this.styleAlgCMB.FormattingEnabled = true;
             this.styleAlgCMB.Location = new System.Drawing.Point(6, 19);
             this.styleAlgCMB.Name = "styleAlgCMB";
-            this.styleAlgCMB.Size = new System.Drawing.Size(157, 21);
+            this.styleAlgCMB.Size = new System.Drawing.Size(182, 21);
             this.styleAlgCMB.TabIndex = 0;
+            this.styleAlgCMB.SelectedValueChanged += new System.EventHandler(this.styleAlgSelectedValueChanged);
             // 
             // DemoForm
             // 
@@ -225,6 +254,7 @@
             this.splitContainer1.Panel2.PerformLayout();
             this.splitContainer1.ResumeLayout(false);
             this.styleAlgGRP.ResumeLayout(false);
+            this.styleAlgGRP.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -245,6 +275,8 @@
         private System.Windows.Forms.GroupBox styleAlgGRP;
         private System.Windows.Forms.Button styleAlgTestBTN;
         private System.Windows.Forms.ComboBox styleAlgCMB;
+        private System.Windows.Forms.CheckBox styleAlgDirectedCHK;
+        private System.Windows.Forms.CheckBox styleAlgReversedCHK;
     }
 }
 

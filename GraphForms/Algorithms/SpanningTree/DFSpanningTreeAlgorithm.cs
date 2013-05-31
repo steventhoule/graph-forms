@@ -30,7 +30,6 @@ namespace GraphForms.Algorithms.SpanningTree
             //this.mSpanningTree.AddNodeRange(graph.Nodes);
         }
 
-
         public DirectionalGraph<Node, Edge> SpanningTree
         {
             get { return this.mSpanningTree; }

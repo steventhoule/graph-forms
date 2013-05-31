@@ -12,15 +12,15 @@ namespace GraphForms.Algorithms.Search
         private Queue<DirectionalGraph<Node, Edge>.GraphNode> mNodeQueue;
 
         public BreadthFirstSearchAlgorithm(DirectionalGraph<Node, Edge> graph)
-            : base(graph)
+            : base(graph, true, false)
         {
             this.mNodeQueue = new Queue<DirectionalGraph<Node, 
                 Edge>.GraphNode>(graph.NodeCount + 1);
         }
 
         public BreadthFirstSearchAlgorithm(DirectionalGraph<Node, Edge> graph,
-            bool undirected, bool reversed)
-            : base(graph, undirected, reversed)
+            bool directed, bool reversed)
+            : base(graph, directed, reversed)
         {
             this.mNodeQueue = new Queue<DirectionalGraph<Node, 
                 Edge>.GraphNode>(graph.NodeCount + 1);
@@ -30,21 +30,6 @@ namespace GraphForms.Algorithms.Search
         protected virtual void OnExamineNode(Node n, int index)
         {
         }
-
-        protected virtual void OnNonTreeEdge(Edge e, 
-            int srcIndex, int dstIndex, bool reversed)
-        {
-        }
-
-        protected virtual void OnGrayTarget(Edge e, 
-            int srcIndex, int dstIndex, bool reversed)
-        {
-        }
-
-        protected virtual void OnBlackTarget(Edge e, 
-            int srcIndex, int dstIndex, bool reversed)
-        {
-        }
         #endregion
 
         protected override void InternalCompute()
@@ -52,37 +37,44 @@ namespace GraphForms.Algorithms.Search
             if (this.mGraph.NodeCount == 0 || this.mGraph.EdgeCount == 0)
                 return;
 
+            // put all nodes to white
             this.Initialize();
 
-            bool hasRoot = this.HasRoot;
-            if (hasRoot)
+            DirectionalGraph<Node, Edge>.GraphNode node;
+
+            // if there is a starting node, start with it
+            if (this.HasRoot)
             {
-                // equeue select root only
                 int index = this.mGraph.IndexOfNode(this.TryGetRoot());
-                hasRoot = index >= 0;
-                if (hasRoot)
-                    this.Visit(this.mGraph.InternalNodeAt(index));
-            }
-            if (!hasRoot)
-            {
-                DirectionalGraph<Node, Edge>.GraphNode node;
-                DirectionalGraph<Node, Edge>.GraphNode[] nodes
-                    = this.mGraph.InternalNodes;
-                for (int i = 0; i < nodes.Length; i++)
+                if (index >= 0)
                 {
-                    node = nodes[i];
-                    if (node.SrcEdgeCount == 0 && node.DstEdgeCount > 0)
-                        this.EnqueueRoot(node);
+                    node = this.mGraph.InternalNodeAt(index);
+                    this.EnqueueRoot(node);
+                    this.FlushVisitQueue();
                 }
-                this.FlushVisitQueue();
+            }
+
+            // process each node
+            DirectionalGraph<Node, Edge>.GraphNode[] nodes
+                = this.mGraph.InternalNodes;
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                if (this.State == ComputeState.Aborting)
+                    return;
+                node = nodes[i];
+                if (node.Color == GraphColor.White)
+                {
+                    this.EnqueueRoot(node);
+                    this.FlushVisitQueue();
+                }
             }
         }
 
-        public void Visit(DirectionalGraph<Node, Edge>.GraphNode s)
+        /*public void Visit(DirectionalGraph<Node, Edge>.GraphNode s)
         {
             this.EnqueueRoot(s);
             this.FlushVisitQueue();
-        }
+        }/* */
 
         private void EnqueueRoot(DirectionalGraph<Node, Edge>.GraphNode s)
         {
@@ -124,28 +116,27 @@ namespace GraphForms.Algorithms.Search
                     this.OnExamineEdge(edge.mData, edge.mSrcNode.Index, 
                         edge.mDstNode.Index, reversed);
 
-                    if (v.Color == GraphColor.White)
+                    switch (v.Color)
                     {
-                        this.OnTreeEdge(edge.mData, edge.mSrcNode.Index,
-                            edge.mDstNode.Index, reversed);
-                        v.Color = GraphColor.Gray;
-                        this.OnDiscoverNode(v.mData, v.Index);
-                        this.mNodeQueue.Enqueue(v);
-                    }
-                    else
-                    {
-                        this.OnNonTreeEdge(edge.mData, edge.mSrcNode.Index,
-                            edge.mDstNode.Index, reversed);
-                        if (v.Color == GraphColor.Gray)
-                        {
-                            this.OnGrayTarget(edge.Data, edge.mSrcNode.Index,
+                        case GraphColor.White:
+                            this.OnTreeEdge(edge.mData, edge.mSrcNode.Index,
                                 edge.mDstNode.Index, reversed);
-                        }
-                        else
-                        {
-                            this.OnBlackTarget(edge.Data, edge.mSrcNode.Index,
+                            v.Color = GraphColor.Gray;
+                            this.OnDiscoverNode(v.mData, v.Index);
+                            this.mNodeQueue.Enqueue(v);
+                            break;
+                        case GraphColor.Gray:
+                            // OnNonTreeEdge
+                            // OnBackEdge
+                            this.OnGrayEdge(edge.mData, edge.mSrcNode.Index,
                                 edge.mDstNode.Index, reversed);
-                        }
+                            break;
+                        case GraphColor.Black:
+                            // OnNonTreeEdge
+                            // OnForwardOrCrossEdge
+                            this.OnBlackEdge(edge.mData, edge.mSrcNode.Index,
+                                edge.mDstNode.Index, reversed);
+                            break;
                     }
                 }
                 u.Color = GraphColor.Black;

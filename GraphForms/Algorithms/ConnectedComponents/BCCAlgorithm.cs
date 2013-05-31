@@ -37,16 +37,22 @@ namespace GraphForms.Algorithms.ConnectedComponents
 
         private List<Node> mArtNodes;
         private List<Edge[]> mComponents;
-        private List<List<Node>> mCompGroups;
+        private List<Node[]> mCompGroups;
 
         public BCCAlgorithm(DirectionalGraph<Node, Edge> graph)
-            : base(graph, true, false)
+            : this(graph, false)
+        {
+        }
+
+        public BCCAlgorithm(DirectionalGraph<Node, Edge> graph,
+            bool reversed)
+            : base(graph, false, reversed)
         {
             this.mNodeStack = new Stack<NodeData>(graph.NodeCount + 1);
             this.mEdgeStack = new Stack<Edge>(graph.EdgeCount + 1);
             this.mArtNodes = new List<Node>();
             this.mComponents = new List<Edge[]>();
-            this.mCompGroups = new List<List<Node>>();
+            this.mCompGroups = new List<Node[]>();
         }
 
         public Edge[][] Components
@@ -63,12 +69,13 @@ namespace GraphForms.Algorithms.ConnectedComponents
         {
             get
             {
-                Node[][] compGroups = new Node[this.mCompGroups.Count][];
+                /*Node[][] compGroups = new Node[this.mCompGroups.Count][];
                 for (int i = 0; i < this.mCompGroups.Count; i++)
                 {
                     compGroups[i] = this.mCompGroups[i].ToArray();
                 }
-                return compGroups;
+                return compGroups;/* */
+                return this.mCompGroups.ToArray();
             }
         }
 
@@ -81,28 +88,43 @@ namespace GraphForms.Algorithms.ConnectedComponents
                 case ComputeState.Aborting:
                     throw new InvalidOperationException();
             }
-            int j, k, size;
+            int j, index, size;
             for (int i = 0; i < this.mDatas.Length; i++)
             {
                 if (this.mDatas[i].GIDs != null)
                 {
                     List<int> gids = this.mDatas[i].GIDs;
-                    k = 0;
-                    size = this.mCompGroups[gids[0]].Count;
+                    index = 0;
+                    size = this.mCompGroups[gids[0]].Length;
                     for (j = 1; j < gids.Count; j++)
                     {
-                        if (this.mCompGroups[gids[j]].Count > size)
+                        if (this.mCompGroups[gids[j]].Length > size)
                         {
-                            size = this.mCompGroups[gids[j]].Count;
-                            k = j;
+                            size = this.mCompGroups[gids[j]].Length;
+                            index = j;
                         }
                     }
-                    if (k != 0)
+                    if (index != 0)
                     {
                         size = this.mDatas[i].GroupID;
-                        this.mCompGroups[size].Remove(this.mDatas[i].Data);
-                        size = this.mDatas[i].GIDs[k];
-                        this.mCompGroups[size].Add(this.mDatas[i].Data);
+                        //this.mCompGroups[size].Remove(this.mDatas[i].Data);
+                        int len = this.mCompGroups[size].Length;
+                        j = Array.IndexOf<Node>(this.mCompGroups[size], 
+                            this.mDatas[i].Data, 0, len);
+                        Node[] nodes = new Node[len - 1];
+                        Array.Copy(this.mCompGroups[size], 0, nodes, 0, j);
+                        Array.Copy(this.mCompGroups[size], j + 1, nodes, j, 
+                            len - j - 1);
+                        this.mCompGroups[size] = nodes;
+
+                        size = this.mDatas[i].GIDs[index];
+                        //this.mCompGroups[size].Add(this.mDatas[i].Data);
+                        len = this.mCompGroups[size].Length;
+                        nodes = new Node[len + 1];
+                        Array.Copy(this.mCompGroups[size], 0, nodes, 0, len);
+                        nodes[len] = this.mDatas[i].Data;
+                        this.mCompGroups[size] = nodes;
+
                         this.mDatas[i].GroupID = size;
                     }
                 }
@@ -123,9 +145,8 @@ namespace GraphForms.Algorithms.ConnectedComponents
                 for (i = 0; i < this.mDatas.Length; i++)
                 {
                     if (this.mDatas[i].IsCut)
-                    //if (this.mDatas[i].GIDs != null)
                     {
-                        grps[count].Add(mDatas[i].Data);
+                        grps[count].Add(this.mDatas[i].Data);
                         count++;
                     }
                     else
@@ -140,34 +161,6 @@ namespace GraphForms.Algorithms.ConnectedComponents
                     isoGroups[i] = grps[i].ToArray();
                 }
                 return isoGroups;
-                /*List<Node[]> isoGroups = new List<Node[]>(
-                    this.mArtNodes.Count + this.mComponents.Count + 1);
-                int i, j;
-                for (i = 0; i < this.mArtNodes.Count; i++)
-                {
-                    isoGroups.Add(new Node[] { this.mArtNodes[i] });
-                }
-                List<Node> nodes;
-                Edge[] edges;
-                Node node;
-                for (i = 0; i < this.mComponents.Count; i++)
-                {
-                    nodes = new List<Node>();
-                    edges = this.mComponents[i];
-                    for (j = 0; j < edges.Length; j++)
-                    {
-                        node = edges[j].SrcNode;
-                        if (!this.mArtNodes.Contains(node) && 
-                            !nodes.Contains(node))
-                            nodes.Add(node);
-                        node = edges[j].DstNode;
-                        if (!this.mArtNodes.Contains(node) &&
-                            !nodes.Contains(node))
-                            nodes.Add(node);
-                    }
-                    isoGroups.Add(nodes.ToArray());
-                }
-                return isoGroups.ToArray();/* */
             }
         }
 
@@ -229,9 +222,6 @@ namespace GraphForms.Algorithms.ConnectedComponents
             base.OnFinishEdge(e, srcIndex, dstIndex, reversed);
         }
 
-        // TODO: For compact groups, figure out a way to get larger groups
-        // to take articulation nodes from smaller adjacent groups.
-        // Will this make the graph tidier in the circular balloon layout?
         private void OnComponent(Edge edge, int fromNodeIndex)
         {
             List<Node> cGrp = new List<Node>(this.mNodeStack.Count + 1);
@@ -248,11 +238,10 @@ namespace GraphForms.Algorithms.ConnectedComponents
                     cGrp.Add(data.Data);
                     data.GroupID = this.mCompGroups.Count;
                 }
-                else
+                else if (data.GroupID != this.mCompGroups.Count)
                 {
                     if (data.GIDs == null)
                     {
-                        //this.mArtNodes.Add(data.Data);
                         data.GIDs = new List<int>();
                         data.GIDs.Add(data.GroupID);
                     }
@@ -274,8 +263,8 @@ namespace GraphForms.Algorithms.ConnectedComponents
             else
             {
                 this.OnArticulationNode(fromNodeIndex);
-            }/* */
-            this.mCompGroups.Add(cGrp);
+            }
+            this.mCompGroups.Add(cGrp.ToArray());
         }
 
         private void OnArticulationNode(int index)
@@ -286,15 +275,9 @@ namespace GraphForms.Algorithms.ConnectedComponents
                 Node node = this.mGraph.NodeAt(index);
                 this.mArtNodes.Add(node);
             }
-        }/* */
-
-        protected override void OnFinishNode(Node n, int index)
-        {
-            
-            base.OnFinishNode(n, index);
         }
 
-        protected override void OnBackEdge(Edge e, 
+        protected override void OnGrayEdge(Edge e, 
             int srcIndex, int dstIndex, bool reversed)
         {
             this.mEdgeStack.Push(e);
@@ -311,10 +294,10 @@ namespace GraphForms.Algorithms.ConnectedComponents
                 vData = this.mDatas[dstIndex];
             }
             uData.LowPoint = Math.Min(uData.LowPoint, vData.Depth);
-            base.OnBackEdge(e, srcIndex, dstIndex, reversed);
+            base.OnGrayEdge(e, srcIndex, dstIndex, reversed);
         }
 
-        protected override void OnForwardOrCrossEdge(Edge e, 
+        protected override void OnBlackEdge(Edge e, 
             int srcIndex, int dstIndex, bool reversed)
         {
             this.mEdgeStack.Push(e);
@@ -331,7 +314,7 @@ namespace GraphForms.Algorithms.ConnectedComponents
                 vData = this.mDatas[dstIndex];
             }
             uData.LowPoint = Math.Min(uData.LowPoint, vData.Depth);
-            base.OnForwardOrCrossEdge(e, srcIndex, dstIndex, reversed);
+            base.OnBlackEdge(e, srcIndex, dstIndex, reversed);
         }
     }
 }

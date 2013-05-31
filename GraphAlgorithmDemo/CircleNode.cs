@@ -23,13 +23,19 @@ namespace GraphAlgorithmDemo
         private DirectionalGraph<CircleNode, ArrowEdge>.GraphNode mGraphNode;
 
         private float mRadius;
+        private string mAName;
 
         public CircleNode(CircleNodeScene scene)
-            : this(scene, 15)
+            : this(scene, 15, null)
         {
         }
 
-        public CircleNode(CircleNodeScene scene, float radius)
+        public CircleNode(CircleNodeScene scene, string aName)
+            : this(scene, 15, aName)
+        {
+        }
+
+        public CircleNode(CircleNodeScene scene, float radius, string aName)
         {
             this.mScene = scene;
 
@@ -46,6 +52,10 @@ namespace GraphAlgorithmDemo
             this.Zvalue = -1;
 
             this.mScene.AddItem(this);
+
+            this.mAName = aName;
+
+            this.InitializeTextStuff();
         }
 
         public float Radius
@@ -63,6 +73,12 @@ namespace GraphAlgorithmDemo
             }
         }
 
+        public string AName
+        {
+            get { return this.mAName; }
+            set { this.mAName = value; }
+        }
+
         private SolidBrush mMarkerBrush = new SolidBrush(Color.Transparent);
 
         public Color MarkerColor
@@ -78,7 +94,7 @@ namespace GraphAlgorithmDemo
             }
         }
 
-        private Pen mBorderPen = new Pen(Color.Black, 1f);
+        private Pen mBorderPen = new Pen(Color.Black, 2f);
 
         public Color BorderColor
         {
@@ -88,6 +104,33 @@ namespace GraphAlgorithmDemo
                 if (this.mBorderPen.Color != value)
                 {
                     this.mBorderPen.Color = value;
+                    this.Invalidate();
+                }
+            }
+        }
+
+        private SolidBrush mTextBrush;
+        private Font mTextFont;
+        private StringFormat mTextFormat;
+        private string mTextString;
+
+        private void InitializeTextStuff()
+        {
+            this.mTextBrush = new SolidBrush(Color.Black);
+            this.mTextFont = new Font(FontFamily.GenericSansSerif, 5f);
+            this.mTextFormat = new StringFormat();
+            this.mTextFormat.Alignment = StringAlignment.Center;
+            this.mTextString = null;
+        }
+
+        public string TextString
+        {
+            get { return this.mTextString; }
+            set
+            {
+                if (this.mTextString != value)
+                {
+                    this.mTextString = value;
                     this.Invalidate();
                 }
             }
@@ -106,21 +149,40 @@ namespace GraphAlgorithmDemo
             return GraphHelpers.Length(point) <= this.mRadius;
         }
 
-        protected override void OnDrawBackground(System.Windows.Forms.PaintEventArgs e)
-        {
-            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        private static readonly float sInsetPos
+            = (float)(Math.Sqrt(2.0) / -2.0);
+        private static readonly float sInsetDim
+            = (float)(Math.Sqrt(2.0));
 
-            e.Graphics.FillEllipse(Brushes.DarkGray, -mRadius + 3, -mRadius + 3, 
+        protected override void OnDrawBackground(
+            System.Windows.Forms.PaintEventArgs e)
+        {
+            Graphics g = e.Graphics;
+
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+
+            g.FillEllipse(Brushes.DarkGray, -mRadius + 3, -mRadius + 3, 
                 2 * mRadius, 2 * mRadius);
 
-            e.Graphics.FillEllipse(
+            g.FillEllipse(
                 this.bMouseGrabbed ? sNodeBrushSunken : sNodeBrushRisen, 
                 -mRadius, -mRadius, 2 * mRadius, 2 * mRadius);
-            e.Graphics.DrawEllipse(this.mBorderPen, -mRadius, -mRadius, 
+            g.DrawEllipse(this.mBorderPen, -mRadius, -mRadius, 
                 2 * mRadius, 2 * mRadius);
 
-            e.Graphics.FillEllipse(this.mMarkerBrush,
+            g.FillEllipse(this.mMarkerBrush,
                 -mRadius / 2, -mRadius / 2, mRadius, mRadius);
+
+            string text = this.mTextString ?? this.mAName;
+            if (!string.IsNullOrEmpty(text))
+            {
+                RectangleF inset = new RectangleF(
+                    mRadius * sInsetPos, mRadius * sInsetPos,
+                    mRadius * sInsetDim, mRadius * sInsetDim);
+                g.DrawString(text, this.mTextFont, this.mTextBrush, 
+                    inset, this.mTextFormat);
+
+            }
         }
 
         private bool bMouseGrabbed = false;
