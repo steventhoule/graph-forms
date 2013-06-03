@@ -12,12 +12,12 @@ namespace GraphForms.Algorithms.ConnectedComponents
     {
         private List<List<Node>> mComponents;
 
-        public CCAlgorithm(DirectionalGraph<Node, Edge> graph)
+        public CCAlgorithm(Digraph<Node, Edge> graph)
             : this(graph, false, false)
         {
         }
 
-        public CCAlgorithm(DirectionalGraph<Node, Edge> graph,
+        public CCAlgorithm(Digraph<Node, Edge> graph,
             bool directed, bool reversed)
             : base(graph, directed, reversed)
         {
@@ -45,6 +45,12 @@ namespace GraphForms.Algorithms.ConnectedComponents
         {
             this.mComponents[this.mComponents.Count - 1].Add(n);
             base.OnDiscoverNode(n, index);
+        }
+
+        protected override void OnBlackEdge(Edge e, 
+            int srcIndex, int dstIndex, bool reversed)
+        {
+            base.OnBlackEdge(e, srcIndex, dstIndex, reversed);
         }
     }
 }

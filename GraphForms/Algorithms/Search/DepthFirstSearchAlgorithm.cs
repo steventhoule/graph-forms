@@ -12,12 +12,12 @@ namespace GraphForms.Algorithms.Search
         private bool bImplicit = false;
         private int mMaxDepth = int.MaxValue;
 
-        public DepthFirstSearchAlgorithm(DirectionalGraph<Node, Edge> graph)
+        public DepthFirstSearchAlgorithm(Digraph<Node, Edge> graph)
             : base(graph, true, false)
         {
         }
 
-        public DepthFirstSearchAlgorithm(DirectionalGraph<Node, Edge> graph,
+        public DepthFirstSearchAlgorithm(Digraph<Node, Edge> graph,
             bool directed, bool reversed)
             : base(graph, directed, reversed)
         {
@@ -66,7 +66,7 @@ namespace GraphForms.Algorithms.Search
             // put all nodes to white
             this.Initialize();
 
-            DirectionalGraph<Node, Edge>.GraphNode node;
+            Digraph<Node, Edge>.GNode node;
 
             // if there is a starting node, start with it
             if (this.HasRoot)
@@ -84,7 +84,7 @@ namespace GraphForms.Algorithms.Search
             }
 
             // process each node
-            DirectionalGraph<Node, Edge>.GraphNode[] nodes
+            Digraph<Node, Edge>.GNode[] nodes
                 = this.mGraph.InternalNodes;
             for (int i = 0; i < nodes.Length; i++)
             {
@@ -104,14 +104,14 @@ namespace GraphForms.Algorithms.Search
 
         private class SearchFrame
         {
-            public readonly DirectionalGraph<Node, Edge>.GraphNode Node;
-            public readonly DirectionalGraph<Node, Edge>.GraphEdge[] Edges;
+            public readonly Digraph<Node, Edge>.GNode Node;
+            public readonly Digraph<Node, Edge>.GEdge[] Edges;
             public readonly int Depth;
             public readonly int EdgeIndex;
             public readonly bool Reversed;
 
-            public SearchFrame(DirectionalGraph<Node, Edge>.GraphNode node,
-                DirectionalGraph<Node, Edge>.GraphEdge[] edges,
+            public SearchFrame(Digraph<Node, Edge>.GNode node,
+                Digraph<Node, Edge>.GEdge[] edges,
                 int depth, int edgeIndex, bool reversed)
             {
                 this.Node = node;
@@ -122,16 +122,16 @@ namespace GraphForms.Algorithms.Search
             }
         }
 
-        private void Visit(DirectionalGraph<Node, Edge>.GraphNode root)
+        private void Visit(Digraph<Node, Edge>.GNode root)
         {
             Stack<SearchFrame> todo = new Stack<SearchFrame>();
             root.Color = GraphColor.Gray;
             this.OnDiscoverNode(root.Data, root.Index);
 
             SearchFrame frame;
-            DirectionalGraph<Node, Edge>.GraphNode u, v;
-            DirectionalGraph<Node, Edge>.GraphEdge e;
-            DirectionalGraph<Node, Edge>.GraphEdge[] edges;
+            Digraph<Node, Edge>.GNode u, v;
+            Digraph<Node, Edge>.GEdge e;
+            Digraph<Node, Edge>.GEdge[] edges;
             int depth, edgeIndex;
             bool rev;
 
@@ -173,9 +173,6 @@ namespace GraphForms.Algorithms.Search
                     edgeIndex++;
                     if (this.State == ComputeState.Aborting)
                         return;
-                    if (e.Color == GraphColor.Black) // edge already visited
-                        continue;
-                    e.Color = GraphColor.Black;
 
                     v = e.mDstNode;
                     rev = v.Equals(u);
@@ -220,7 +217,7 @@ namespace GraphForms.Algorithms.Search
             }
         }
 
-        private void ImplicitVisit(DirectionalGraph<Node, Edge>.GraphNode u,
+        private void ImplicitVisit(Digraph<Node, Edge>.GNode u,
                                    int depth)
         {
             if (depth > this.mMaxDepth)
@@ -229,9 +226,9 @@ namespace GraphForms.Algorithms.Search
             u.Color = GraphColor.Gray;
             this.OnDiscoverNode(u.mData, u.Index);
 
-            DirectionalGraph<Node, Edge>.GraphNode v;
-            DirectionalGraph<Node, Edge>.GraphEdge e;
-            DirectionalGraph<Node, Edge>.GraphEdge[] edges;
+            Digraph<Node, Edge>.GNode v;
+            Digraph<Node, Edge>.GEdge e;
+            Digraph<Node, Edge>.GEdge[] edges;
             if (this.bUndirected)
                 edges = u.AllInternalEdges(this.bReversed);
             else if (this.bReversed)
@@ -245,9 +242,6 @@ namespace GraphForms.Algorithms.Search
                 e = edges[i];
                 if (this.State == ComputeState.Aborting)
                     return;
-                if (e.Color == GraphColor.Black) // edge already visited
-                    continue;
-                e.Color = GraphColor.Black;
 
                 v = e.mDstNode;
                 reversed = v.Equals(u);

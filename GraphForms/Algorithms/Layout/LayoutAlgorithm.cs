@@ -5,7 +5,7 @@ namespace GraphForms.Algorithms.Layout
 {
     /// <summary>
     /// The base class for algorithms which calculate the layout of a given
-    /// <see cref="T:DirectionalGraph`2{Node,Edge}"/> instance by setting the
+    /// <see cref="T:Digraph`2{Node,Edge}"/> instance by setting the
     /// positions of its <typeparamref name="Node"/> instances based on the
     /// <typeparamref name="Edge"/> instances connecting them and the 
     /// parameter values within the <typeparamref name="Params"/> instance.
@@ -27,7 +27,7 @@ namespace GraphForms.Algorithms.Layout
         /// <summary>
         /// The graph which this layout algorithm operates on.
         /// </summary>
-        protected readonly DirectionalGraph<Node, Edge> mGraph;
+        protected readonly Digraph<Node, Edge> mGraph;
 
         private Params mParameters;
         /// <summary>
@@ -50,7 +50,7 @@ namespace GraphForms.Algorithms.Layout
         /// <summary>
         /// The new X-coordinates for each node in this layout algorithm's 
         /// graph, the same size and in the same order as the graph's
-        /// <see cref="P:DirectionalGraph`2{Node,Edge}.Nodes"/> list.
+        /// <see cref="P:Digraph`2{Node,Edge}.Nodes"/> list.
         /// </summary>
         protected float[] NewXPositions
         {
@@ -60,7 +60,7 @@ namespace GraphForms.Algorithms.Layout
         /// <summary>
         /// The new Y-coordinates for each node in this layout algorithm's 
         /// graph, the same size and in the same order as the graph's
-        /// <see cref="P:DirectionalGraph`2{Node,Edge}.Nodes"/> list.
+        /// <see cref="P:Digraph`2{Node,Edge}.Nodes"/> list.
         /// </summary>
         protected float[] NewYPositions
         {
@@ -75,7 +75,7 @@ namespace GraphForms.Algorithms.Layout
         /// </summary>
         /// <param name="graph">The graph that will be rearranged by this
         /// layout algorithm.</param>
-        public LayoutAlgorithm(DirectionalGraph<Node, Edge> graph)
+        public LayoutAlgorithm(Digraph<Node, Edge> graph)
             : this(graph, null)
         {
         }
@@ -92,7 +92,7 @@ namespace GraphForms.Algorithms.Layout
         /// this layout algorithm rearranges the <paramref name="graph"/>.
         /// If null, the <see cref="DefaultParameters"/> are used instead.
         /// </param>
-        public LayoutAlgorithm(DirectionalGraph<Node, Edge> graph,
+        public LayoutAlgorithm(Digraph<Node, Edge> graph,
             Params oldParameters)
         {
             this.mGraph = graph;
@@ -107,7 +107,7 @@ namespace GraphForms.Algorithms.Layout
         /// computing and setting the positions of its 
         /// <typeparamref name="Node"/> instances.
         /// </summary>
-        public DirectionalGraph<Node, Edge> Graph
+        public Digraph<Node, Edge> Graph
         {
             get { return this.mGraph; }
         }
@@ -209,7 +209,7 @@ namespace GraphForms.Algorithms.Layout
             GraphElement p;
             bool xNaN, yNaN;
             Random rnd = new Random(DateTime.Now.Millisecond);
-            DirectionalGraph<Node, Edge>.GraphNode[] nodes = this.mGraph.InternalNodes;
+            Digraph<Node, Edge>.GNode[] nodes = this.mGraph.InternalNodes;
             Node node;
             SizeF pos;
             int i;
@@ -234,7 +234,7 @@ namespace GraphForms.Algorithms.Layout
                     node.SetPosition(pos.Width, pos.Height);
                 }
             }
-            DirectionalGraph<Node, Edge>.GraphEdge[] edges = this.mGraph.InternalEdges;
+            Digraph<Node, Edge>.GEdge[] edges = this.mGraph.InternalEdges;
             for (i = 0; i < edges.Length; i++)
             {
                 edges[i].Data.Update();
@@ -315,9 +315,9 @@ namespace GraphForms.Algorithms.Layout
                     this.Abort();
                 }
             }
-            DirectionalGraph<Node, Edge>.GraphNode[] nodes 
+            Digraph<Node, Edge>.GNode[] nodes 
                 = this.mGraph.InternalNodes;
-            DirectionalGraph<Node, Edge>.GraphEdge[] edges 
+            Digraph<Node, Edge>.GEdge[] edges 
                 = this.mGraph.InternalEdges;
             float pbL = this.mParameters.X;
             float pbR = this.mParameters.X + this.mParameters.Width;
@@ -355,11 +355,11 @@ namespace GraphForms.Algorithms.Layout
                     dx = node.X - dx;
                     dy = node.Y - dy;
                     dist += dx * dx + dy * dy;
-                    nodes[i].Visited = true;
+                    nodes[i].Color = GraphColor.Gray;
                 }
                 else
                 {
-                    nodes[i].Visited = false;
+                    nodes[i].Color = GraphColor.White;
                 }
             }
             if (nodeMoved)
@@ -367,7 +367,7 @@ namespace GraphForms.Algorithms.Layout
                 // Move nodes to their new positions
                 for (i = 0; i < nodes.Length; i++)
                 {
-                    if (nodes[i].Visited)
+                    if (nodes[i].Color == GraphColor.Gray)
                     {
                         node = nodes[i].mData;
                         //node.SetPosition(node.NewX, node.NewY);
@@ -378,8 +378,8 @@ namespace GraphForms.Algorithms.Layout
                 for (i = 0; i < edges.Length; i++)
                 {
                     //if (dirtyEdge[i])
-                    if (edges[i].mSrcNode.Visited ||
-                        edges[i].mDstNode.Visited)
+                    if (edges[i].mSrcNode.Color == GraphColor.Gray ||
+                        edges[i].mDstNode.Color == GraphColor.Gray)
                         edges[i].mData.Update();
                 }
             }

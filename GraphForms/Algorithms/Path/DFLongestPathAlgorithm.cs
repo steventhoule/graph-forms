@@ -49,15 +49,16 @@ namespace GraphForms.Algorithms.Path
         private NodeData mStart = null;
         private NodeData[] mDatas;
 
+        private int[] mPathNodeIndexes;
         private Node[] mPathNodes;
         private Edge[] mPathEdges;
 
-        public DFLongestPathAlgorithm(DirectionalGraph<Node, Edge> graph)
+        public DFLongestPathAlgorithm(Digraph<Node, Edge> graph)
             : base(graph)
         {
         }
 
-        public DFLongestPathAlgorithm(DirectionalGraph<Node, Edge> graph,
+        public DFLongestPathAlgorithm(Digraph<Node, Edge> graph,
             bool directed, bool reversed)
             : base(graph, directed, reversed)
         {
@@ -71,6 +72,11 @@ namespace GraphForms.Algorithms.Path
                 if (this.State != ComputeState.Running)
                     this.bUseWeights = value;
             }
+        }
+
+        public int[] PathNodeIndexes
+        {
+            get { return this.mPathNodeIndexes; }
         }
 
         public Node[] PathNodes
@@ -104,7 +110,7 @@ namespace GraphForms.Algorithms.Path
         {
             if (this.bUndirected && this.mStartIndex == index)
             {
-                double len = this.mStart.Length;
+                double len = this.mDatas[index].Length;
                 Edge next = this.mStart.Next;
                 int nextNode = this.mStart.NextNode;
                 while (nextNode != -1)
@@ -175,6 +181,22 @@ namespace GraphForms.Algorithms.Path
                 vData = this.mDatas[dstIndex];
             }
             double len = vData.Length + (this.bUseWeights ? e.Weight : 1);
+            if (this.bUndirected && uData.NextNode != -1 &&
+                this.mStartIndex == (reversed ? dstIndex : srcIndex) &&
+                len > this.mStart.Length)
+            {
+                if (len > uData.Length)
+                {
+                    this.mStart = new NodeData(uData);
+                }
+                else
+                {
+                    this.mStart = new NodeData();
+                    this.mStart.Length = len;
+                    this.mStart.Next = e;
+                    this.mStart.NextNode = reversed ? srcIndex : dstIndex;
+                }
+            }
             if (len > uData.Length)
             {
                 uData.Length = len;
@@ -202,15 +224,18 @@ namespace GraphForms.Algorithms.Path
                     len = this.mDatas[j].Length;
                 }
             }
+            List<int> pIndexes = new List<int>();
             List<Node> pNodes = new List<Node>();
             List<Edge> pEdges = new List<Edge>();
             j = root;
             while (j != -1)
             {
+                pIndexes.Add(j);
                 pNodes.Add(this.mGraph.NodeAt(j));
                 pEdges.Add(this.mDatas[j].Next);
                 j = this.mDatas[j].NextNode;
             }
+            this.mPathNodeIndexes = pIndexes.ToArray();
             this.mPathNodes = pNodes.ToArray();
             this.mPathEdges = new Edge[pEdges.Count - 1];
             pEdges.CopyTo(0, this.mPathEdges, 0, pEdges.Count - 1);

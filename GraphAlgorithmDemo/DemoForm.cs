@@ -18,6 +18,9 @@ namespace GraphAlgorithmDemo
 
         private StyleAlgorithm[] mStyleAlgs;
 
+        private IGraphCreator[] mGraphCreators;
+        private bool bPendingGraphCreation;
+
         public DemoForm()
         {
             InitializeComponent();
@@ -41,24 +44,39 @@ namespace GraphAlgorithmDemo
 
             this.mStyleAlgs = new StyleAlgorithm[]
             {
-                new BCCStyleAlgorithm(this.mScene),
-                new SCCStyleAlgorithm(this.mScene),
-                new BFSpanTreeStyleAlgorithm(this.mScene),
-                new DFSpanTreeStyleAlgorithm(this.mScene),
-                new KruskalSpanTreeStyleAlgorithm(this.mScene),
-                new BoruvkaSpanTreeStyleAlgorithm(this.mScene),
-                new DFLongestPathStyleAlgorithm(this.mScene),
-                new ClearAllStyleAlgorithm(this.mScene)
+                new BCCStyleAlgorithm(),
+                new SCCStyleAlgorithm(),
+                new WCCStyleAlgorithm(),
+                new BFSpanTreeStyleAlgorithm(),
+                new DFSpanTreeStyleAlgorithm(),
+                new KruskalSpanTreeStyleAlgorithm(),
+                new BoruvkaSpanTreeStyleAlgorithm(),
+                new DFLongestPathStyleAlgorithm(),
+                new ClearAllStyleAlgorithm()
             };
             this.styleAlgCMB.Items.AddRange(this.mStyleAlgs);
 
+            this.mGraphCreators = new IGraphCreator[]
+            {
+                new RandomGraphCreator(),
+                new BCCTestGraphCreator(),
+                new SCCTestGraphCreator(),
+                new MinSpanTreeTestGraphCreator(),
+                new SPQRTestGraphCreator(),
+                new WagonWheelGraphCreator()
+            };
+            this.graphCreatorCMB.Items.AddRange(this.mGraphCreators);
+
             //this.GenerateRandomGraph();
-            this.GenerateGraph3();
+            //this.GenerateGraph1();
             //this.GenerateWagonWheelGraph(15);
             //this.mScene.Layout.ShuffleNodePositions();
+            new BCCTestGraphCreator().CreateGraph(this.mScene);
 
             this.mScene.NodeMoved += new Action<CircleNode>(sceneNodeMoved);
             this.mScene.LayoutStopped += new EventHandler(sceneLayoutStopped);
+
+            this.bPendingGraphCreation = false;
         }
 
         private void GenerateRandomGraph()
@@ -161,12 +179,32 @@ namespace GraphAlgorithmDemo
 
             ArrowEdge e32 = new ArrowEdge(n14, n11, this.mScene);/* */
 
+            float unit = 40;
+
+            n01.SetPosition(2 * unit, 2 * unit);
+            n02.SetPosition(1 * unit, 3 * unit);
+            n03.SetPosition(3 * unit, 3 * unit);
+            n04.SetPosition(2 * unit, 4 * unit);
+            n05.SetPosition(3 * unit, 5 * unit);
+            n06.SetPosition(4 * unit, 4 * unit);
+            n07.SetPosition(7 * unit, 2 * unit);
+            n08.SetPosition(5 * unit, 3 * unit);
+            n09.SetPosition(8 * unit, 3 * unit);
+            n10.SetPosition(6 * unit, 4 * unit);
+            n11.SetPosition(7 * unit, 5 * unit);
+            n12.SetPosition(9 * unit, 5 * unit);
+            n13.SetPosition(5 * unit, 5 * unit);
+            n14.SetPosition(6 * unit, 6 * unit);
+
             ArrowEdge[] edges = { e01, e02, e03, e04, e05, e06, e07, e08, 
                                   e09, e10, e11, e12, e13, e14, e15, e16,
                                   //e17, e18, e19, e20, e21, e22, e23, e24, 
                                   //e25, e26, e27, e28, e29, e30, e31, e32 
                                 };
-
+            for (int i = 0; i < edges.Length; i++)
+            {
+                edges[i].Update();
+            }
         }
 
         // Copied from Wikipedia article image in order to test SCC algorithm
@@ -199,14 +237,16 @@ namespace GraphAlgorithmDemo
             ArrowEdge e13 = new ArrowEdge(n08, n07, this.mScene);
             ArrowEdge e14 = new ArrowEdge(n08, n08, this.mScene);
 
-            n01.SetPosition( 50, 150);
-            n02.SetPosition( 50, 250);
-            n03.SetPosition(150, 150);
-            n04.SetPosition(150, 250);
-            n05.SetPosition(250, 250);
-            n06.SetPosition(250, 150);
-            n07.SetPosition(350, 150);
-            n08.SetPosition(350, 250);
+            float unit = 50;
+
+            n01.SetPosition(1 * unit, 3 * unit);
+            n02.SetPosition(1 * unit, 5 * unit);
+            n03.SetPosition(3 * unit, 3 * unit);
+            n04.SetPosition(3 * unit, 5 * unit);
+            n05.SetPosition(5 * unit, 5 * unit);
+            n06.SetPosition(5 * unit, 3 * unit);
+            n07.SetPosition(7 * unit, 3 * unit);
+            n08.SetPosition(7 * unit, 5 * unit);
             ArrowEdge[] edges = { e01, e02, e03, e04, e05, e06, e07, e08, 
                                   e09, e10, e11, e12, e13, e14 };
             for (int i = 0; i < edges.Length; i++)
@@ -243,13 +283,15 @@ namespace GraphAlgorithmDemo
             //ArrowEdge eAD = new ArrowEdge(nD, nA, this.mScene,  4, "eDA");
             //ArrowEdge eBD = new ArrowEdge(nD, nB, this.mScene,  9, "eDB");
 
-            nA.SetPosition(100, 100);
-            nB.SetPosition(200, 150);
-            nC.SetPosition(300, 100);
-            nD.SetPosition(125, 200);
-            nE.SetPosition(275, 200);
-            nF.SetPosition(200, 250);
-            nG.SetPosition(300, 300);
+            float unit = 50;
+
+            nA.SetPosition(2 * unit, 2 * unit);
+            nB.SetPosition(4 * unit, 3 * unit);
+            nC.SetPosition(6 * unit, 2 * unit);
+            nD.SetPosition(3 * unit, 4 * unit);
+            nE.SetPosition(5 * unit, 4 * unit);
+            nF.SetPosition(4 * unit, 5 * unit);
+            nG.SetPosition(6 * unit, 6 * unit);
             ArrowEdge[] edges = { eAB, eAD, eBC, eBD, eBE, eCE, eDE, eDF, eEF, eEG, eFG };
             for (int i = 0; i < edges.Length; i++)
             {
@@ -274,17 +316,17 @@ namespace GraphAlgorithmDemo
             CircleNode nA7 = new CircleNode(this.mScene, rad, "A7");
             CircleNode nA8 = new CircleNode(this.mScene, rad, "A8");
 
-            ArrowEdge eA1A2 = new ArrowEdge(nA1, nA2, mScene, 1, ang, "A1->A2");
-            ArrowEdge eA7A1 = new ArrowEdge(nA7, nA1, mScene, 1, ang, "A7->A1");
-            ArrowEdge eA2A8 = new ArrowEdge(nA2, nA8, mScene, 1, ang, "A2->A8");
-            ArrowEdge eA1A3 = new ArrowEdge(nA1, nA3, mScene, 1, ang, "A1->A3");
-            ArrowEdge eA2A4 = new ArrowEdge(nA2, nA4, mScene, 1, ang, "A2->A4");
-            ArrowEdge eA7A5 = new ArrowEdge(nA7, nA5, mScene, 1, ang, "A7->A5");
-            ArrowEdge eA8A6 = new ArrowEdge(nA8, nA6, mScene, 1, ang, "A8->A6");
-            ArrowEdge eA3A4 = new ArrowEdge(nA3, nA4, mScene, 1, ang, "A3->A4");
-            ArrowEdge eA4A6 = new ArrowEdge(nA4, nA6, mScene, 1, ang, "A4->A6");
-            ArrowEdge eA6A5 = new ArrowEdge(nA6, nA5, mScene, 1, ang, "A6->A5");
-            ArrowEdge eA5A3 = new ArrowEdge(nA5, nA3, mScene, 1, ang, "A5->A3");
+            ArrowEdge eA1A2 = new ArrowEdge(nA1, nA2, mScene, 1, ang);
+            ArrowEdge eA7A1 = new ArrowEdge(nA7, nA1, mScene, 1, ang);
+            ArrowEdge eA2A8 = new ArrowEdge(nA2, nA8, mScene, 1, ang);
+            ArrowEdge eA1A3 = new ArrowEdge(nA1, nA3, mScene, 1, ang);
+            ArrowEdge eA2A4 = new ArrowEdge(nA2, nA4, mScene, 1, ang);
+            ArrowEdge eA7A5 = new ArrowEdge(nA7, nA5, mScene, 1, ang);
+            ArrowEdge eA8A6 = new ArrowEdge(nA8, nA6, mScene, 1, ang);
+            ArrowEdge eA3A4 = new ArrowEdge(nA3, nA4, mScene, 1, ang);
+            ArrowEdge eA4A6 = new ArrowEdge(nA4, nA6, mScene, 1, ang);
+            ArrowEdge eA6A5 = new ArrowEdge(nA6, nA5, mScene, 1, ang);
+            ArrowEdge eA5A3 = new ArrowEdge(nA5, nA3, mScene, 1, ang);
 
             CircleNode nB1 = new CircleNode(this.mScene, rad, "B1");
             CircleNode nB2 = new CircleNode(this.mScene, rad, "B2");
@@ -292,28 +334,28 @@ namespace GraphAlgorithmDemo
             CircleNode nB4 = new CircleNode(this.mScene, rad, "B4");
             CircleNode nB5 = new CircleNode(this.mScene, rad, "B5");
 
-            ArrowEdge eA8B1 = new ArrowEdge(nA8, nB1, mScene, 1, ang, "A8->B1");
-            ArrowEdge eB1B5 = new ArrowEdge(nB1, nB5, mScene, 1, ang, "B1->B5");
-            ArrowEdge eB5B4 = new ArrowEdge(nB5, nB4, mScene, 1, ang, "B5->B4");
-            ArrowEdge eA8B2 = new ArrowEdge(nA8, nB2, mScene, 1, ang, "A8->B2");
-            ArrowEdge eB1B2 = new ArrowEdge(nB1, nB2, mScene, 1, ang, "B1->B2");
-            ArrowEdge eB5B3 = new ArrowEdge(nB5, nB3, mScene, 1, ang, "B5->B3");
-            ArrowEdge eB4B3 = new ArrowEdge(nB4, nB3, mScene, 1, ang, "B4->B3");
-            ArrowEdge eB2B3 = new ArrowEdge(nB2, nB3, mScene, 1, ang, "B2->B3");
+            ArrowEdge eA8B1 = new ArrowEdge(nA8, nB1, mScene, 1, ang);
+            ArrowEdge eB1B5 = new ArrowEdge(nB1, nB5, mScene, 1, ang);
+            ArrowEdge eB5B4 = new ArrowEdge(nB5, nB4, mScene, 1, ang);
+            ArrowEdge eA8B2 = new ArrowEdge(nA8, nB2, mScene, 1, ang);
+            ArrowEdge eB1B2 = new ArrowEdge(nB1, nB2, mScene, 1, ang);
+            ArrowEdge eB5B3 = new ArrowEdge(nB5, nB3, mScene, 1, ang);
+            ArrowEdge eB4B3 = new ArrowEdge(nB4, nB3, mScene, 1, ang);
+            ArrowEdge eB2B3 = new ArrowEdge(nB2, nB3, mScene, 1, ang);
 
             CircleNode nC1 = new CircleNode(this.mScene, rad, "C1");
             CircleNode nC2 = new CircleNode(this.mScene, rad, "C2");
             CircleNode nC3 = new CircleNode(this.mScene, rad, "C3");
 
-            ArrowEdge eB4C3 = new ArrowEdge(nB4, nC3, mScene, 1, ang, "B4->C3");
-            ArrowEdge eC3C1 = new ArrowEdge(nC3, nC1, mScene, 1, ang, "C3->C1");
-            ArrowEdge eC1C2 = new ArrowEdge(nC1, nC2, mScene, 1, ang, "C1->C2");
-            ArrowEdge eB4C2 = new ArrowEdge(nB4, nC2, mScene, 1, ang, "B4->C2");
-            ArrowEdge eC3C2 = new ArrowEdge(nC3, nC2, mScene, 1, ang, "C3->C2");
+            ArrowEdge eB4C3 = new ArrowEdge(nB4, nC3, mScene, 1, ang);
+            ArrowEdge eC3C1 = new ArrowEdge(nC3, nC1, mScene, 1, ang);
+            ArrowEdge eC1C2 = new ArrowEdge(nC1, nC2, mScene, 1, ang);
+            ArrowEdge eB4C2 = new ArrowEdge(nB4, nC2, mScene, 1, ang);
+            ArrowEdge eC3C2 = new ArrowEdge(nC3, nC2, mScene, 1, ang);
 
-            ArrowEdge eB4C1 = new ArrowEdge(nB4, nC1, mScene, 1, ang, "B4->C1");
+            ArrowEdge eB4C1 = new ArrowEdge(nB4, nC1, mScene, 1, ang);
 
-            ArrowEdge eC1A7 = new ArrowEdge(nC1, nA7, mScene, 1, ang, "C1->A7");
+            ArrowEdge eC1A7 = new ArrowEdge(nC1, nA7, mScene, 1, ang);
 
             float unit = 40;
             float left = 200 - 1.5f * unit;
@@ -421,6 +463,17 @@ namespace GraphAlgorithmDemo
         private void sceneLayoutStopped(object sender, EventArgs e)
         {
             this.layoutStartStopBTN.Text = "Start";
+            if (this.bPendingGraphCreation)
+            {
+                IGraphCreator gc = this.graphCreatorCMB.SelectedItem as IGraphCreator;
+                if (gc != null)
+                {
+                    this.mScene.ClearGraph();
+                    gc.CreateGraph(this.mScene);
+                    this.graphCreatorCMB.Enabled = true;
+                }
+                this.bPendingGraphCreation = false;
+            }
         }
 
         private void styleAlgSelectedValueChanged(object sender, EventArgs e)
@@ -458,7 +511,30 @@ namespace GraphAlgorithmDemo
             StyleAlgorithm alg = this.styleAlgCMB.SelectedItem as StyleAlgorithm;
             if (alg != null)
             {
-                alg.Compute();
+                alg.Compute(this.mScene);
+            }
+        }
+
+        private void createGraphClick(object sender, EventArgs e)
+        {
+            IGraphCreator gc = this.graphCreatorCMB.SelectedItem as IGraphCreator;
+            if (gc != null)
+            {
+                if (this.mScene.IsLayoutRunning)
+                {
+                    this.mScene.IsLayoutRunning = false;
+
+                    this.mScene.LayoutPaused = false;
+                    this.layoutPausedCHK.Checked = false;
+                    
+                    this.graphCreatorCMB.Enabled = false;
+                    this.bPendingGraphCreation = true;
+                }
+                else
+                {
+                    this.mScene.ClearGraph();
+                    gc.CreateGraph(this.mScene);
+                }
             }
         }
     }

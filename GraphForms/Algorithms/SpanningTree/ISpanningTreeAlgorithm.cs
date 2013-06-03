@@ -8,6 +8,6 @@ namespace GraphForms.Algorithms.SpanningTree
         where Node : class
         where Edge : class, IGraphEdge<Node>
     {
-        DirectionalGraph<Node, Edge> SpanningTree { get; }
+        Digraph<Node, Edge> SpanningTree { get; }
     }
 }

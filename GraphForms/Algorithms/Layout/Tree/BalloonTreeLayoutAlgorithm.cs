@@ -45,15 +45,15 @@ namespace GraphForms.Algorithms.Layout.Tree
         private int mMinRadius;
         private float mBorder;
 
-        private DirectionalGraph<Node, Edge>.GraphNode mRoot;
+        private Digraph<Node, Edge>.GNode mRoot;
         private BalloonData[] mDatas;
 
-        public BalloonTreeLayoutAlgorithm(DirectionalGraph<Node, Edge> graph)
+        public BalloonTreeLayoutAlgorithm(Digraph<Node, Edge> graph)
             : base(graph, null)
         {
         }
 
-        public BalloonTreeLayoutAlgorithm(DirectionalGraph<Node, Edge> graph,
+        public BalloonTreeLayoutAlgorithm(Digraph<Node, Edge> graph,
             BalloonTreeLayoutParameters oldParameters)
             : base(graph, oldParameters)
         {
@@ -63,8 +63,8 @@ namespace GraphForms.Algorithms.Layout.Tree
         {
             this.mMinRadius = this.Parameters.MinRadius;
 
-            DirectionalGraph<Node, Edge>.GraphNode node;
-            DirectionalGraph<Node, Edge>.GraphNode[] nodes 
+            Digraph<Node, Edge>.GNode node;
+            Digraph<Node, Edge>.GNode[] nodes 
                 = this.mGraph.InternalNodes;
             int i;
 
@@ -74,36 +74,36 @@ namespace GraphForms.Algorithms.Layout.Tree
                 this.mDatas[i] = new BalloonData();
                 node = nodes[i];
                 node.Index = i;
-                node.Visited = false;
+                node.Color = GraphColor.White;
             }
 
             this.FirstWalk(this.mRoot);
 
             for (i = 0; i < nodes.Length; i++)
             {
-                nodes[i].Visited = false;
+                nodes[i].Color = GraphColor.White;
             }
 
             this.SecondWalk(this.mRoot, null, 0, 0, 1, 0);
         }
 
-        private void FirstWalk(DirectionalGraph<Node, Edge>.GraphNode v)
+        private void FirstWalk(Digraph<Node, Edge>.GNode v)
         {
             BalloonData otherData, data = this.mDatas[v.Index];
-            v.Visited = true;
+            v.Color = GraphColor.Gray;
             data.d = 0;
 
             float s = 0;
 
-            DirectionalGraph<Node, Edge>.GraphNode otherNode;
-            DirectionalGraph<Node, Edge>.GraphEdge[] outEdges
+            Digraph<Node, Edge>.GNode otherNode;
+            Digraph<Node, Edge>.GEdge[] outEdges
                 = v.InternalDstEdges;
             for (int i = 0; i < outEdges.Length; i++)
             {
                 otherNode = outEdges[i].DstNode;
                 otherData = this.mDatas[otherNode.Index];
 
-                if (!otherNode.Visited)
+                if (otherNode.Color == GraphColor.White)
                 {
                     this.FirstWalk(otherNode);
                     data.d = Math.Max(data.d, otherData.r);
@@ -116,21 +116,21 @@ namespace GraphForms.Algorithms.Layout.Tree
             data.r = Math.Max(data.d / 2, this.mMinRadius);
         }
 
-        private void SecondWalk(DirectionalGraph<Node, Edge>.GraphNode v,
-            DirectionalGraph<Node, Edge>.GraphNode r, float x, float y,
+        private void SecondWalk(Digraph<Node, Edge>.GNode v,
+            Digraph<Node, Edge>.GNode r, float x, float y,
             float l, float t)
         {
             //v.Data.NewX = x;
             //v.Data.NewY = y;
             this.NewXPositions[v.Index] = x;
             this.NewYPositions[v.Index] = y;
-            v.Visited = true;
+            v.Color = GraphColor.Gray;
 
             if (v.DstEdgeCount > 0)
             {
                 BalloonData otherData, data = this.mDatas[v.Index];
-                DirectionalGraph<Node, Edge>.GraphNode otherNode;
-                DirectionalGraph<Node, Edge>.GraphEdge[] outEdges
+                Digraph<Node, Edge>.GNode otherNode;
+                Digraph<Node, Edge>.GEdge[] outEdges
                     = v.InternalDstEdges;
                 float dd = l * data.d;
                 float p = (float)(t + Math.PI);
@@ -151,7 +151,7 @@ namespace GraphForms.Algorithms.Layout.Tree
                 for (i = 0; i < outEdges.Length; i++)
                 {
                     otherNode = outEdges[i].DstNode;
-                    if (otherNode.Visited)
+                    if (otherNode.Color == GraphColor.Gray)
                         continue;
 
                     otherData = this.mDatas[otherNode.Index];

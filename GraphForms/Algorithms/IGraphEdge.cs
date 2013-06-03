@@ -39,7 +39,7 @@ namespace GraphForms.Algorithms
         /// <param name="dstNode">The <see cref="DstNode"/> of the copy.</param>
         /// <returns>A copy of this edge with the same internal data,
         /// but with the given source and destination nodes.</returns>
-        /// <seealso cref="M:DirectionalGraph`2{Node,Edge}.Replace(Node,Node)"/>
+        /// <seealso cref="M:Digraph`2{Node,Edge}.Replace(Node,Node)"/>
         Edge Copy<Edge>(Node srcNode, Node dstNode) where Edge : class, IGraphEdge<Node>;
     }
 }

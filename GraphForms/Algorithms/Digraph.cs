@@ -13,53 +13,53 @@ namespace GraphForms.Algorithms
     /// directional graph.</typeparam>
     /// <typeparam name="Edge">The type of edges connecting the 
     /// vertices contained in this directional graph.</typeparam>
-    public class DirectionalGraph<Node, Edge>
+    public class Digraph<Node, Edge>
         where Node : class
         where Edge : class, IGraphEdge<Node>
     {
         /// <summary>
         /// This class is used to store an <typeparamref name="Edge"/> instance
-        /// along with <see cref="GraphNode"/> instances that store the edge's
+        /// along with <see cref="GNode"/> instances that store the edge's
         /// <see cref="P:IGraphEdge`1{Node}.SrcNode"/> and 
         /// <see cref="P:IGraphEdge`1{Node}.DstNode"/> in their respective
-        /// <see cref="GraphNode.Data"/>.
+        /// <see cref="GNode.Data"/>.
         /// </summary>
-        public class GraphEdge
+        public class GEdge
         {
             /// <summary>
             /// The source node of this edge; its parent
             /// </summary>
-            internal GraphNode mSrcNode;
+            internal GNode mSrcNode;
             /// <summary>
             /// The destination node of this edge; its child
             /// </summary>
-            internal GraphNode mDstNode;
+            internal GNode mDstNode;
             /// <summary>
             /// The underlying data that this edge represents.
             /// </summary>
             internal Edge mData;
-            /// <summary>
-            /// Marks the state of visitation of this <see cref="GraphEdge"/>
+            /*/// <summary>
+            /// Marks the state of visitation of this <see cref="GEdge"/>
             /// instance when it is being traversed by a search algorithm or
             /// some other manner of data processing.
             /// </summary>
-            public GraphColor Color;
+            public GraphColor Color;/* */
 
             /// <summary>
-            /// Initializes a new <see cref="GraphEdge"/> instance with the 
-            /// given source and destination <see cref="GraphNode"/> instances
+            /// Initializes a new <see cref="GEdge"/> instance with the 
+            /// given source and destination <see cref="GNode"/> instances
             /// and the given <typeparamref name="Edge"/> instance.
             /// </summary>
             /// <param name="srcNode">The source node.</param>
             /// <param name="dstNode">The destination node.</param>
             /// <param name="data">The underlying edge data.</param>
             /// <remarks>
-            /// The <see cref="GraphNode.Data"/> of <paramref name="srcNode"/>
+            /// The <see cref="GNode.Data"/> of <paramref name="srcNode"/>
             /// and <paramref name="dstNode"/> must match the respective 
             /// <see cref="P:IGraphEdge{Node}`1.SrcNode"/> and 
             /// <see cref="P:IGraphEdge`1{Node}.DstNode"/> of 
             /// <paramref name="data"/>.</remarks>
-            internal GraphEdge(GraphNode srcNode, GraphNode dstNode, Edge data)
+            internal GEdge(GNode srcNode, GNode dstNode, Edge data)
             {
                 this.mSrcNode = srcNode;
                 this.mDstNode = dstNode;
@@ -67,33 +67,33 @@ namespace GraphForms.Algorithms
             }
             /// <summary>
             /// The underlying <typeparamref name="Edge"/> instance that this
-            /// <see cref="GraphEdge"/> instance represents.
+            /// <see cref="GEdge"/> instance represents.
             /// </summary>
             public Edge Data
             {
                 get { return this.mData; }
             }
             /// <summary>
-            /// The <see cref="GraphNode"/> instance that stores the
+            /// The <see cref="GNode"/> instance that stores the
             /// <see cref="P:IGraphEdge`1{Node}.SrcNode"/> of 
             /// <see cref="Data"/>.
             /// </summary>
-            public GraphNode SrcNode
+            public GNode SrcNode
             {
                 get { return this.mSrcNode; }
             }
             /// <summary>
-            /// The <see cref="GraphNode"/> instance that stores the
+            /// The <see cref="GNode"/> instance that stores the
             /// <see cref="P:IGraphEdge`1{Node}.DstNode"/> of 
             /// <see cref="Data"/>.
             /// </summary>
-            public GraphNode DstNode
+            public GNode DstNode
             {
                 get { return this.mDstNode; }
             }
         }
 
-        private static int IndexOfSrc(List<GraphEdge> nodes, Node data)
+        private static int IndexOfSrc(List<GEdge> nodes, Node data)
         {
             int count = nodes.Count;
             for (int i = 0; i < count; i++)
@@ -104,7 +104,7 @@ namespace GraphForms.Algorithms
             return -1;
         }
 
-        private static int IndexOfDst(List<GraphEdge> nodes, Node data)
+        private static int IndexOfDst(List<GEdge> nodes, Node data)
         {
             int count = nodes.Count;
             for (int i = 0; i < count; i++)
@@ -119,11 +119,11 @@ namespace GraphForms.Algorithms
         /// This class is used internally to store instances of the
         /// <typeparamref name="Node"/> class along with additional data
         /// used for traversing its containing 
-        /// <see cref="T:DirectionalGraph`2{Node,Edge}"/> instance.
+        /// <see cref="T:Digraph`2{Node,Edge}"/> instance.
         /// </summary>
-        public class GraphNode : IEquatable<GraphNode>
+        public class GNode : IEquatable<GNode>
         {
-            internal DirectionalGraph<Node, Edge> mGraph;
+            internal Digraph<Node, Edge> mGraph;
             /// <summary>
             /// The underlying data that this node represents.
             /// </summary>
@@ -132,39 +132,39 @@ namespace GraphForms.Algorithms
             /// <summary>
             /// Temporary storage for this node's index in its containing
             /// directional graph's internal list of 
-            /// <see cref="P:DirectionalGraph`2{Node,Edge}.InternalNodes"/>.
+            /// <see cref="P:Digraph`2{Node,Edge}.InternalNodes"/>.
             /// </summary>
             public int Index;
             /// <summary>
-            /// Marks the state of visitation of this <see cref="GraphNode"/>
+            /// Marks the state of visitation of this <see cref="GNode"/>
             /// instance when it is being traversed by a search algorithm or
             /// some other manner of data processing.
             /// </summary>
             public GraphColor Color;
-            /// <summary>
-            /// Flags whether or not this <see cref="GraphNode"/> has already
+            /*/// <summary>
+            /// Flags whether or not this <see cref="GNode"/> has already
             /// been visited by a graph traversal algorithm.
             /// </summary>
-            public bool Visited;
+            public bool Visited;/* */
             /// <summary>
             /// Temporary storage for this node's theoretical distance from a
-            /// starting root <see cref="GraphNode"/> of a traversal algorithm
+            /// starting root <see cref="GNode"/> of a traversal algorithm
             /// based on the sum of the <see cref="P:IGraphEdge`1{Node}.Weight"/>s
             /// along the (usually shortest) path connecting them.
             /// </summary>
             public float Distance;
 
-            internal List<GraphEdge> mSrcEdges = new List<GraphEdge>();
-            internal List<GraphEdge> mDstEdges = new List<GraphEdge>();
+            internal List<GEdge> mSrcEdges = new List<GEdge>();
+            internal List<GEdge> mDstEdges = new List<GEdge>();
 
             /// <summary>
-            /// Initializes a new <see cref="GraphNode"/> instance contained
+            /// Initializes a new <see cref="GNode"/> instance contained
             /// within the given <paramref name="graph"/> and representing
             /// the given <paramref name="data"/>.
             /// </summary>
             /// <param name="graph">The graph that contains this node.</param>
             /// <param name="data">The data that this node represents.</param>
-            internal GraphNode(DirectionalGraph<Node, Edge> graph, Node data)
+            internal GNode(Digraph<Node, Edge> graph, Node data)
             {
                 this.mGraph = graph;
                 this.mData = data;
@@ -173,17 +173,17 @@ namespace GraphForms.Algorithms
             #region Properties
 
             /// <summary>
-            /// The <see cref="T:DirectionalGraph`2{Node,Edge}"/> instance within
-            /// which this <see cref="GraphNode"/> instance was created.
+            /// The <see cref="T:Digraph`2{Node,Edge}"/> instance within
+            /// which this <see cref="GNode"/> instance was created.
             /// </summary>
-            public DirectionalGraph<Node, Edge> Graph
+            public Digraph<Node, Edge> Graph
             {
                 get { return this.mGraph; }
             }
 
             /// <summary>
             /// The underlying <typeparamref name="Node"/> data that this
-            /// <see cref="GraphNode"/> instance represents.
+            /// <see cref="GNode"/> instance represents.
             /// </summary>
             public Node Data
             {
@@ -193,7 +193,7 @@ namespace GraphForms.Algorithms
             #region Source Traversal
             /// <summary>
             /// The current number of <typeparamref name="Edge"/> instances
-            /// that have this <see cref="GraphNode"/>'s <see cref="Data"/>
+            /// that have this <see cref="GNode"/>'s <see cref="Data"/>
             /// as their <see cref="P:IGraphEdge`1{Node}.DstNode"/>.
             /// </summary>
             public int SrcEdgeCount
@@ -203,7 +203,7 @@ namespace GraphForms.Algorithms
 
             /// <summary>
             /// An array of all <typeparamref name="Edge"/> instances that
-            /// have this <see cref="GraphNode"/>'s <see cref="Data"/> as
+            /// have this <see cref="GNode"/>'s <see cref="Data"/> as
             /// their <see cref="P:IGraphNode`1{Node}.DstNode"/>.
             /// </summary>
             public Edge[] SrcEdges
@@ -218,25 +218,25 @@ namespace GraphForms.Algorithms
             }
 
             /// <summary>
-            /// An array of all <see cref="GraphEdge"/> instances that
-            /// has this <see cref="GraphNode"/> as their
-            /// <see cref="P:GraphEdge.DstNode"/>.
+            /// An array of all <see cref="GEdge"/> instances that
+            /// has this <see cref="GNode"/> as their
+            /// <see cref="P:GEdge.DstNode"/>.
             /// </summary>
-            public GraphEdge[] InternalSrcEdges
+            public GEdge[] InternalSrcEdges
             {
                 get { return this.mSrcEdges.ToArray(); }
             }
 
             /// <summary>
-            /// An array of all <see cref="GraphNode"/> instances connected
-            /// to this <see cref="GraphNode"/> instance by an <typeparamref 
+            /// An array of all <see cref="GNode"/> instances connected
+            /// to this <see cref="GNode"/> instance by an <typeparamref 
             /// name="Edge"/> instance with this node as its destination.
             /// </summary>
-            public GraphNode[] SrcNodes
+            public GNode[] SrcNodes
             {
                 get
                 {
-                    GraphNode[] srcNodes = new GraphNode[this.mSrcEdges.Count];
+                    GNode[] srcNodes = new GNode[this.mSrcEdges.Count];
                     for (int i = 0; i < this.mSrcEdges.Count; i++)
                         srcNodes[i] = this.mSrcEdges[i].mSrcNode;
                     return srcNodes;
@@ -247,7 +247,7 @@ namespace GraphForms.Algorithms
             #region Destination Traversal
             /// <summary>
             /// The current number of <typeparamref name="Edge"/> instances
-            /// that have this <see cref="GraphNode"/>'s <see cref="Data"/>
+            /// that have this <see cref="GNode"/>'s <see cref="Data"/>
             /// as their <see cref="P:IGraphEdge`1{Node}.SrcNode"/>.
             /// </summary>
             public int DstEdgeCount
@@ -257,7 +257,7 @@ namespace GraphForms.Algorithms
 
             /// <summary>
             /// An array of all <typeparamref name="Edge"/> instances that
-            /// have this <see cref="GraphNode"/>'s <see cref="Data"/> as
+            /// have this <see cref="GNode"/>'s <see cref="Data"/> as
             /// their <see cref="P:IGraphNode`1{Node}.SrcNode"/>.
             /// </summary>
             public Edge[] DstEdges
@@ -272,25 +272,25 @@ namespace GraphForms.Algorithms
             }
 
             /// <summary>
-            /// An array of all <see cref="GraphEdge"/> instances that
-            /// has this <see cref="GraphNode"/> as their
-            /// <see cref="P:GraphEdge.SrcNode"/>.
+            /// An array of all <see cref="GEdge"/> instances that
+            /// has this <see cref="GNode"/> as their
+            /// <see cref="P:GEdge.SrcNode"/>.
             /// </summary>
-            public GraphEdge[] InternalDstEdges
+            public GEdge[] InternalDstEdges
             {
                 get { return this.mDstEdges.ToArray(); }
             }
 
             /// <summary>
-            /// An array of all <see cref="GraphNode"/> instances connected
-            /// to this <see cref="GraphNode"/> instance by an <typeparamref 
+            /// An array of all <see cref="GNode"/> instances connected
+            /// to this <see cref="GNode"/> instance by an <typeparamref 
             /// name="Edge"/> instance with this node as its source.
             /// </summary>
-            public GraphNode[] DstNodes
+            public GNode[] DstNodes
             {
                 get
                 {
-                    GraphNode[] dstNodes = new GraphNode[this.mDstEdges.Count];
+                    GNode[] dstNodes = new GNode[this.mDstEdges.Count];
                     for (int i = 0; i < this.mDstEdges.Count; i++)
                         dstNodes[i] = this.mDstEdges[i].mDstNode;
                     return dstNodes;
@@ -299,6 +299,17 @@ namespace GraphForms.Algorithms
             #endregion
 
             #region Undirected Traversal
+            /// <summary>
+            /// The current number of <typeparamref name="Edge"/> instances
+            /// that have this <see cref="GNode"/>'s <see cref="Data"/>
+            /// as their <see cref="P:IGraphEdge`1{Node}.SrcNode"/>
+            /// or their <see cref="P:IGraphEdge`1{Node}.DstNode"/>
+            /// </summary>
+            public int AllEdgeCount
+            {
+                get { return this.mSrcEdges.Count + this.mDstEdges.Count; }
+            }
+
             /// <summary>
             /// A combined array of both <see cref="SrcEdges"/> and
             /// <see cref="DstEdges"/>, ordered by the given 
@@ -341,9 +352,9 @@ namespace GraphForms.Algorithms
             /// array.</param>
             /// <returns>A union of the <see cref="InternalSrcEdges"/> and 
             /// <see cref="InternalDstEdges"/> arrays.</returns>
-            public GraphEdge[] AllInternalEdges(bool srcFirst)
+            public GEdge[] AllInternalEdges(bool srcFirst)
             {
-                GraphEdge[] edges = new GraphEdge[this.mSrcEdges.Count
+                GEdge[] edges = new GEdge[this.mSrcEdges.Count
                     + this.mDstEdges.Count];
                 if (srcFirst)
                 {
@@ -371,12 +382,12 @@ namespace GraphForms.Algorithms
             /// before <see cref="DstNodes"/> in the returned array.</param>
             /// <returns>A union of the <see cref="SrcNodes"/> and 
             /// <see cref="DstNodes"/> arrays.</returns>
-            public GraphNode[] AllNodes(bool srcFirst)
+            public GNode[] AllNodes(bool srcFirst)
             {
                 int i;
                 int srcCount = this.mSrcEdges.Count;
                 int dstCount = this.mDstEdges.Count;
-                GraphNode[] nodes = new GraphNode[srcCount + dstCount];
+                GNode[] nodes = new GNode[srcCount + dstCount];
                 if (srcFirst)
                 {
                     for (i = 0; i < srcCount; i++)
@@ -398,38 +409,38 @@ namespace GraphForms.Algorithms
             #endregion
 
             /// <summary>
-            /// Tests whether or not this <see cref="GraphNode"/> instance's
+            /// Tests whether or not this <see cref="GNode"/> instance's
             /// <see cref="Data"/> is equal the <paramref name="other"/>
             /// instance's Data.
             /// </summary>
-            /// <param name="other">The other <see cref="GraphNode"/> instance
+            /// <param name="other">The other <see cref="GNode"/> instance
             /// to compare <see cref="Data"/> with.</param>
             /// <returns>true if this instance's <see cref="Data"/> is equal to
             /// the <paramref name="other"/> instance's Data, false otherwise.
             /// </returns>
-            public bool Equals(GraphNode other)
+            public bool Equals(GNode other)
             {
                 return this.mData == other.mData;
             }
 
             /// <summary>
-            /// Disconnects this <see cref="GraphNode"/> instance from all
+            /// Disconnects this <see cref="GNode"/> instance from all
             /// other instances in its containing <see cref="Graph"/>,
             /// ophaning it, usually in preparation for removal.
             /// </summary>
             /// <returns>A list of additional nodes which have also been
             /// orphaned by this function because they connected to this
             /// node only beforehand.</returns>
-            internal List<GraphNode> Disconnect()
+            internal List<GNode> Disconnect()
             {
                 int count = this.mSrcEdges.Count;
                 if (count == 0 && this.mDstEdges.Count == 0)
                 {
                     return null;
                 }
-                GraphNode n;
+                GNode n;
                 int i, index;
-                List<GraphNode> orphans = new List<GraphNode>(
+                List<GNode> orphans = new List<GNode>(
                     count + this.mDstEdges.Count + 2);
                 // Disconnect this node from its source nodes
                 for (i = 0; i < count; i++)
@@ -454,7 +465,7 @@ namespace GraphForms.Algorithms
                 this.mDstEdges.Clear();
                 // Tally orphanced source and destination nodes
                 count = orphans.Count;
-                GraphNode[] temp = orphans.ToArray();
+                GNode[] temp = orphans.ToArray();
                 orphans.Clear();
                 for (i = 0; i < count; i++)
                 {
@@ -466,22 +477,22 @@ namespace GraphForms.Algorithms
             }
         }
 
-        private List<GraphNode> mNodes;
-        private List<GraphEdge> mEdges;
+        private List<GNode> mNodes;
+        private List<GEdge> mEdges;
 
         /// <summary>
-        /// Initializes a new <see cref="T:DirectionalGraph`2{Node,Edge}"/>
+        /// Initializes a new <see cref="T:Digraph`2{Node,Edge}"/>
         /// instance that is empty and has the default initial capacities
         /// for its internal node and edge lists.
         /// </summary>
-        public DirectionalGraph()
+        public Digraph()
         {
-            this.mNodes = new List<GraphNode>();
-            this.mEdges = new List<GraphEdge>();
+            this.mNodes = new List<GNode>();
+            this.mEdges = new List<GEdge>();
         }
 
         /// <summary>
-        /// Initializes a new <see cref="T:DirectionalGraph`2{Node,Edge}"/>
+        /// Initializes a new <see cref="T:Digraph`2{Node,Edge}"/>
         /// instance that is empty and has the specified initial capacities
         /// for its internal node and edge lists.
         /// </summary>
@@ -489,10 +500,10 @@ namespace GraphForms.Algorithms
         /// can initially store.</param>
         /// <param name="edgeCapacity">The number of edges that the new graph
         /// can initially store.</param>
-        public DirectionalGraph(int nodeCapacity, int edgeCapacity)
+        public Digraph(int nodeCapacity, int edgeCapacity)
         {
-            this.mNodes = new List<GraphNode>(nodeCapacity);
-            this.mEdges = new List<GraphEdge>(edgeCapacity);
+            this.mNodes = new List<GNode>(nodeCapacity);
+            this.mEdges = new List<GEdge>(edgeCapacity);
         }
 
         #region Graph Traversal
@@ -551,7 +562,7 @@ namespace GraphForms.Algorithms
         {
             if (this.mEdges.Count == 0)
                 return new Node[0];
-            GraphNode node = this.mNodes[index];
+            GNode node = this.mNodes[index];
             Node[] srcNodes = new Node[node.mSrcEdges.Count];
             for (int i = 0; i < node.mSrcEdges.Count; i++)
                 srcNodes[i] = node.mSrcEdges[i].mSrcNode.mData;
@@ -569,7 +580,7 @@ namespace GraphForms.Algorithms
         /// <returns>An array of all <typeparamref name="Edge"/> instances
         /// that have <paramref name="node"/> as their destination, or 
         /// null if <paramref name="node"/> isn't contained in this
-        /// <see cref="T:DirectionalGraph`2{Node,Edge}"/>.</returns>
+        /// <see cref="T:Digraph`2{Node,Edge}"/>.</returns>
         /// <seealso cref="GetSrcEdgesAt(int)"/>
         /// <seealso cref="GetSrcNodes(Node)"/>
         /// <seealso cref="GetDstEdges(Node)"/>
@@ -659,7 +670,7 @@ namespace GraphForms.Algorithms
         {
             if (this.mEdges.Count == 0)
                 return new Node[0];
-            GraphNode node = this.mNodes[index];
+            GNode node = this.mNodes[index];
             Node[] dstNodes = new Node[node.mDstEdges.Count];
             for (int i = 0; i < node.mDstEdges.Count; i++)
                 dstNodes[i] = node.mDstEdges[i].mDstNode.mData;
@@ -677,7 +688,7 @@ namespace GraphForms.Algorithms
         /// <returns>An array of all <typeparamref name="Edge"/> instances
         /// that have <paramref name="node"/> as their source, or 
         /// null if <paramref name="node"/> isn't contained in this
-        /// <see cref="T:DirectionalGraph`2{Node,Edge}"/>.</returns>
+        /// <see cref="T:Digraph`2{Node,Edge}"/>.</returns>
         /// <seealso cref="GetDstEdgesAt(int)"/>
         /// <seealso cref="GetDstNodes(Node)"/>
         /// <seealso cref="GetSrcEdges(Node)"/>
@@ -728,7 +739,7 @@ namespace GraphForms.Algorithms
         /// <returns>An array of all <typeparamref name="Edge"/> instances
         /// that have <paramref name="node"/> as their source or destination,  
         /// or null if <paramref name="node"/> isn't contained in this
-        /// <see cref="T:DirectionalGraph`2{Node,Edge}"/>.</returns>
+        /// <see cref="T:Digraph`2{Node,Edge}"/>.</returns>
         public Edge[] GetAllEdges(Node node, bool srcFirst)
         {
             int index = this.IndexOfNode(node);
@@ -748,7 +759,7 @@ namespace GraphForms.Algorithms
         /// </summary>
         /// <param name="distances">The theoretical distances between connected
         /// <typeparamref name="Node"/> instances contained in a 
-        /// <see cref="T:DirectionalGraph`2{Node,Edge}"/> instance.</param>
+        /// <see cref="T:Digraph`2{Node,Edge}"/> instance.</param>
         /// <returns>The maximum value within the given 
         /// <paramref name="distances"/> which doesn't equal 
         /// <see cref="float.MaxValue"/>, or <see cref="float.NegativeInfinity"/>
@@ -803,14 +814,14 @@ namespace GraphForms.Algorithms
                         distances[index, i] = i == index ? 0 : float.MaxValue;
             }
             float distance;
-            GraphNode n, current;
+            GNode n, current;
             for (i = 0; i < count; i++)
             {
                 current = this.mNodes[i];
                 current.Color = GraphColor.White;
                 current.Distance = float.MaxValue;
             }
-            Queue<GraphNode> queue = new Queue<GraphNode>(count);
+            Queue<GNode> queue = new Queue<GNode>(count);
             for (index = 0; index < count; index++)
             {
                 current = this.mNodes[index];
@@ -890,17 +901,17 @@ namespace GraphForms.Algorithms
                     dist[i] = i == nodeIndex ? 0 : float.MaxValue;
             }
             float distance;
-            GraphNode n, current;
+            GNode n, current;
             for (i = 0; i < count; i++)
             {
                 current = this.mNodes[i];
-                current.Visited = false;
+                current.Color = GraphColor.White;
                 current.Distance = float.MaxValue;
             }
-            Queue<GraphNode> queue = new Queue<GraphNode>(count);
+            Queue<GNode> queue = new Queue<GNode>(count);
             current = this.mNodes[nodeIndex];
             current.Distance = 0f;
-            current.Visited = true;
+            current.Color = GraphColor.Gray;
             queue.Enqueue(current);
             while (queue.Count > 0)
             {
@@ -911,9 +922,9 @@ namespace GraphForms.Algorithms
                     n = current.mDstEdges[i].mDstNode;
                     distance = current.Distance
                         + current.mDstEdges[i].mData.Weight;
-                    if (!n.Visited)
+                    if (n.Color == GraphColor.White)
                     {
-                        n.Visited = true;
+                        n.Color = GraphColor.Gray;
                         n.Distance = distance;
                         queue.Enqueue(n);
                     }
@@ -938,7 +949,7 @@ namespace GraphForms.Algorithms
         #region Node List Properties
         /// <summary>
         /// The number of <typeparamref name="Node"/> instances currently
-        /// contained in this <see cref="T:DirectionalGraph`2{Node,Edge}"/>.
+        /// contained in this <see cref="T:Digraph`2{Node,Edge}"/>.
         /// </summary>
         public int NodeCount
         {
@@ -965,7 +976,7 @@ namespace GraphForms.Algorithms
 
         /// <summary>
         /// An array of all the <typeparamref name="Node"/> instances
-        /// contained in this <see cref="T:DirectionalGraph`2{Node,Edge}"/>,
+        /// contained in this <see cref="T:Digraph`2{Node,Edge}"/>,
         /// in the same order as all functions with a <c>nodeIndex</c>
         /// argument.</summary><seealso cref="InternalNodes"/>
         /// <seealso cref="Edges"/>
@@ -998,44 +1009,44 @@ namespace GraphForms.Algorithms
         }
 
         /// <summary>
-        /// An array of all the <see cref="GraphNode"/> instances currently
-        /// contained within this <see cref="T:DirectionalGraph`2{Node,Edge}"/>,
+        /// An array of all the <see cref="GNode"/> instances currently
+        /// contained within this <see cref="T:Digraph`2{Node,Edge}"/>,
         /// in the same order as all functions with a <c>nodeIndex</c>
         /// argument.</summary><seealso cref="Nodes"/>
         /// <seealso cref="InternalEdges"/>
-        public GraphNode[] InternalNodes
+        public GNode[] InternalNodes
         {
             get { return this.mNodes.ToArray(); }
         }
 
         /// <summary>
-        /// Retrieves the <see cref="GraphNode"/> instance at the given
+        /// Retrieves the <see cref="GNode"/> instance at the given
         /// <paramref name="nodeIndex"/> in this directional graph's
         /// internal list of <see cref="InternalNodes"/>.
         /// </summary>
-        /// <param name="nodeIndex">The index of the <see cref="GraphNode"/>
+        /// <param name="nodeIndex">The index of the <see cref="GNode"/>
         /// instance to retrieve from this directional graph's internal list of
         /// <see cref="InternalNodes"/>.</param>
-        /// <returns>The <see cref="GraphNode"/> instance at 
+        /// <returns>The <see cref="GNode"/> instance at 
         /// <paramref name="nodeIndex"/> in this directional graph's internal
         /// list of <see cref="InternalNodes"/>.</returns>
-        public GraphNode InternalNodeAt(int nodeIndex)
+        public GNode InternalNodeAt(int nodeIndex)
         {
             return this.mNodes[nodeIndex];
         }
 
         /// <summary>
-        /// A convenience function that retrieves the <see cref="GraphNode"/>
+        /// A convenience function that retrieves the <see cref="GNode"/>
         /// instance that corresponds to and contains the given
         /// <paramref name="node"/>.  If <paramref name="node"/> is not in
         /// this graph, null is returned.
         /// </summary>
         /// <param name="node">The <typeparamref name="Node"/> instance to
-        /// find the corresponding <see cref="GraphNode"/> instance.</param>
-        /// <returns>The <see cref="GraphNode"/> instance corresponding to
+        /// find the corresponding <see cref="GNode"/> instance.</param>
+        /// <returns>The <see cref="GNode"/> instance corresponding to
         /// <paramref name="node"/>, or null if <paramref name="node"/> is not
         /// in this graph.</returns>
-        public GraphNode InternalNodeFor(Node node)
+        public GNode InternalNodeFor(Node node)
         {
             int index = this.IndexOfNode(node);
             if (index < 0)
@@ -1048,13 +1059,13 @@ namespace GraphForms.Algorithms
         /// <summary>
         /// Searches for the specified <typeparamref name="Node"/> instance
         /// and returns the zero-based index of its occurrence within this
-        /// <see cref="T:DirectionalGraph`2{Node,Edge}"/>'s internal list of 
+        /// <see cref="T:Digraph`2{Node,Edge}"/>'s internal list of 
         /// <see cref="Nodes"/>.</summary>
         /// <param name="node">The <typeparamref name="Node"/> to locate
-        /// in this <see cref="T:DirectionalGraph`2{Node,Edge}"/>.</param>
+        /// in this <see cref="T:Digraph`2{Node,Edge}"/>.</param>
         /// <returns>The zero-based index of the occurrence of 
         /// <paramref name="node"/> within this <see 
-        /// cref="T:DirectionalGraph`2{Node,Edge}"/>, if found; otherwise, -1.
+        /// cref="T:Digraph`2{Node,Edge}"/>, if found; otherwise, -1.
         /// </returns><seealso cref="IndexOfEdge(Node,Node)"/>
         public int IndexOfNode(Node node)
         {
@@ -1068,13 +1079,13 @@ namespace GraphForms.Algorithms
 
         /// <summary>
         /// Determines whether the given <typeparamref name="Node"/> is in
-        /// this <see cref="T:DirectionalGraph`2{Node,Edge}"/>.
+        /// this <see cref="T:Digraph`2{Node,Edge}"/>.
         /// </summary>
         /// <param name="node">The <typeparamref name="Node"/> instance to
-        /// locate in this <see cref="T:DirectionalGraph`2{Node,Edge}"/>.
+        /// locate in this <see cref="T:Digraph`2{Node,Edge}"/>.
         /// </param>
         /// <returns>true if <paramref name="node"/> is found in this
-        /// <see cref="T:DirectionalGraph`2{Node,Edge}"/>; otherwise, false.
+        /// <see cref="T:Digraph`2{Node,Edge}"/>; otherwise, false.
         /// </returns><remarks>
         /// This is really just a convenience function for testing whether the
         /// <see cref="IndexOfNode(Node)"/> is greater than or equal to zero.
@@ -1088,20 +1099,20 @@ namespace GraphForms.Algorithms
         #region Adding Nodes
         /// <summary>
         /// Adds a <typeparamref name="Node"/> instance to the end of this
-        /// <see cref="T:DirectionalGraph`2{Node,Edge}"/>, if it isn't already
+        /// <see cref="T:Digraph`2{Node,Edge}"/>, if it isn't already
         /// contained in this graph.</summary>
         /// <param name="node">The <typeparamref name="Node"/> instance to be
-        /// added to the end of this <see cref="T:DirectionalGraph`2{Node,Edge}"/>.
+        /// added to the end of this <see cref="T:Digraph`2{Node,Edge}"/>.
         /// </param>
         /// <returns>true if the <paramref name="node"/> is added to the end of
-        /// this <see cref="T:DirectionalGraph`2{Node,Edge}"/>, false if it's already
+        /// this <see cref="T:Digraph`2{Node,Edge}"/>, false if it's already
         /// contained in it.</returns><seealso cref="AddEdge(Edge)"/>
         public bool AddNode(Node node)
         {
             // Don't allow duplicates
             if (this.IndexOfNode(node) < 0)
             {
-                this.mNodes.Add(new GraphNode(this, node));
+                this.mNodes.Add(new GNode(this, node));
                 return true;
             }
             return false;
@@ -1109,22 +1120,22 @@ namespace GraphForms.Algorithms
 
         /// <summary>
         /// Adds the <typeparamref name="Node"/> instances in the specified
-        /// array to the end of this <see cref="T:DirectionalGraph`2{Node,Edge}"/>,
+        /// array to the end of this <see cref="T:Digraph`2{Node,Edge}"/>,
         /// if they aren't already contained in this graph.
         /// </summary>
         /// <param name="nodes">The array of <typeparamref name="Node"/>
         /// instances that should be added to the end of this 
-        /// <see cref="T:DirectionalGraph`2{Node,Edge}"/>.</param>
+        /// <see cref="T:Digraph`2{Node,Edge}"/>.</param>
         /// <returns>The number of <typeparamref name="Node"/> instances that
         /// are successfully added to the end of this 
-        /// <see cref="T:DirectionalGraph`2{Node,Edge}"/>.</returns>
+        /// <see cref="T:Digraph`2{Node,Edge}"/>.</returns>
         public int AddNodeRange(Node[] nodes)
         {
             if (nodes == null || nodes.Length == 0)
                 return 0;
             // Don't allow duplicates
             Node node;
-            List<GraphNode> gNodes = new List<GraphNode>(nodes.Length + 1);
+            List<GNode> gNodes = new List<GNode>(nodes.Length + 1);
             int i, j, index;
             for (i = 0; i < nodes.Length; i++)
             {
@@ -1139,7 +1150,7 @@ namespace GraphForms.Algorithms
                     }
                     if (index < 0)
                     {
-                        gNodes.Add(new GraphNode(this, nodes[i]));
+                        gNodes.Add(new GNode(this, nodes[i]));
                     }
                 }
             }
@@ -1150,9 +1161,9 @@ namespace GraphForms.Algorithms
 
         /// <summary>
         /// If <paramref name="oldNode"/> is found within this
-        /// <see cref="T:DirectionalGraph`2{Node,Edge}"/>, it is replaced with 
+        /// <see cref="T:Digraph`2{Node,Edge}"/>, it is replaced with 
         /// <paramref name="newNode"/>, but only if <paramref name="newNode"/>
-        /// isn't already contained in this <see cref="T:DirectionalGraph`2{Node,Edge}"/>.
+        /// isn't already contained in this <see cref="T:Digraph`2{Node,Edge}"/>.
         /// </summary>
         /// <param name="oldNode">The <typeparamref name="Node"/> instance to
         /// be replaced with <paramref name="newNode"/>.</param>
@@ -1215,15 +1226,15 @@ namespace GraphForms.Algorithms
         #region Removing Nodes
         /// <summary>
         /// Removes the specified <typeparamref name="Node"/> instance from
-        /// this <see cref="T:DirectionalGraph`2{Node,Edge}"/>, along with all
+        /// this <see cref="T:Digraph`2{Node,Edge}"/>, along with all
         /// <typeparamref name="Edge"/> instances connecting it to the rest of 
         /// this graph, but doesn't remove any nodes orphaned by the removal
         /// of <paramref name="node"/>.</summary>
         /// <param name="node">The <typeparamref name="Node"/> instance to 
-        /// remove from this <see cref="T:DirectionalGraph`2{Node,Edge}"/>.</param>
+        /// remove from this <see cref="T:Digraph`2{Node,Edge}"/>.</param>
         /// <returns>true if <paramref name="node"/> is successfully removed;
         /// otherwise false if <paramref name="node"/> wasn't found in this
-        /// <see cref="T:DirectionalGraph`2{Node,Edge}"/>.</returns>
+        /// <see cref="T:Digraph`2{Node,Edge}"/>.</returns>
         /// <seealso cref="RemoveNodeAt(int)"/>
         /// <seealso cref="OrphanNode(Node)"/>
         /// <seealso cref="RemoveEdge(Node,Node)"/>
@@ -1238,17 +1249,17 @@ namespace GraphForms.Algorithms
 
         /// <summary>
         /// Removes the specified <typeparamref name="Node"/> instance from
-        /// this <see cref="T:DirectionalGraph`2{Node,Edge}"/>, along with all
+        /// this <see cref="T:Digraph`2{Node,Edge}"/>, along with all
         /// <typeparamref name="Edge"/> instances connecting it to the rest of 
         /// this graph.</summary>
         /// <param name="node">The <typeparamref name="Node"/> instance to 
-        /// remove from this <see cref="T:DirectionalGraph`2{Node,Edge}"/>.</param>
+        /// remove from this <see cref="T:Digraph`2{Node,Edge}"/>.</param>
         /// <param name="removeOrphans">Whether or not to remove any 
         /// <typeparamref name="Node"/> instances orphaned by the removal of
         /// <paramref name="node"/>.</param>
         /// <returns>true if <paramref name="node"/> is successfully removed;
         /// otherwise false if <paramref name="node"/> wasn't found in this
-        /// <see cref="T:DirectionalGraph`2{Node,Edge}"/>.</returns>
+        /// <see cref="T:Digraph`2{Node,Edge}"/>.</returns>
         /// <seealso cref="RemoveNodeAt(int,bool)"/>
         /// <seealso cref="OrphanNode(Node)"/>
         /// <seealso cref="RemoveEdge(Node,Node,bool)"/>
@@ -1263,7 +1274,7 @@ namespace GraphForms.Algorithms
 
         /// <summary>
         /// Removes the <typeparamref name="Node"/> instance at the specified
-        /// index in this <see cref="T:DirectionalGraph`2{Node,Edge}"/>'s list of
+        /// index in this <see cref="T:Digraph`2{Node,Edge}"/>'s list of
         /// <see cref="Nodes"/>, along with all <typeparamref name="Edge"/>
         /// instances connecting it to the rest of this graph, but doesn't 
         /// remove any any nodes orphaned by the removal of the node at 
@@ -1285,7 +1296,7 @@ namespace GraphForms.Algorithms
 
         /// <summary>
         /// Removes the <typeparamref name="Node"/> instance at the specified
-        /// index in this <see cref="T:DirectionalGraph`2{Node,Edge}"/>'s list of
+        /// index in this <see cref="T:Digraph`2{Node,Edge}"/>'s list of
         /// <see cref="Nodes"/>, along with all <typeparamref name="Edge"/>
         /// instances connecting it to the rest of this graph.</summary>
         /// <param name="nodeIndex">The zero-based index of the <typeparamref 
@@ -1312,12 +1323,12 @@ namespace GraphForms.Algorithms
             Node node = this.mNodes[i].mData;
             if (removeOrphans)
             {
-                GraphNode n = this.mNodes[i];
-                List<GraphNode> orphans = n.Disconnect();
+                GNode n = this.mNodes[i];
+                List<GNode> orphans = n.Disconnect();
                 if (!orphans.Contains(n))
                     orphans.Add(n);
                 count = this.mNodes.Count;
-                List<GraphNode> newNodes = new List<GraphNode>(
+                List<GNode> newNodes = new List<GNode>(
                     count - orphans.Count + 1);
                 for (i = 0; i < count; i++)
                 {
@@ -1335,7 +1346,7 @@ namespace GraphForms.Algorithms
                 this.mNodes.RemoveAt(i);
             }
             count = this.mEdges.Count;
-            List<GraphEdge> newEdges = new List<GraphEdge>(count + 1);
+            List<GEdge> newEdges = new List<GEdge>(count + 1);
             Edge e;
             for (i = 0; i < count; i++)
             {
@@ -1351,14 +1362,14 @@ namespace GraphForms.Algorithms
         /// <summary>
         /// Removes all <typeparamref name="Edge"/> instances connecting the
         /// given <typeparamref name="Node"/> instance to all other instances 
-        /// in this <see cref="T:DirectionalGraph`2{Node,Edge}"/>, essentially
+        /// in this <see cref="T:Digraph`2{Node,Edge}"/>, essentially
         /// orphaning it from the rest of this graph.</summary>
         /// <param name="node">The <typeparamref name="Node"/> instance to be
-        /// orphaned from the rest of this <see cref="T:DirectionalGraph`2{Node,Edge}"/>.
+        /// orphaned from the rest of this <see cref="T:Digraph`2{Node,Edge}"/>.
         /// </param>
         /// <returns>true if <paramref name="node"/> is successfully orphaned;
         /// otherwise, false if <paramref name="node"/> wasn't found in this
-        /// <see cref="T:DirectionalGraph`2{Node,Edge}"/>.</returns>
+        /// <see cref="T:Digraph`2{Node,Edge}"/>.</returns>
         /// <seealso cref="OrphanNodeAt(int)"/>
         /// <seealso cref="RemoveNode(Node,bool)"/>
         /// <seealso cref="RemoveEdge(Node,Node,bool)"/>
@@ -1374,7 +1385,7 @@ namespace GraphForms.Algorithms
         /// <summary>
         /// Removes all <typeparamref name="Edge"/> instances connecting the
         /// <typeparamref name="Node"/> instance at the given index to all 
-        /// other instances in this <see cref="T:DirectionalGraph`2{Node,Edge}"/>,
+        /// other instances in this <see cref="T:Digraph`2{Node,Edge}"/>,
         /// essentially orphaning it from the rest of this graph.</summary>
         /// <param name="nodeIndex">The zero-based index of the <typeparamref 
         /// name="Node"/> instance to be orphaned.</param>
@@ -1391,13 +1402,13 @@ namespace GraphForms.Algorithms
 
         private void InternalOrphanNodeAt(int i)
         {
-            GraphNode n = this.mNodes[i];
+            GNode n = this.mNodes[i];
             if (n.mSrcEdges.Count == 0 && n.mDstEdges.Count == 0)
                 return;
             n.Disconnect();
             Node node = n.mData;
             int count = this.mEdges.Count;
-            List<GraphEdge> newEdges = new List<GraphEdge>(count + 1);
+            List<GEdge> newEdges = new List<GEdge>(count + 1);
             Edge e;
             for (i = 0; i < count; i++)
             {
@@ -1412,10 +1423,10 @@ namespace GraphForms.Algorithms
         /// Retrieves all orphaned <typeparamref name="Node"/> instances (nodes
         /// without any <typeparamref name="Edge"/> instances connecting them
         /// to any other <typeparamref name="Node"/> instances) from this
-        /// <see cref="T:DirectionalGraph`2{Node,Edge}"/>.
+        /// <see cref="T:Digraph`2{Node,Edge}"/>.
         /// </summary>
         /// <returns>An array containing all orphaned <typeparamref 
-        /// name="Node"/> currently in this <see cref="T:DirectionalGraph`2{Node,Edge}"/>.
+        /// name="Node"/> currently in this <see cref="T:Digraph`2{Node,Edge}"/>.
         /// </returns><seealso cref="Nodes"/>
         /// <seealso cref="OrphanNode(Node)"/>
         public Node[] FindOrphanedNodes()
@@ -1426,7 +1437,7 @@ namespace GraphForms.Algorithms
             if (count == 0)
                 return new Node[0];
             List<Node> orphans = new List<Node>(count + 1);
-            GraphNode n;
+            GNode n;
             for (int i = 0; i < count; i++)
             {
                 n = this.mNodes[i];
@@ -1437,24 +1448,24 @@ namespace GraphForms.Algorithms
         }
 
         /// <summary>
-        /// Retrieves all orphaned <see cref="GraphNode"/> instances (nodes
+        /// Retrieves all orphaned <see cref="GNode"/> instances (nodes
         /// without any <typeparamref name="Edge"/> instances connecting them
-        /// to any other <see cref="GraphNode"/> instances) from this
-        /// <see cref="T:DirectionalGraph`2{Node,Edge}"/>.
+        /// to any other <see cref="GNode"/> instances) from this
+        /// <see cref="T:Digraph`2{Node,Edge}"/>.
         /// </summary>
         /// <returns>An array containing all orphaned <typeparamref 
-        /// name="Node"/> currently in this <see cref="T:DirectionalGraph`2{Node,Edge}"/>.
+        /// name="Node"/> currently in this <see cref="T:Digraph`2{Node,Edge}"/>.
         /// </returns><seealso cref="InternalNodes"/>
         /// <seealso cref="OrphanNode(Node)"/>
-        public GraphNode[] FindOrphanedInternalNodes()
+        public GNode[] FindOrphanedInternalNodes()
         {
             if (this.mEdges.Count == 0)
                 return this.mNodes.ToArray();
             int count = this.mNodes.Count;
             if (count == 0)
-                return new GraphNode[0];
-            List<GraphNode> orphans = new List<GraphNode>(count + 1);
-            GraphNode n;
+                return new GNode[0];
+            List<GNode> orphans = new List<GNode>(count + 1);
+            GNode n;
             for (int i = 0; i < count; i++)
             {
                 n = this.mNodes[i];
@@ -1468,7 +1479,7 @@ namespace GraphForms.Algorithms
         /// Removes all orphaned <typeparamref name="Node"/> instances (nodes
         /// without any <typeparamref name="Edge"/> instances connecting them
         /// to any other <typeparamref name="Node"/> instances) from this
-        /// <see cref="T:DirectionalGraph`2{Node,Edge}"/>.
+        /// <see cref="T:Digraph`2{Node,Edge}"/>.
         /// </summary><remarks>
         /// Remember that this will remove any <typeparamref name="Node"/>
         /// instances recently added without any connections yet, as well as
@@ -1479,9 +1490,9 @@ namespace GraphForms.Algorithms
         {
             if (this.mEdges.Count == 0)
                 this.ClearNodes();
-            GraphNode n;
+            GNode n;
             int i, count = this.mNodes.Count;
-            List<GraphNode> newNodes = new List<GraphNode>(count + 1);
+            List<GNode> newNodes = new List<GNode>(count + 1);
             for (i = 0; i < count; i++)
             {
                 n = this.mNodes[i];
@@ -1500,7 +1511,7 @@ namespace GraphForms.Algorithms
 
         /// <summary>
         /// Removes all <typeparamref name="Node"/> instances from this <see 
-        /// cref="T:DirectionalGraph`2{Node,Edge}"/>, as well as all <typeparamref 
+        /// cref="T:Digraph`2{Node,Edge}"/>, as well as all <typeparamref 
         /// name="Edge"/> instances, since they're meaningless without any
         /// <typeparamref name="Node"/> instances.
         /// </summary><seealso cref="ClearOrphanedNodes()"/>
@@ -1524,7 +1535,7 @@ namespace GraphForms.Algorithms
         #region Edge List Properties
         /// <summary>
         /// The number of <typeparamref name="Edge"/> instances currently
-        /// contained in this <see cref="T:DirectionalGraph`2{Node,Edge}"/>.
+        /// contained in this <see cref="T:Digraph`2{Node,Edge}"/>.
         /// </summary><seealso cref="NodeCount"/>
         public int EdgeCount
         {
@@ -1551,7 +1562,7 @@ namespace GraphForms.Algorithms
 
         /// <summary>
         /// An array of all the <typeparamref name="Edge"/> instances
-        /// contained in this <see cref="T:DirectionalGraph`2{Node,Edge}"/>,
+        /// contained in this <see cref="T:Digraph`2{Node,Edge}"/>,
         /// in the same order as all functions with an <c>edgeIndex</c>
         /// argument.</summary><seealso cref="InternalEdges"/>
         /// <seealso cref="Nodes"/>
@@ -1584,28 +1595,28 @@ namespace GraphForms.Algorithms
         }
 
         /// <summary>
-        /// An array of all the <see cref="GraphEdge"/> instances currently
-        /// contained within this <see cref="T:DirectionalGraph`2{Node,Edge}"/>,
+        /// An array of all the <see cref="GEdge"/> instances currently
+        /// contained within this <see cref="T:Digraph`2{Node,Edge}"/>,
         /// in the same order as all functions with an <c>edgeIndex</c>
         /// argument.</summary><seealso cref="Edges"/>
         /// <seealso cref="InternalNodes"/>
-        public GraphEdge[] InternalEdges
+        public GEdge[] InternalEdges
         {
             get { return this.mEdges.ToArray(); }
         }
 
         /// <summary>
-        /// Retrieves the <see cref="GraphEdge"/> instance at the given
+        /// Retrieves the <see cref="GEdge"/> instance at the given
         /// <paramref name="edgeIndex"/> in this directional graph's
         /// internal list of <see cref="InternalEdges"/>.
         /// </summary>
-        /// <param name="edgeIndex">The index of the <see cref="GraphEdge"/>
+        /// <param name="edgeIndex">The index of the <see cref="GEdge"/>
         /// instance to retrieve from this directional graph's internal list of
         /// <see cref="InternalEdges"/>.</param>
-        /// <returns>The <see cref="GraphEdge"/> instance at 
+        /// <returns>The <see cref="GEdge"/> instance at 
         /// <paramref name="edgeIndex"/> in this directional graph's internal
         /// list of <see cref="InternalEdges"/>.</returns>
-        public GraphEdge InternalEdgeAt(int edgeIndex)
+        public GEdge InternalEdgeAt(int edgeIndex)
         {
             return this.mEdges[edgeIndex];
         }
@@ -1616,7 +1627,7 @@ namespace GraphForms.Algorithms
         /// Searches for the <typeparamref name="Edge"/> instance with the
         /// specified source and destination <typeparamref name="Node"/>s
         /// and returns the zero-based index of its occurrence within this
-        /// <see cref="T:DirectionalGraph`2{Node,Edge}"/>'s internal list of 
+        /// <see cref="T:Digraph`2{Node,Edge}"/>'s internal list of 
         /// <see cref="Edges"/>.</summary>
         /// <param name="srcNode">The <see cref="P:IGraphEdge`1{Node}.SrcNode"/>
         /// of the <typeparamref name="Edge"/> instance to locate.</param>
@@ -1625,7 +1636,7 @@ namespace GraphForms.Algorithms
         /// <returns>The zero-based index of the occurrence of the
         /// edge with the given <paramref name="srcNode"/> source and
         /// <paramref name="dstNode"/> destination within this <see 
-        /// cref="T:DirectionalGraph`2{Node,Edge}"/>, if found; otherwise, -1.
+        /// cref="T:Digraph`2{Node,Edge}"/>, if found; otherwise, -1.
         /// </returns>
         /// <seealso cref="IndexOfNode(Node)"/>
         public int IndexOfEdge(Node srcNode, Node dstNode)
@@ -1644,7 +1655,7 @@ namespace GraphForms.Algorithms
         /// <summary>
         /// Determines whether an <typeparamref name="Edge"/> instance with the
         /// specified source and destination <typeparamref name="Node"/>s is in
-        /// this <see cref="T:DirectionalGraph`2{Node,Edge}"/>.
+        /// this <see cref="T:Digraph`2{Node,Edge}"/>.
         /// </summary>
         /// <param name="srcNode">The <see cref="P:IGraphEdge`1{Node}.SrcNode"/>
         /// of the <typeparamref name="Edge"/> instance to locate.</param>
@@ -1653,7 +1664,7 @@ namespace GraphForms.Algorithms
         /// <returns>true if an <typeparamref name="Edge"/> instance with the
         /// given <paramref name="srcNode"/> source and 
         /// <paramref name="dstNode"/> destination is in this 
-        /// <see cref="T:DirectionalGraph`2{Node,Edge}"/>; otherwise, false.
+        /// <see cref="T:Digraph`2{Node,Edge}"/>; otherwise, false.
         /// </returns><remarks>
         /// This is really just a convenience function for testing whether the
         /// <see cref="IndexOfEdge(Node,Node)"/> is greater than or equal to 
@@ -1675,7 +1686,7 @@ namespace GraphForms.Algorithms
         /// of the <typeparamref name="Edge"/> instance to locate.</param>
         /// <returns>The <typeparamref name="Edge"/> instance with the given
         /// <paramref name="srcNode"/> source and <paramref name="dstNode"/>
-        /// destination in this <see cref="T:DirectionalGraph`2{Node,Edge}"/>,
+        /// destination in this <see cref="T:Digraph`2{Node,Edge}"/>,
         /// if found; otherwise, the default value of the <typeparamref 
         /// name="Edge"/> type.</returns>
         public Edge FindEdge(Node srcNode, Node dstNode)
@@ -1688,13 +1699,13 @@ namespace GraphForms.Algorithms
         #region Adding Edges
         /// <summary>
         /// Adds an <typeparamref name="Edge"/> instance to the end of this
-        /// <see cref="T:DirectionalGraph`2{Node,Edge}"/>, or replaces the 
+        /// <see cref="T:Digraph`2{Node,Edge}"/>, or replaces the 
         /// <typeparamref name="Edge"/> instance with the same <see 
         /// cref="P:IGraphEdge`1{Node}.SrcNode"/> and <see 
         /// cref="P:IGraphNode`1{Node}.DstNode"/> already in this graph with the
         /// given <paramref name="edge"/>.</summary>
         /// <param name="edge">The <typeparamref name="Edge"/> instance to be
-        /// added to the end of this <see cref="T:DirectionalGraph`2{Node,Edge}"/>, or 
+        /// added to the end of this <see cref="T:Digraph`2{Node,Edge}"/>, or 
         /// replace the instance with the same source and destination.</param>
         /// <seealso cref="AddEdge(Edge,bool)"/><seealso cref="AddNode(Node)"/>
         public void AddEdge(Edge edge)
@@ -1704,26 +1715,26 @@ namespace GraphForms.Algorithms
 
         /// <summary>
         /// Adds an <typeparamref name="Edge"/> instance to the end of this
-        /// <see cref="T:DirectionalGraph`2{Node,Edge}"/>, or replaces the 
+        /// <see cref="T:Digraph`2{Node,Edge}"/>, or replaces the 
         /// <typeparamref name="Edge"/> instance with the same <see 
         /// cref="M:IGraphEdge`1{Node}.SrcNode"/> and <see 
         /// cref="M:IGraphNode`1{Node}.DstNode"/> already in this graph with the
         /// given <paramref name="edge"/>.</summary>
         /// <param name="edge">The <typeparamref name="Edge"/> instance to be
-        /// added to the end of this <see cref="T:DirectionalGraph`2{Node,Edge}"/>, or to
+        /// added to the end of this <see cref="T:Digraph`2{Node,Edge}"/>, or to
         /// replace the instance with the same source and destination.</param>
         /// <param name="replace">Whether or not <paramref name="edge"/>
         /// replaces any existing <typeparamref name="Edge"/> instance with the
         /// same source and destination <typeparamref name="Node"/>s.</param>
         /// <returns>true if the <paramref name="edge"/> is added to this <see 
-        /// cref="T:DirectionalGraph`2{Node,Edge}"/>, false if it's already contained in it 
+        /// cref="T:Digraph`2{Node,Edge}"/>, false if it's already contained in it 
         /// and replacement isn't allowed.</returns>
         /// <seealso cref="AddEdge(Edge)"/><seealso cref="AddNode(Node)"/>
         public bool AddEdge(Edge edge, bool replace)
         {
             // Replace if edge already exists
             int index = this.IndexOfEdge(edge.SrcNode, edge.DstNode);
-            GraphNode src, dst;
+            GNode src, dst;
             if (index >= 0)
             {
                 if (!replace)
@@ -1734,7 +1745,7 @@ namespace GraphForms.Algorithms
             index = this.IndexOfNode(edge.SrcNode);
             if (index < 0)
             {
-                src = new GraphNode(this, edge.SrcNode);
+                src = new GNode(this, edge.SrcNode);
                 this.mNodes.Add(src);
             }
             else
@@ -1744,14 +1755,14 @@ namespace GraphForms.Algorithms
             index = this.IndexOfNode(edge.DstNode);
             if (index < 0)
             {
-                dst = new GraphNode(this, edge.DstNode);
+                dst = new GNode(this, edge.DstNode);
                 this.mNodes.Add(dst);
             }
             else
             {
                 dst = this.mNodes[index];
             }
-            GraphEdge e = new GraphEdge(src, dst, edge);
+            GEdge e = new GEdge(src, dst, edge);
             this.mEdges.Add(e);
             src.mDstEdges.Add(e);
             dst.mSrcEdges.Add(e);
@@ -1763,7 +1774,7 @@ namespace GraphForms.Algorithms
         /// <summary>
         /// Removes the <typeparamref name="Edge"/> instance with the specified
         /// <paramref name="srcNode"/> and <paramref name="dstNode"/> from
-        /// this <see cref="T:DirectionalGraph`2{Node,Edge}"/>, but doesn't remove 
+        /// this <see cref="T:Digraph`2{Node,Edge}"/>, but doesn't remove 
         /// any nodes orphaned by the removal of the edge.</summary>
         /// <param name="srcNode">The <see cref="P:IGraphEdge`1{Node}.SrcNode"/>
         /// of the <typeparamref name="Edge"/> instance to remove.</param>
@@ -1772,7 +1783,7 @@ namespace GraphForms.Algorithms
         /// <returns>true if the <typeparamref name="Edge"/> instance is 
         /// successfully removed; otherwise false if there is no instance with
         /// specified source and destination <typeparamref name="Node"/>
-        /// instances in this <see cref="T:DirectionalGraph`2{Node,Edge}"/>.</returns>
+        /// instances in this <see cref="T:Digraph`2{Node,Edge}"/>.</returns>
         /// <seealso cref="RemoveEdgeAt(int)"/>
         /// <seealso cref="OrphanNode(Node)"/>
         /// <seealso cref="RemoveNode(Node)"/>
@@ -1788,7 +1799,7 @@ namespace GraphForms.Algorithms
         /// <summary>
         /// Removes the <typeparamref name="Edge"/> instance with the specified
         /// <paramref name="srcNode"/> and <paramref name="dstNode"/> from
-        /// this <see cref="T:DirectionalGraph`2{Node,Edge}"/>.</summary>
+        /// this <see cref="T:Digraph`2{Node,Edge}"/>.</summary>
         /// <param name="srcNode">The <see cref="P:IGraphEdge`1{Node}.SrcNode"/>
         /// of the <typeparamref name="Edge"/> instance to remove.</param>
         /// <param name="dstNode">The <see cref="P:IGraphEdge`1{Node}.DstNode"/>
@@ -1799,7 +1810,7 @@ namespace GraphForms.Algorithms
         /// <returns>true if the <typeparamref name="Edge"/> instance is 
         /// successfully removed; otherwise false if there is no instance with
         /// specified source and destination <typeparamref name="Node"/>
-        /// instances in this <see cref="T:DirectionalGraph`2{Node,Edge}"/>.</returns>
+        /// instances in this <see cref="T:Digraph`2{Node,Edge}"/>.</returns>
         /// <seealso cref="RemoveEdgeAt(int,bool)"/>
         /// <seealso cref="OrphanNode(Node)"/>
         /// <seealso cref="RemoveNode(Node,bool)"/>
@@ -1814,7 +1825,7 @@ namespace GraphForms.Algorithms
 
         /// <summary>
         /// Removes the <typeparamref name="Edge"/> instance at the specified
-        /// index in this <see cref="T:DirectionalGraph`2{Node,Edge}"/>'s list of
+        /// index in this <see cref="T:Digraph`2{Node,Edge}"/>'s list of
         /// <see cref="Edges"/>, but doesn't remove any any nodes orphaned by 
         /// the removal of the edge at <paramref name="edgeIndex"/>.</summary>
         /// <param name="edgeIndex">The zero-based index of the <typeparamref 
@@ -1835,7 +1846,7 @@ namespace GraphForms.Algorithms
 
         /// <summary>
         /// Removes the <typeparamref name="Edge"/> instance at the specified
-        /// index in this <see cref="T:DirectionalGraph`2{Node,Edge}"/>'s list of
+        /// index in this <see cref="T:Digraph`2{Node,Edge}"/>'s list of
         /// <see cref="Edges"/>, but doesn't remove any any nodes orphaned by 
         /// the removal of the edge at <paramref name="edgeIndex"/>.</summary>
         /// <param name="edgeIndex">The zero-based index of the <typeparamref 
@@ -1862,7 +1873,7 @@ namespace GraphForms.Algorithms
         private void InternalRemoveEdgeAt(int index, Node src, Node dst,
             bool removeOrphans)
         {
-            GraphEdge edge = this.mEdges[index];
+            GEdge edge = this.mEdges[index];
             this.mEdges.RemoveAt(index);
             index = IndexOfDst(edge.mSrcNode.mDstEdges, dst);
             edge.mSrcNode.mDstEdges.RemoveAt(index);
@@ -1888,12 +1899,12 @@ namespace GraphForms.Algorithms
 
         /// <summary>
         /// Removes all <typeparamref name="Edge"/> instances from this <see 
-        /// cref="T:DirectionalGraph`2{Node,Edge}"/>, effectively orphaning
+        /// cref="T:Digraph`2{Node,Edge}"/>, effectively orphaning
         /// every <typeparamref name="Node"/> instance in this graph.
         /// </summary><remarks>
         /// This is equivalent to calling <see cref="OrphanNode(Node)"/> for
         /// every <typeparamref name="Node"/> instance in this <see 
-        /// cref="T:DirectionalGraph`2{Node,Edge}"/>, except it's much faster.
+        /// cref="T:Digraph`2{Node,Edge}"/>, except it's much faster.
         /// </remarks><seealso cref="ClearOrphanedNodes()"/>
         /// <seealso cref="ClearNodes()"/>.
         public void ClearEdges()

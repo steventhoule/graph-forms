@@ -34,12 +34,12 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         private float mIdealEdgeLength;
         private float mMaxDistance;
 
-        public KKLayoutAlgorithm(DirectionalGraph<Node, Edge> graph)
+        public KKLayoutAlgorithm(Digraph<Node, Edge> graph)
             : base(graph, null)
         {
         }
 
-        public KKLayoutAlgorithm(DirectionalGraph<Node, Edge> graph,
+        public KKLayoutAlgorithm(Digraph<Node, Edge> graph,
             KKLayoutParameters oldParameters)
             : base(graph, oldParameters)
         {
@@ -63,7 +63,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             {
                 // Calculate the distances and diameter of the graph.
                 this.mDistances = this.mGraph.GetDistances();
-                this.mDiameter = DirectionalGraph<Node, Edge>.GetDiameter(this.mDistances);
+                this.mDiameter = Digraph<Node, Edge>.GetDiameter(this.mDistances);
             }
 
             if (paramsDirty)

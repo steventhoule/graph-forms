@@ -5,6 +5,7 @@ using GraphForms.Algorithms.Search;
 
 namespace GraphForms.Algorithms.ConnectedComponents
 {
+    // TODO: Does this need to compensate for self-loop edges?
     // This article was the biggest help in implementing this algorithm:
     // http://www.cs.umd.edu/class/fall2005/cmsc451/biconcomps.pdf
     public class BCCAlgorithm<Node, Edge> 
@@ -14,17 +15,20 @@ namespace GraphForms.Algorithms.ConnectedComponents
     {
         private class NodeData
         {
+            public Node Data;
             public int Depth;
             public int LowPoint;
-            public bool IsCut;
+            public int Parent;
 
-            public Node Data;
+            public bool IsCut;
             public int GroupID;
+            // Only used for strict articulation points?
             public List<int> GIDs;
 
             public NodeData(Node data)
             {
                 this.Data = data;
+                this.Parent = -1;
                 this.GroupID = -1;
             }
         }
@@ -39,12 +43,12 @@ namespace GraphForms.Algorithms.ConnectedComponents
         private List<Edge[]> mComponents;
         private List<Node[]> mCompGroups;
 
-        public BCCAlgorithm(DirectionalGraph<Node, Edge> graph)
+        public BCCAlgorithm(Digraph<Node, Edge> graph)
             : this(graph, false)
         {
         }
 
-        public BCCAlgorithm(DirectionalGraph<Node, Edge> graph,
+        public BCCAlgorithm(Digraph<Node, Edge> graph,
             bool reversed)
             : base(graph, false, reversed)
         {
@@ -69,12 +73,6 @@ namespace GraphForms.Algorithms.ConnectedComponents
         {
             get
             {
-                /*Node[][] compGroups = new Node[this.mCompGroups.Count][];
-                for (int i = 0; i < this.mCompGroups.Count; i++)
-                {
-                    compGroups[i] = this.mCompGroups[i].ToArray();
-                }
-                return compGroups;/* */
                 return this.mCompGroups.ToArray();
             }
         }
@@ -169,7 +167,7 @@ namespace GraphForms.Algorithms.ConnectedComponents
             this.mDepth = 0;
             this.mNodeStack.Clear();
             this.mEdgeStack.Clear();
-            DirectionalGraph<Node, Edge>.GraphNode[] nodes
+            Digraph<Node, Edge>.GNode[] nodes
                 = this.mGraph.InternalNodes;
             this.mDatas = new NodeData[nodes.Length];
             for (int i = 0; i < nodes.Length; i++)
@@ -198,7 +196,9 @@ namespace GraphForms.Algorithms.ConnectedComponents
             int srcIndex, int dstIndex, bool reversed)
         {
             this.mEdgeStack.Push(e);
-            this.mNodeStack.Push(this.mDatas[reversed ? srcIndex : dstIndex]);
+            NodeData vData = this.mDatas[reversed ? srcIndex : dstIndex];
+            vData.Parent = reversed ? dstIndex : srcIndex;
+            this.mNodeStack.Push(vData);
             base.OnTreeEdge(e, srcIndex, dstIndex, reversed);
         }
 
@@ -272,49 +272,33 @@ namespace GraphForms.Algorithms.ConnectedComponents
             if (!this.mDatas[index].IsCut)
             {
                 this.mDatas[index].IsCut = true;
-                Node node = this.mGraph.NodeAt(index);
-                this.mArtNodes.Add(node);
+                this.mArtNodes.Add(this.mDatas[index].Data);
             }
         }
 
         protected override void OnGrayEdge(Edge e, 
             int srcIndex, int dstIndex, bool reversed)
         {
-            this.mEdgeStack.Push(e);
-            this.mNodeStack.Push(this.mDatas[reversed ? srcIndex : dstIndex]);
-            NodeData uData, vData;
+            
+            NodeData uData;
+            int vi;
             if (reversed)
             {
                 uData = this.mDatas[dstIndex];
-                vData = this.mDatas[srcIndex];
+                vi = srcIndex;
             }
             else
             {
                 uData = this.mDatas[srcIndex];
-                vData = this.mDatas[dstIndex];
+                vi = dstIndex;
             }
-            uData.LowPoint = Math.Min(uData.LowPoint, vData.Depth);
+            if (uData.Parent != vi)
+            {
+                this.mEdgeStack.Push(e);
+                this.mNodeStack.Push(this.mDatas[vi]);
+                uData.LowPoint = Math.Min(uData.LowPoint, this.mDatas[vi].Depth);
+            }
             base.OnGrayEdge(e, srcIndex, dstIndex, reversed);
-        }
-
-        protected override void OnBlackEdge(Edge e, 
-            int srcIndex, int dstIndex, bool reversed)
-        {
-            this.mEdgeStack.Push(e);
-            this.mNodeStack.Push(this.mDatas[reversed ? srcIndex : dstIndex]);
-            NodeData uData, vData;
-            if (reversed)
-            {
-                uData = this.mDatas[dstIndex];
-                vData = this.mDatas[srcIndex];
-            }
-            else
-            {
-                uData = this.mDatas[srcIndex];
-                vData = this.mDatas[dstIndex];
-            }
-            uData.LowPoint = Math.Min(uData.LowPoint, vData.Depth);
-            base.OnBlackEdge(e, srcIndex, dstIndex, reversed);
         }
     }
 }

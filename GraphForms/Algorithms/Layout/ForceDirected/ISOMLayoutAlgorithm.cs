@@ -9,7 +9,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         where Node : GraphElement, ILayoutNode
         where Edge : class, IGraphEdge<Node>, IUpdateable
     {
-        private Queue<DirectionalGraph<Node, Edge>.GraphNode> mQueue;
+        private Queue<Digraph<Node, Edge>.GNode> mQueue;
         private readonly Random mRnd = new Random(DateTime.Now.Millisecond);
 
         private PointF mTempPos;
@@ -23,19 +23,19 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         private double mCoolingFactor;
 
         private Node mLastBarycenter = null;
-        private DirectionalGraph<Node, Edge>.GraphNode mBarycenter;
+        private Digraph<Node, Edge>.GNode mBarycenter;
 
-        public ISOMLayoutAlgorithm(DirectionalGraph<Node, Edge> graph)
+        public ISOMLayoutAlgorithm(Digraph<Node, Edge> graph)
             : base(graph, null)
         {
-            this.mQueue = new Queue<DirectionalGraph<Node, Edge>.GraphNode>();
+            this.mQueue = new Queue<Digraph<Node, Edge>.GNode>();
         }
 
-        public ISOMLayoutAlgorithm(DirectionalGraph<Node, Edge> graph,
+        public ISOMLayoutAlgorithm(Digraph<Node, Edge> graph,
             ISOMLayoutParameters<Node> oldParameters)
             : base(graph, oldParameters)
         {
-            this.mQueue = new Queue<DirectionalGraph<Node, Edge>.GraphNode>();
+            this.mQueue = new Queue<Digraph<Node, Edge>.GNode>();
         }
 
         /// <summary>
@@ -120,7 +120,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
 
         private void Adjust()
         {
-            DirectionalGraph<Node, Edge>.GraphNode closest = null;
+            Digraph<Node, Edge>.GNode closest = null;
             if (this.mBarycenter == null)
             {
                 while (closest == null || closest.DstEdgeCount == 0)
@@ -140,30 +140,30 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             }
 
             // Adjust the nodes to the selected node
-            DirectionalGraph<Node, Edge>.GraphNode[] nodes = this.mGraph.InternalNodes;
+            Digraph<Node, Edge>.GNode[] nodes = this.mGraph.InternalNodes;
             for (int i = 0; i < nodes.Length; i++)
             {
                 nodes[i].Index = i;
                 nodes[i].Distance = 0;
-                nodes[i].Visited = false;
+                nodes[i].Color = GraphColor.White;
             }
             this.AdjustNode(closest);
         }
 
-        private void AdjustNode(DirectionalGraph<Node, Edge>.GraphNode closest)
+        private void AdjustNode(Digraph<Node, Edge>.GNode closest)
         {
             this.mQueue.Clear();
             closest.Distance = 0;
-            closest.Visited = true;
+            closest.Color = GraphColor.Gray;
             this.mQueue.Enqueue(closest);
 
             float[] newXs = this.NewXPositions;
             float[] newYs = this.NewYPositions;
-            DirectionalGraph<Node, Edge>.GraphNode current, n;
+            Digraph<Node, Edge>.GNode current, n;
             Node node;
             double posX, posY, factor;
             PointF force;
-            DirectionalGraph<Node, Edge>.GraphEdge[] edges;
+            Digraph<Node, Edge>.GEdge[] edges;
             int i;
             while (this.mQueue.Count > 0)
             {
@@ -193,9 +193,9 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                     {
                         factor = current.Distance + edges[i].Data.Weight;
                         n = edges[i].DstNode;
-                        if (!n.Visited)
+                        if (n.Color == GraphColor.White)
                         {
-                            n.Visited = true;
+                            n.Color = GraphColor.Gray;
                             n.Distance = (float)factor;
                             this.mQueue.Enqueue(n);
                         }
@@ -218,13 +218,13 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         /// <see cref="P:LayoutAlgorithm`3.Parameters"/>.</param>
         /// <returns>Returns the closest node to the given 
         /// <paramref name="position"/>.</returns>
-        public DirectionalGraph<Node, Edge>.GraphNode GetClosest(PointF position)
+        public Digraph<Node, Edge>.GNode GetClosest(PointF position)
         {
-            DirectionalGraph<Node, Edge>.GraphNode n, node = null;
+            Digraph<Node, Edge>.GNode n, node = null;
             double d, distance = double.MaxValue;
 
             // find the closest node
-            DirectionalGraph<Node, Edge>.GraphNode[] nodes = this.mGraph.InternalNodes;
+            Digraph<Node, Edge>.GNode[] nodes = this.mGraph.InternalNodes;
             for (int i = 0; i < nodes.Length; i++)
             {
                 n = nodes[i];

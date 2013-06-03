@@ -11,26 +11,26 @@ namespace GraphForms.Algorithms.SpanningTree
         where Node : class
         where Edge : class, IGraphEdge<Node>
     {
-        private DirectionalGraph<Node, Edge> mSpanningTree;
+        private Digraph<Node, Edge> mSpanningTree;
 
-        public DFSpanningTreeAlgorithm(DirectionalGraph<Node, Edge> graph)
+        public DFSpanningTreeAlgorithm(Digraph<Node, Edge> graph)
             : base(graph)
         {
-            this.mSpanningTree = new DirectionalGraph<Node, Edge>(
+            this.mSpanningTree = new Digraph<Node, Edge>(
                 graph.NodeCount, graph.EdgeCount / 2);
             //this.mSpanningTree.AddNodeRange(graph.Nodes);
         }
 
-        public DFSpanningTreeAlgorithm(DirectionalGraph<Node, Edge> graph,
+        public DFSpanningTreeAlgorithm(Digraph<Node, Edge> graph,
             bool undirected, bool reversed)
             : base(graph, undirected, reversed)
         {
-            this.mSpanningTree = new DirectionalGraph<Node, Edge>(
+            this.mSpanningTree = new Digraph<Node, Edge>(
                 graph.NodeCount, graph.EdgeCount / 2);
             //this.mSpanningTree.AddNodeRange(graph.Nodes);
         }
 
-        public DirectionalGraph<Node, Edge> SpanningTree
+        public Digraph<Node, Edge> SpanningTree
         {
             get { return this.mSpanningTree; }
         }

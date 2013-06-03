@@ -15,18 +15,14 @@ namespace GraphAlgorithmDemo
         public static readonly Color[] sLineColors = new Color[]
         {
             Color.Red, Color.Green, Color.Blue,
-            Color.Yellow, Color.Magenta, Color.Cyan
+            Color.Orange, Color.Magenta, Color.Cyan
         };
-
-        protected readonly CircleNodeScene mScene;
 
         private bool bDirected;
         private bool bReversed;
 
-        public StyleAlgorithm(CircleNodeScene scene,
-            bool directed, bool reversed)
+        public StyleAlgorithm(bool directed, bool reversed)
         {
-            this.mScene = scene;
             this.bDirected = directed;
             this.bReversed = reversed;
         }
@@ -53,15 +49,15 @@ namespace GraphAlgorithmDemo
             set { this.bReversed = value; }
         }
 
-        public abstract void Compute();
+        public abstract void Compute(CircleNodeScene scene);
     }
 
     public class BCCStyleAlgorithm : StyleAlgorithm
     {
         private BCCAlgorithm<CircleNode, ArrowEdge> mAlg;
 
-        public BCCStyleAlgorithm(CircleNodeScene scene)
-            : base(scene, false, false)
+        public BCCStyleAlgorithm()
+            : base(false, false)
         {
         }
 
@@ -70,10 +66,10 @@ namespace GraphAlgorithmDemo
             get { return false; }
         }
 
-        public override void Compute()
+        public override void Compute(CircleNodeScene scene)
         {
             this.mAlg = new BCCAlgorithm<CircleNode, ArrowEdge>(
-                this.mScene.Graph, this.Reversed);
+                scene.Graph, this.Reversed);
             this.mAlg.Compute();
             ArrowEdge[] comp;
             ArrowEdge[][] comps = this.mAlg.Components;
@@ -113,8 +109,8 @@ namespace GraphAlgorithmDemo
     {
         private SCCAlgorithm<CircleNode, ArrowEdge> mAlg;
 
-        public SCCStyleAlgorithm(CircleNodeScene scene)
-            : base(scene, true, false)
+        public SCCStyleAlgorithm()
+            : base(true, false)
         {
         }
 
@@ -123,10 +119,10 @@ namespace GraphAlgorithmDemo
             get { return false; }
         }
 
-        public override void Compute()
+        public override void Compute(CircleNodeScene scene)
         {
             this.mAlg = new SCCAlgorithm<CircleNode, ArrowEdge>(
-                this.mScene.Graph, this.Reversed);
+                scene.Graph, this.Reversed);
             this.mAlg.Compute();
             CircleNode[] nodes;
             CircleNode[][] comps = this.mAlg.Components;
@@ -152,25 +148,68 @@ namespace GraphAlgorithmDemo
         }
     }
 
+    public class WCCStyleAlgorithm : StyleAlgorithm
+    {
+        private WCCAlgorithm<CircleNode, ArrowEdge> mAlg;
+
+        public WCCStyleAlgorithm()
+            : base(true, false)
+        {
+        }
+
+        public override bool EnableDirected
+        {
+            get { return false; }
+        }
+
+        public override void Compute(CircleNodeScene scene)
+        {
+            this.mAlg = new WCCAlgorithm<CircleNode, ArrowEdge>(
+                scene.Graph, this.Reversed);
+            this.mAlg.Compute();
+            CircleNode[] nodes;
+            CircleNode[][] comps = this.mAlg.Components;
+            int i, j, sC = sLineColors.Length;
+            for (i = 0; i < comps.Length; i++)
+            {
+                nodes = comps[i];
+                for (j = 0; j < nodes.Length; j++)
+                {
+                    nodes[j].BorderColor = sLineColors[i % sC];
+                }
+            }
+            /*nodes = this.mAlg.Roots;
+            for (i = 0; i < nodes.Length; i++)
+            {
+                nodes[i].MarkerColor = sLineColors[0];
+            }/* */
+        }
+
+        public override string ToString()
+        {
+            return "Weakly Connected Components";
+        }
+    }
+
     public abstract class SpanTreeStyleAlgorithm : StyleAlgorithm
     {
         private ISpanningTreeAlgorithm<CircleNode, ArrowEdge> mAlg;
 
-        public SpanTreeStyleAlgorithm(CircleNodeScene scene,
-            bool directed, bool reversed)
-            : base(scene, directed, reversed)
+        public SpanTreeStyleAlgorithm(bool directed, bool reversed)
+            : base(directed, reversed)
         {
         }
 
-        protected abstract ISpanningTreeAlgorithm<CircleNode, ArrowEdge> a();
+        protected abstract ISpanningTreeAlgorithm<CircleNode, ArrowEdge> a(
+            CircleNodeScene scene);
 
-        public override void Compute()
+        public override void Compute(CircleNodeScene scene)
         {
-            this.mAlg = a();
+            this.mAlg = a(scene);
             this.mAlg.Compute();
             int i;
-            DirectionalGraph<CircleNode, ArrowEdge>.GraphEdge[] edges
-                = this.mScene.Graph.InternalEdges;
+            Digraph<CircleNode, ArrowEdge>.GEdge[] edges
+                = scene.Graph.InternalEdges;
             for (i = 0; i < edges.Length; i++)
             {
                 edges[i].Data.LineDashStyle = DashStyle.Solid;
@@ -185,15 +224,16 @@ namespace GraphAlgorithmDemo
 
     public class BFSpanTreeStyleAlgorithm : SpanTreeStyleAlgorithm
     {
-        public BFSpanTreeStyleAlgorithm(CircleNodeScene scene)
-            : base(scene, true, false)
+        public BFSpanTreeStyleAlgorithm()
+            : base(true, false)
         {
         }
 
-        protected override ISpanningTreeAlgorithm<CircleNode, ArrowEdge> a()
+        protected override ISpanningTreeAlgorithm<CircleNode, ArrowEdge> a(
+            CircleNodeScene scene)
         {
             return new BFSpanningTreeAlgorithm<CircleNode, ArrowEdge>(
-                this.mScene.Graph, this.Directed, this.Reversed);
+                scene.Graph, this.Directed, this.Reversed);
         }
 
         public override string ToString()
@@ -204,15 +244,16 @@ namespace GraphAlgorithmDemo
 
     public class DFSpanTreeStyleAlgorithm : SpanTreeStyleAlgorithm
     {
-        public DFSpanTreeStyleAlgorithm(CircleNodeScene scene)
-            : base(scene, true, false)
+        public DFSpanTreeStyleAlgorithm()
+            : base(true, false)
         {
         }
 
-        protected override ISpanningTreeAlgorithm<CircleNode, ArrowEdge> a()
+        protected override ISpanningTreeAlgorithm<CircleNode, ArrowEdge> a(
+            CircleNodeScene scene)
         {
             return new DFSpanningTreeAlgorithm<CircleNode, ArrowEdge>(
-                this.mScene.Graph, this.Directed, this.Reversed);
+                scene.Graph, this.Directed, this.Reversed);
         }
 
         public override string ToString()
@@ -223,8 +264,8 @@ namespace GraphAlgorithmDemo
 
     public class KruskalSpanTreeStyleAlgorithm : SpanTreeStyleAlgorithm
     {
-        public KruskalSpanTreeStyleAlgorithm(CircleNodeScene scene)
-            : base(scene, false, false)
+        public KruskalSpanTreeStyleAlgorithm()
+            : base(false, false)
         {
         }
 
@@ -238,10 +279,11 @@ namespace GraphAlgorithmDemo
             get { return false; }
         }
 
-        protected override ISpanningTreeAlgorithm<CircleNode, ArrowEdge> a()
+        protected override ISpanningTreeAlgorithm<CircleNode, ArrowEdge> a(
+            CircleNodeScene scene)
         {
             return new KruskalMinSpanningTreeAlgorithm<CircleNode, ArrowEdge>(
-                this.mScene.Graph);
+                scene.Graph);
         }
 
         public override string ToString()
@@ -252,8 +294,8 @@ namespace GraphAlgorithmDemo
 
     public class BoruvkaSpanTreeStyleAlgorithm : SpanTreeStyleAlgorithm
     {
-        public BoruvkaSpanTreeStyleAlgorithm(CircleNodeScene scene)
-            : base(scene, false, false)
+        public BoruvkaSpanTreeStyleAlgorithm()
+            : base(false, false)
         {
         }
 
@@ -267,10 +309,11 @@ namespace GraphAlgorithmDemo
             get { return false; }
         }
 
-        protected override ISpanningTreeAlgorithm<CircleNode, ArrowEdge> a()
+        protected override ISpanningTreeAlgorithm<CircleNode, ArrowEdge> a(
+            CircleNodeScene scene)
         {
             return new BoruvkaMinSpanningTreeAlgorithm<CircleNode, ArrowEdge>(
-                this.mScene.Graph);
+                scene.Graph);
         }
 
         public override string ToString()
@@ -283,18 +326,18 @@ namespace GraphAlgorithmDemo
     {
         private DFLongestPathAlgorithm<CircleNode, ArrowEdge> mAlg;
 
-        public DFLongestPathStyleAlgorithm(CircleNodeScene scene)
-            : base(scene, true, false)
+        public DFLongestPathStyleAlgorithm()
+            : base(true, false)
         {
         }
 
-        public override void Compute()
+        public override void Compute(CircleNodeScene scene)
         {
             this.mAlg = new DFLongestPathAlgorithm<CircleNode, ArrowEdge>(
-                this.mScene.Graph, this.Directed, this.Reversed);
+                scene.Graph, this.Directed, this.Reversed);
             this.mAlg.Compute();
-            DirectionalGraph<CircleNode, ArrowEdge>.GraphEdge[] edges
-                = this.mScene.Graph.InternalEdges;
+            Digraph<CircleNode, ArrowEdge>.GEdge[] edges
+                = scene.Graph.InternalEdges;
             for (int i = 0; i < edges.Length; i++)
             {
                 edges[i].Data.LineColor = Color.Black;
@@ -314,8 +357,8 @@ namespace GraphAlgorithmDemo
 
     public class ClearAllStyleAlgorithm : StyleAlgorithm
     {
-        public ClearAllStyleAlgorithm(CircleNodeScene scene)
-            : base(scene, false, false)
+        public ClearAllStyleAlgorithm()
+            : base(false, false)
         {
         }
 
@@ -329,17 +372,17 @@ namespace GraphAlgorithmDemo
             get { return false; }
         }
 
-        public override void Compute()
+        public override void Compute(CircleNodeScene scene)
         {
-            DirectionalGraph<CircleNode, ArrowEdge>.GraphEdge[] edges
-                = this.mScene.Graph.InternalEdges;
+            Digraph<CircleNode, ArrowEdge>.GEdge[] edges
+                = scene.Graph.InternalEdges;
             for (int i = 0; i < edges.Length; i++)
             {
                 edges[i].Data.LineColor = Color.Black;
                 edges[i].Data.LineDashStyle = DashStyle.Solid;
             }
-            DirectionalGraph<CircleNode, ArrowEdge>.GraphNode[] nodes
-                = this.mScene.Graph.InternalNodes;
+            Digraph<CircleNode, ArrowEdge>.GNode[] nodes
+                = scene.Graph.InternalNodes;
             for (int j = 0; j < nodes.Length; j++)
             {
                 nodes[j].Data.MarkerColor = Color.Transparent;

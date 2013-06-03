@@ -11,12 +11,12 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         where Node : GraphElement, ILayoutNode
         where Edge : class, IGraphEdge<Node>, IUpdateable
     {
-        public LinLogLayoutAlgorithm(DirectionalGraph<Node, Edge> graph)
+        public LinLogLayoutAlgorithm(Digraph<Node, Edge> graph)
             : base(graph, null)
         {
         }
 
-        public LinLogLayoutAlgorithm(DirectionalGraph<Node, Edge> graph,
+        public LinLogLayoutAlgorithm(Digraph<Node, Edge> graph,
             LinLogLayoutParameters oldParameters)
             : base(graph, oldParameters)
         {
@@ -375,14 +375,14 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
 
         private void InitAlgorithm()
         {
-            DirectionalGraph<Node, Edge>.GraphNode[] nodes 
+            Digraph<Node, Edge>.GNode[] nodes 
                 = this.mGraph.InternalNodes;
 
             this.mNodes = new LinLogNode[nodes.Length];
 
-            var nodeMap = new Dictionary<DirectionalGraph<Node, Edge>.GraphNode, LinLogNode>();
+            var nodeMap = new Dictionary<Digraph<Node, Edge>.GNode, LinLogNode>();
 
-            DirectionalGraph<Node, Edge>.GraphEdge[] edges;
+            Digraph<Node, Edge>.GEdge[] edges;
             LinLogEdge e;
             LinLogNode n;
             float weight;

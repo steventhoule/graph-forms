@@ -9,12 +9,12 @@ namespace GraphForms.Algorithms.Layout.Circular
         where Node : GraphElement, ILayoutNode
         where Edge : class, IGraphEdge<Node>, IUpdateable
     {
-        public CircularLayoutAlgorithm(DirectionalGraph<Node, Edge> graph)
+        public CircularLayoutAlgorithm(Digraph<Node, Edge> graph)
             : base(graph, null)
         {
         }
 
-        public CircularLayoutAlgorithm(DirectionalGraph<Node, Edge> graph,
+        public CircularLayoutAlgorithm(Digraph<Node, Edge> graph,
             CircularLayoutParameters oldParameters)
             : base(graph, oldParameters)
         {

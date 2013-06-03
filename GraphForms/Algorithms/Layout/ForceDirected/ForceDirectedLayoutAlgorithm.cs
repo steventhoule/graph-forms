@@ -6,7 +6,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
 {
     /// <summary>
     /// A simple base class for algorithms which calculate the layout of a given
-    /// <see cref="T:DirectionalGraph`2{Node,Edge}"/> instance by using physics
+    /// <see cref="T:Digraph`2{Node,Edge}"/> instance by using physics
     /// calculations to set the positions of its <typeparamref name="Node"/> 
     /// instances, based on balancing forces carried along the 
     /// <typeparamref name="Edge"/> instances connecting them and influenced by 
@@ -58,7 +58,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         /// <see cref="P:LayoutAlgorithm`3.DefaultParameters"/>.</summary>
         /// <param name="graph">The graph that will be rearranged by this
         /// force-directed layout algorithm.</param>
-        public ForceDirectedLayoutAlgorithm(DirectionalGraph<Node, Edge> graph)
+        public ForceDirectedLayoutAlgorithm(Digraph<Node, Edge> graph)
             : base(graph, null)
         {
         }
@@ -75,7 +75,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         /// this layout algorithm rearranges the <paramref name="graph"/>.
         /// If null, the <see cref="P:LayoutAlgorithm`3.DefaultParameters"/> 
         /// are used instead.</param>
-        public ForceDirectedLayoutAlgorithm(DirectionalGraph<Node, Edge> graph,
+        public ForceDirectedLayoutAlgorithm(Digraph<Node, Edge> graph,
             Params oldParameters)
             : base(graph, oldParameters)
         {

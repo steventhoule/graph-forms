@@ -30,12 +30,12 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             get { return new FRFreeLayoutParameters(); }
         }
 
-        public FRLayoutAlgorithm(DirectionalGraph<Node, Edge> graph)
+        public FRLayoutAlgorithm(Digraph<Node, Edge> graph)
             : base(graph, null)
         {
         }
 
-        public FRLayoutAlgorithm(DirectionalGraph<Node, Edge> graph,
+        public FRLayoutAlgorithm(Digraph<Node, Edge> graph,
             FRLayoutParameters oldParameters)
             : base(graph, oldParameters)
         {
@@ -99,8 +99,8 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
 
             float[] newXs = this.NewXPositions;
             float[] newYs = this.NewYPositions;
-            DirectionalGraph<Node, Edge>.GraphNode[] nodes = this.mGraph.InternalNodes;
-            DirectionalGraph<Node, Edge>.GraphEdge[] edges;
+            Digraph<Node, Edge>.GNode[] nodes = this.mGraph.InternalNodes;
+            Digraph<Node, Edge>.GEdge[] edges;
             Node u, v;
 
             // Repulsive forces

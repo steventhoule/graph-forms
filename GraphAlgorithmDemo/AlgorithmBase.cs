@@ -17,15 +17,17 @@ namespace GraphAlgorithmDemo
             this.mScene = scene;
         }
 
-        protected override bool OnIterationEnded(int iteration, double statusInPercent, 
-            double distanceChange, double maxDistanceChange, string message)
+        protected override bool OnIterationEnded(int iteration, 
+            double statusInPercent, double distanceChange, 
+            double maxDistanceChange, string message)
         {
             bool keep = false;
             if (base.OnIterationEnded(iteration, statusInPercent, 
                 distanceChange, maxDistanceChange, message))
             {
-                keep = this.mScene.OnLayoutIterEnded(iteration, statusInPercent, 
-                    distanceChange, maxDistanceChange, message);
+                keep = this.mScene.OnLayoutIterEnded(iteration, 
+                    statusInPercent, distanceChange, 
+                    maxDistanceChange, message);
             }
             return keep;
         }
@@ -47,15 +49,17 @@ namespace GraphAlgorithmDemo
             this.mScene = scene;
         }
 
-        protected override bool OnIterationEnded(int iteration, double statusInPercent,
-            double distanceChange, double maxDistanceChange, string message)
+        protected override bool OnIterationEnded(int iteration, 
+            double statusInPercent, double distanceChange, 
+            double maxDistanceChange, string message)
         {
             bool keep = false;
             if (base.OnIterationEnded(iteration, statusInPercent,
                 distanceChange, maxDistanceChange, message))
             {
-                keep = this.mScene.OnLayoutIterEnded(iteration, statusInPercent,
-                    distanceChange, maxDistanceChange, message);
+                keep = this.mScene.OnLayoutIterEnded(iteration, 
+                    statusInPercent, distanceChange, 
+                    maxDistanceChange, message);
             }
             return keep;
         }
@@ -82,15 +86,17 @@ namespace GraphAlgorithmDemo
             get { return new FRBoundedLayoutParameters(); }
         }
 
-        protected override bool OnIterationEnded(int iteration, double statusInPercent,
-            double distanceChange, double maxDistanceChange, string message)
+        protected override bool OnIterationEnded(int iteration,
+            double statusInPercent, double distanceChange,
+            double maxDistanceChange, string message)
         {
             bool keep = false;
             if (base.OnIterationEnded(iteration, statusInPercent,
                 distanceChange, maxDistanceChange, message))
             {
-                keep = this.mScene.OnLayoutIterEnded(iteration, statusInPercent,
-                    distanceChange, maxDistanceChange, message);
+                keep = this.mScene.OnLayoutIterEnded(iteration,
+                    statusInPercent, distanceChange,
+                    maxDistanceChange, message);
             }
             return keep;
         }
@@ -112,15 +118,17 @@ namespace GraphAlgorithmDemo
             this.mScene = scene;
         }
 
-        protected override bool OnIterationEnded(int iteration, double statusInPercent, 
-            double distanceChange, double maxDistanceChange, string message)
+        protected override bool OnIterationEnded(int iteration,
+            double statusInPercent, double distanceChange,
+            double maxDistanceChange, string message)
         {
             bool keep = false;
-            if (base.OnIterationEnded(iteration, statusInPercent, 
+            if (base.OnIterationEnded(iteration, statusInPercent,
                 distanceChange, maxDistanceChange, message))
             {
-                keep = this.mScene.OnLayoutIterEnded(iteration, statusInPercent, 
-                    distanceChange, maxDistanceChange, message);
+                keep = this.mScene.OnLayoutIterEnded(iteration,
+                    statusInPercent, distanceChange,
+                    maxDistanceChange, message);
             }
             return keep;
         }
@@ -142,15 +150,17 @@ namespace GraphAlgorithmDemo
             this.mScene = scene;
         }
 
-        protected override bool OnIterationEnded(int iteration, double statusInPercent, 
-            double distanceChange, double maxDistanceChange, string message)
+        protected override bool OnIterationEnded(int iteration,
+            double statusInPercent, double distanceChange,
+            double maxDistanceChange, string message)
         {
             bool keep = false;
-            if (base.OnIterationEnded(iteration, statusInPercent, 
+            if (base.OnIterationEnded(iteration, statusInPercent,
                 distanceChange, maxDistanceChange, message))
             {
-                keep = this.mScene.OnLayoutIterEnded(iteration, statusInPercent, 
-                    distanceChange, maxDistanceChange, message);
+                keep = this.mScene.OnLayoutIterEnded(iteration,
+                    statusInPercent, distanceChange,
+                    maxDistanceChange, message);
             }
             return keep;
         }
@@ -172,15 +182,17 @@ namespace GraphAlgorithmDemo
             this.mScene = scene;
         }
 
-        protected override bool OnIterationEnded(int iteration, double statusInPercent, 
-            double distanceChange, double maxDistanceChange, string message)
+        protected override bool OnIterationEnded(int iteration,
+            double statusInPercent, double distanceChange,
+            double maxDistanceChange, string message)
         {
             bool keep = false;
-            if (base.OnIterationEnded(iteration, statusInPercent, 
+            if (base.OnIterationEnded(iteration, statusInPercent,
                 distanceChange, maxDistanceChange, message))
             {
-                keep = this.mScene.OnLayoutIterEnded(iteration, statusInPercent, 
-                    distanceChange, maxDistanceChange, message);
+                keep = this.mScene.OnLayoutIterEnded(iteration,
+                    statusInPercent, distanceChange,
+                    maxDistanceChange, message);
             }
             return keep;
         }
@@ -202,15 +214,17 @@ namespace GraphAlgorithmDemo
             this.mScene = scene;
         }
 
-        protected override bool OnIterationEnded(int iteration, double statusInPercent, 
-            double distanceChange, double maxDistanceChange, string message)
+        protected override bool OnIterationEnded(int iteration,
+            double statusInPercent, double distanceChange,
+            double maxDistanceChange, string message)
         {
             bool keep = false;
-            if (base.OnIterationEnded(iteration, statusInPercent, 
+            if (base.OnIterationEnded(iteration, statusInPercent,
                 distanceChange, maxDistanceChange, message))
             {
-                keep = this.mScene.OnLayoutIterEnded(iteration, statusInPercent, 
-                    distanceChange, maxDistanceChange, message);
+                keep = this.mScene.OnLayoutIterEnded(iteration,
+                    statusInPercent, distanceChange,
+                    maxDistanceChange, message);
             }
             return keep;
         }

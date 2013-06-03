@@ -11,28 +11,55 @@ namespace GraphAlgorithmDemo
 {
     public class CircleNodeScene : GraphScene
     {
-        private DirectionalGraph<CircleNode, ArrowEdge> mGraph;
+        private Digraph<CircleNode, ArrowEdge> mGraph;
         private Timer mLayoutTimer;
 
         private IForceDirectedLayoutAlgorithm mLayout;
 
         public CircleNodeScene()
         {
-            this.mGraph = new DirectionalGraph<CircleNode, ArrowEdge>();
+            this.mGraph = new Digraph<CircleNode, ArrowEdge>();
 
             this.mLayoutTimer = new Timer();
             this.mLayoutTimer.Interval = 1000 / 25;
             this.mLayoutTimer.Tick += new EventHandler(OnLayoutTimerTick);
 
             this.mLayout = new ElasticLayoutForCircles(this);
-            
+        }
+
+        public void ClearGraph()
+        {
+            Digraph<CircleNode, ArrowEdge>.GEdge[] edges
+                = this.mGraph.InternalEdges;
+            for (int i = 0; i < edges.Length; i++)
+            {
+                this.RemoveItem(edges[i].Data);
+            }
+            this.mGraph.ClearEdges();
+            Digraph<CircleNode, ArrowEdge>.GNode[] nodes
+                = this.mGraph.InternalNodes;
+            for (int j = 0; j < nodes.Length; j++)
+            {
+                this.RemoveItem(nodes[j].Data);
+            }
+            this.mGraph.ClearNodes();
+        }
+
+        public void UpdateEdges()
+        {
+            Digraph<CircleNode, ArrowEdge>.GEdge[] edges
+                = this.mGraph.InternalEdges;
+            for (int i = 0; i < edges.Length; i++)
+            {
+                edges[i].Data.Update();
+            }
         }
 
         /// <summary>
         /// The graph that contains the nodes that are arranged by the
         /// <see cref="Layout"/> algorithm.
         /// </summary>
-        public DirectionalGraph<CircleNode, ArrowEdge> Graph
+        public Digraph<CircleNode, ArrowEdge> Graph
         {
             get { return this.mGraph; }
         }
@@ -77,9 +104,13 @@ namespace GraphAlgorithmDemo
             set
             {
                 if (value)
+                {
                     this.StartLayout();
+                }
                 else
+                {
                     this.mLayout.Abort();
+                }
             }
         }
 
@@ -94,7 +125,7 @@ namespace GraphAlgorithmDemo
         /// </summary>
         public bool LayoutPaused = false;
 
-        public void OnNodeMoved(CircleNode node)
+        public void OnNodeMovedByMouse(CircleNode node)
         {
             if (this.LayoutOnNodeMoved)
             {

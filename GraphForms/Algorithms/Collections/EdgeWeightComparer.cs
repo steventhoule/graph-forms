@@ -5,7 +5,7 @@ using System.Text;
 namespace GraphForms.Algorithms.Collections
 {
     public class EdgeWeightComparer<Node, Edge>
-        : IComparer<DirectionalGraph<Node, Edge>.GraphEdge>,
+        : IComparer<Digraph<Node, Edge>.GEdge>,
           IComparer<Edge>
         where Node : class
         where Edge : class, IGraphEdge<Node>
@@ -22,8 +22,8 @@ namespace GraphForms.Algorithms.Collections
             this.bReversed = reversed;
         }
 
-        public int Compare(DirectionalGraph<Node, Edge>.GraphEdge x, 
-                           DirectionalGraph<Node, Edge>.GraphEdge y)
+        public int Compare(Digraph<Node, Edge>.GEdge x, 
+                           Digraph<Node, Edge>.GEdge y)
         {
             if (this.bReversed)
                 return y.mData.Weight.CompareTo(x.mData.Weight);

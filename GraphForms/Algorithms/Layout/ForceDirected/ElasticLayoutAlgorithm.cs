@@ -11,12 +11,12 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         private float mForceMult;
         private float mWeightMult;
 
-        public ElasticLayoutAlgorithm(DirectionalGraph<Node, Edge> graph)
+        public ElasticLayoutAlgorithm(Digraph<Node, Edge> graph)
             : base(graph, null)
         {
         }
 
-        public ElasticLayoutAlgorithm(DirectionalGraph<Node, Edge> graph,
+        public ElasticLayoutAlgorithm(Digraph<Node, Edge> graph,
             ElasticLayoutParameters oldParameters)
             : base(graph, oldParameters)
         {
@@ -36,9 +36,9 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         {
             float[] newXs = this.NewXPositions;
             float[] newYs = this.NewYPositions;
-            DirectionalGraph<Node, Edge>.GraphNode[] nodes
+            Digraph<Node, Edge>.GNode[] nodes
                 = this.mGraph.InternalNodes;
-            DirectionalGraph<Node, Edge>.GraphEdge[] edges;
+            Digraph<Node, Edge>.GEdge[] edges;
             Node node, n;
             SizeF vec;
             float xvel, yvel, dx, dy, factor;

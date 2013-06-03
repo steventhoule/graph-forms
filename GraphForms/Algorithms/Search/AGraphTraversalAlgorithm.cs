@@ -9,7 +9,7 @@ namespace GraphForms.Algorithms.Search
         where Node : class
         where Edge : class, IGraphEdge<Node>
     {
-        protected readonly DirectionalGraph<Node, Edge> mGraph;
+        protected readonly Digraph<Node, Edge> mGraph;
 
         /// <summary>
         /// If true, the graph is traversed from both the source edges and
@@ -24,14 +24,14 @@ namespace GraphForms.Algorithms.Search
         /// </summary>
         protected readonly bool bReversed;
 
-        /*public AGraphTraversalAlgorithm(DirectionalGraph<Node, Edge> graph)
+        /*public AGraphTraversalAlgorithm(Digraph<Node, Edge> graph)
         {
             this.mGraph = graph;
             this.bDirected = true;
             this.bReversed = false;
         }/* */
 
-        public AGraphTraversalAlgorithm(DirectionalGraph<Node, Edge> graph,
+        public AGraphTraversalAlgorithm(Digraph<Node, Edge> graph,
             bool directed, bool reversed)
         {
             this.mGraph = graph;
@@ -94,14 +94,12 @@ namespace GraphForms.Algorithms.Search
         protected virtual void OnBlackEdge(Edge e,
             int srcIndex, int dstIndex, bool reversed)
         {
-            // TODO (For certain descendant classes):
-            // Is this ever called in an undirected DFS?
         }
         #endregion
 
         public virtual void Initialize()
         {
-            DirectionalGraph<Node, Edge>.GraphNode[] nodes
+            Digraph<Node, Edge>.GNode[] nodes
                 = this.mGraph.InternalNodes;
             for (int i = 0; i < nodes.Length; i++)
             {
@@ -110,12 +108,6 @@ namespace GraphForms.Algorithms.Search
                 nodes[i].Color = GraphColor.White;
                 nodes[i].Index = i;
                 this.OnInitializeNode(nodes[i].mData, i);
-            }
-            DirectionalGraph<Node, Edge>.GraphEdge[] edges
-                = this.mGraph.InternalEdges;
-            for (int j = 0; j < edges.Length; j++)
-            {
-                edges[j].Color = GraphColor.White;
             }
         }
     }

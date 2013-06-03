@@ -5,6 +5,8 @@ using GraphForms.Algorithms.Search;
 
 namespace GraphForms.Algorithms.ConnectedComponents
 {
+    // Based on Tarjan's Algorithm for Strongly Connected Components
+    // http://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm
     public class SCCAlgorithm<Node, Edge>
         : DepthFirstSearchAlgorithm<Node, Edge>
         where Node : class
@@ -36,12 +38,12 @@ namespace GraphForms.Algorithms.ConnectedComponents
         private List<Node> mRoots;
         private List<Node[]> mComponents;
 
-        public SCCAlgorithm(DirectionalGraph<Node, Edge> graph)
+        public SCCAlgorithm(Digraph<Node, Edge> graph)
             : this(graph, false)
         {
         }
 
-        public SCCAlgorithm(DirectionalGraph<Node, Edge> graph,
+        public SCCAlgorithm(Digraph<Node, Edge> graph,
             bool reversed)
             : base(graph, true, reversed)
         {
@@ -63,7 +65,7 @@ namespace GraphForms.Algorithms.ConnectedComponents
         public override void Initialize()
         {
             this.mDepth = 0;
-            DirectionalGraph<Node, Edge>.GraphNode[] nodes
+            Digraph<Node, Edge>.GNode[] nodes
                 = this.mGraph.InternalNodes;
             this.mDatas = new NodeData[nodes.Length];
             for (int i = 0; i < nodes.Length; i++)

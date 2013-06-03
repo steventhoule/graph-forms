@@ -20,7 +20,7 @@ namespace GraphAlgorithmDemo
         }
 
         private CircleNodeScene mScene;
-        private DirectionalGraph<CircleNode, ArrowEdge>.GraphNode mGraphNode;
+        private Digraph<CircleNode, ArrowEdge>.GNode mGraphNode;
 
         private float mRadius;
         private string mAName;
@@ -39,7 +39,7 @@ namespace GraphAlgorithmDemo
         {
             this.mScene = scene;
 
-            DirectionalGraph<CircleNode, ArrowEdge> graph = scene.Graph;
+            Digraph<CircleNode, ArrowEdge> graph = scene.Graph;
             int index = graph.IndexOfNode(this);
             if (index < 0)
             {
@@ -246,10 +246,10 @@ namespace GraphAlgorithmDemo
 
         protected override void OnPositionChanged()
         {
-            if (this.bMouseGrabbed)
+            if (this.bMouseGrabbed && this.mScene != null)
             {
                 int i;
-                DirectionalGraph<CircleNode, ArrowEdge>.GraphEdge[] edges
+                Digraph<CircleNode, ArrowEdge>.GEdge[] edges
                     = this.mGraphNode.InternalDstEdges;
                 for (i = 0; i < edges.Length; i++)
                 {
@@ -260,7 +260,7 @@ namespace GraphAlgorithmDemo
                 {
                     edges[i].Data.Update();
                 }
-                this.mScene.OnNodeMoved(this);
+                this.mScene.OnNodeMovedByMouse(this);
             }
             // Layout algorithm handles edge updating otherwise
             base.OnPositionChanged();

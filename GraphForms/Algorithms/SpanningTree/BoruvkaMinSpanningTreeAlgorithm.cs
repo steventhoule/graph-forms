@@ -22,17 +22,17 @@ namespace GraphForms.Algorithms.SpanningTree
             }
         }
 
-        private readonly DirectionalGraph<Node, Edge> mGraph;
+        private readonly Digraph<Node, Edge> mGraph;
         private NodeData[] mDatas;
-        private DirectionalGraph<Node, Edge> mSpanningTree;
+        private Digraph<Node, Edge> mSpanningTree;
 
         public BoruvkaMinSpanningTreeAlgorithm(
-            DirectionalGraph<Node, Edge> graph)
+            Digraph<Node, Edge> graph)
         {
             this.mGraph = graph;
         }
 
-        public DirectionalGraph<Node, Edge> SpanningTree
+        public Digraph<Node, Edge> SpanningTree
         {
             get { return this.mSpanningTree; }
         }
@@ -49,15 +49,15 @@ namespace GraphForms.Algorithms.SpanningTree
 
         protected override void InternalCompute()
         {
-            DirectionalGraph<Node, Edge>.GraphNode[] nodes
+            Digraph<Node, Edge>.GNode[] nodes
                 = this.mGraph.InternalNodes;
-            DirectionalGraph<Node, Edge>.GraphEdge[] edges
+            Digraph<Node, Edge>.GEdge[] edges
                 = this.mGraph.InternalEdges;
-            Array.Sort<DirectionalGraph<Node, Edge>.GraphEdge>(edges,
+            Array.Sort<Digraph<Node, Edge>.GEdge>(edges,
                 new EdgeWeightComparer<Node, Edge>());
 
             this.mDatas = new NodeData[nodes.Length];
-            this.mSpanningTree = new DirectionalGraph<Node,Edge>(
+            this.mSpanningTree = new Digraph<Node,Edge>(
                 this.mGraph.NodeCount, this.mGraph.EdgeCount / 2);
             int i, compCount = nodes.Length;
             for (i = 0; i < compCount; i++)
@@ -67,7 +67,7 @@ namespace GraphForms.Algorithms.SpanningTree
                 this.mSpanningTree.AddNode(nodes[i].mData);
             }
 
-            DirectionalGraph<Node, Edge>.GraphEdge edge;
+            Digraph<Node, Edge>.GEdge edge;
             int j, si, di, newCompCount;
             List<int> remEdges;
             // TODO: Does checking edges.Length fully compensate for
@@ -128,8 +128,8 @@ namespace GraphForms.Algorithms.SpanningTree
                     Array.Copy(edges, remEdges[j] + 1,
                         edges, remEdges[j], si - remEdges[j]);
                 }
-                DirectionalGraph<Node, Edge>.GraphEdge[] newEdges
-                    = new DirectionalGraph<Node, Edge>.GraphEdge[si];
+                Digraph<Node, Edge>.GEdge[] newEdges
+                    = new Digraph<Node, Edge>.GEdge[si];
                 Array.Copy(edges, 0, newEdges, 0, si);
                 edges = newEdges;
                 for (i = 0; i < this.mDatas.Length; i++)

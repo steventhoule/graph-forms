@@ -16,8 +16,8 @@ namespace GraphForms.Algorithms.Layout.Tree
         {
             public double Size;
             public double NextPosition;
-            public readonly List<DirectionalGraph<Node, Edge>.GraphNode> Nodes
-                = new List<DirectionalGraph<Node, Edge>.GraphNode>();
+            public readonly List<Digraph<Node, Edge>.GNode> Nodes
+                = new List<Digraph<Node, Edge>.GNode>();
             public double LastTranslate;
 
             public Layer()
@@ -28,7 +28,7 @@ namespace GraphForms.Algorithms.Layout.Tree
 
         private class NodeData
         {
-            public DirectionalGraph<Node, Edge>.GraphNode parent;
+            public Digraph<Node, Edge>.GNode parent;
             public double translate;
             public double position;
         }
@@ -38,19 +38,19 @@ namespace GraphForms.Algorithms.Layout.Tree
         private LayoutDirection mDirection;
         private SearchMethod mSpanTreeGen;
 
-        private DirectionalGraph<Node, Edge> mSpanningTree;
+        private Digraph<Node, Edge> mSpanningTree;
         private SizeF[] mSizes;
         private NodeData[] mDatas;
         private int mDir;
         private List<Layer> mLayers = new List<Layer>();
         
 
-        public SimpleTreeLayoutAlgorithm(DirectionalGraph<Node, Edge> graph)
+        public SimpleTreeLayoutAlgorithm(Digraph<Node, Edge> graph)
             : base(graph, null)
         {
         }
 
-        public SimpleTreeLayoutAlgorithm(DirectionalGraph<Node, Edge> graph,
+        public SimpleTreeLayoutAlgorithm(Digraph<Node, Edge> graph,
             SimpleTreeLayoutParameters oldParameters)
             : base(graph, oldParameters)
         {
@@ -65,7 +65,7 @@ namespace GraphForms.Algorithms.Layout.Tree
             this.mSpanTreeGen = param.SpanningTreeGeneration;
 
             int i;
-            DirectionalGraph<Node, Edge>.GraphNode[] nodes
+            Digraph<Node, Edge>.GNode[] nodes
                 = this.mGraph.InternalNodes;
 
             this.mSizes = new SizeF[nodes.Length];
@@ -131,10 +131,10 @@ namespace GraphForms.Algorithms.Layout.Tree
             this.mSpanningTree = alg.SpanningTree;
         }
 
-        private double CalculatePosition(DirectionalGraph<Node, Edge>.GraphNode n,
-            DirectionalGraph<Node, Edge>.GraphNode parent, int l)
+        private double CalculatePosition(Digraph<Node, Edge>.GNode n,
+            Digraph<Node, Edge>.GNode parent, int l)
         {
-            if (n.Visited)
+            if (n.Color == GraphColor.Gray)
                 return -1; // this node is already laid out
 
             while (l >= this.mLayers.Count)
@@ -145,7 +145,7 @@ namespace GraphForms.Algorithms.Layout.Tree
             NodeData d = new NodeData();
             d.parent = parent;
             this.mDatas[n.Index] = d;
-            n.Visited = true;
+            n.Color = GraphColor.Gray;
 
             layer.NextPosition += size.Width;
             if (l > 0)
@@ -164,8 +164,8 @@ namespace GraphForms.Algorithms.Layout.Tree
                 double minPos = double.MaxValue;
                 double maxPos = -double.MaxValue;
                 // first put the children
-                DirectionalGraph<Node, Edge>.GraphNode child;
-                DirectionalGraph<Node, Edge>.GraphEdge[] outEdges
+                Digraph<Node, Edge>.GNode child;
+                Digraph<Node, Edge>.GEdge[] outEdges
                     = n.InternalDstEdges;
                 double childPos;
                 for (int i = 0; i < outEdges.Length; i++)
@@ -202,8 +202,8 @@ namespace GraphForms.Algorithms.Layout.Tree
 
             float[] newXs = this.NewXPositions;
             float[] newYs = this.NewYPositions;
-            List<DirectionalGraph<Node, Edge>.GraphNode> nodes;
-            DirectionalGraph<Node, Edge>.GraphNode node;
+            List<Digraph<Node, Edge>.GNode> nodes;
+            Digraph<Node, Edge>.GNode node;
             SizeF size;
             NodeData d;
             int i, j;

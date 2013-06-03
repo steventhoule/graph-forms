@@ -43,7 +43,7 @@
     <Compile Include="Algorithms\AAlgorithm.cs" />
     <Compile Include="Algorithms\AGraphEdge.cs" />
     <Compile Include="Algorithms\ComputeState.cs" />
-    <Compile Include="Algorithms\DirectionalGraph.cs" />
+    <Compile Include="Algorithms\Digraph.cs" />
     <Compile Include="Algorithms\IAlgorithm.cs" />
     <Compile Include="Algorithms\IGraphEdge.cs" />
     <Compile Include="Algorithms\Layout\ForceDirected\ElasticLayoutAlgorithm.cs" />
@@ -85,6 +85,7 @@
     <Compile Include="Algorithms\ConnectedComponents\BCCAlgorithm.cs" />
     <Compile Include="Algorithms\ConnectedComponents\CCAlgorithm.cs" />
     <Compile Include="Algorithms\ConnectedComponents\SCCAlgorithm.cs" />
+    <Compile Include="Algorithms\ConnectedComponents\WCCAlgorithm.cs" />
     <Compile Include="Algorithms\GraphColor.cs" />
     <Compile Include="Algorithms\Layout\Circular\FDSingleCircleLayoutAlgorithm.cs" />
     <Compile Include="Algorithms\Layout\Circular\FDSingleCircleLayoutParameters.cs" />

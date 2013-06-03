@@ -10,17 +10,17 @@ namespace GraphForms.Algorithms.SpanningTree
         where Node : class
         where Edge : class, IGraphEdge<Node>
     {
-        protected readonly DirectionalGraph<Node, Edge> mGraph;
+        protected readonly Digraph<Node, Edge> mGraph;
         private Tree<Node>[] mTrees;
-        private DirectionalGraph<Node, Edge> mSpanningTree;
+        private Digraph<Node, Edge> mSpanningTree;
 
         public KruskalMinSpanningTreeAlgorithm(
-            DirectionalGraph<Node, Edge> graph)
+            Digraph<Node, Edge> graph)
         {
             this.mGraph = graph;
         }
 
-        public DirectionalGraph<Node, Edge> SpanningTree
+        public Digraph<Node, Edge> SpanningTree
         {
             get { return this.mSpanningTree; }
         }
@@ -49,15 +49,15 @@ namespace GraphForms.Algorithms.SpanningTree
 
         protected override void InternalCompute()
         {
-            DirectionalGraph<Node, Edge>.GraphNode[] nodes
+            Digraph<Node, Edge>.GNode[] nodes
                 = this.mGraph.InternalNodes;
-            DirectionalGraph<Node, Edge>.GraphEdge[] edges
+            Digraph<Node, Edge>.GEdge[] edges
                 = this.mGraph.InternalEdges;
-            Array.Sort<DirectionalGraph<Node, Edge>.GraphEdge>(edges,
+            Array.Sort<Digraph<Node, Edge>.GEdge>(edges,
                 new EdgeWeightComparer<Node, Edge>(true));
 
             this.mTrees = new Tree<Node>[nodes.Length];
-            this.mSpanningTree = new DirectionalGraph<Node, Edge>(
+            this.mSpanningTree = new Digraph<Node, Edge>(
                 this.mGraph.NodeCount, this.mGraph.EdgeCount / 2);
             int i, srcIndex, dstIndex;
             for (i = 0; i < nodes.Length; i++)
@@ -66,7 +66,7 @@ namespace GraphForms.Algorithms.SpanningTree
                 this.mTrees[i] = new Tree<Node>(nodes[i].mData);
                 this.mSpanningTree.AddNode(nodes[i].mData);
             }
-            DirectionalGraph<Node, Edge>.GraphEdge edge;
+            Digraph<Node, Edge>.GEdge edge;
             for (i = edges.Length - 1; i >= 0; i--)
             {
                 edge = edges[i];

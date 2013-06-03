@@ -9,21 +9,21 @@ namespace GraphForms.Algorithms.Search
         where Node : class
         where Edge : class, IGraphEdge<Node>
     {
-        private Queue<DirectionalGraph<Node, Edge>.GraphNode> mNodeQueue;
+        private Queue<Digraph<Node, Edge>.GNode> mNodeQueue;
 
-        public BreadthFirstSearchAlgorithm(DirectionalGraph<Node, Edge> graph)
+        public BreadthFirstSearchAlgorithm(Digraph<Node, Edge> graph)
             : base(graph, true, false)
         {
-            this.mNodeQueue = new Queue<DirectionalGraph<Node, 
-                Edge>.GraphNode>(graph.NodeCount + 1);
+            this.mNodeQueue = new Queue<Digraph<Node, 
+                Edge>.GNode>(graph.NodeCount + 1);
         }
 
-        public BreadthFirstSearchAlgorithm(DirectionalGraph<Node, Edge> graph,
+        public BreadthFirstSearchAlgorithm(Digraph<Node, Edge> graph,
             bool directed, bool reversed)
             : base(graph, directed, reversed)
         {
-            this.mNodeQueue = new Queue<DirectionalGraph<Node, 
-                Edge>.GraphNode>(graph.NodeCount + 1);
+            this.mNodeQueue = new Queue<Digraph<Node, 
+                Edge>.GNode>(graph.NodeCount + 1);
         }
 
         #region Events
@@ -40,7 +40,7 @@ namespace GraphForms.Algorithms.Search
             // put all nodes to white
             this.Initialize();
 
-            DirectionalGraph<Node, Edge>.GraphNode node;
+            Digraph<Node, Edge>.GNode node;
 
             // if there is a starting node, start with it
             if (this.HasRoot)
@@ -55,7 +55,7 @@ namespace GraphForms.Algorithms.Search
             }
 
             // process each node
-            DirectionalGraph<Node, Edge>.GraphNode[] nodes
+            Digraph<Node, Edge>.GNode[] nodes
                 = this.mGraph.InternalNodes;
             for (int i = 0; i < nodes.Length; i++)
             {
@@ -70,13 +70,7 @@ namespace GraphForms.Algorithms.Search
             }
         }
 
-        /*public void Visit(DirectionalGraph<Node, Edge>.GraphNode s)
-        {
-            this.EnqueueRoot(s);
-            this.FlushVisitQueue();
-        }/* */
-
-        private void EnqueueRoot(DirectionalGraph<Node, Edge>.GraphNode s)
+        private void EnqueueRoot(Digraph<Node, Edge>.GNode s)
         {
             this.OnStartNode(s.mData, s.Index);
 
@@ -90,9 +84,9 @@ namespace GraphForms.Algorithms.Search
         {
             int i;
             bool reversed;
-            DirectionalGraph<Node, Edge>.GraphNode u, v;
-            DirectionalGraph<Node, Edge>.GraphEdge edge;
-            DirectionalGraph<Node, Edge>.GraphEdge[] edges;
+            Digraph<Node, Edge>.GNode u, v;
+            Digraph<Node, Edge>.GEdge edge;
+            Digraph<Node, Edge>.GEdge[] edges;
 
             while (this.mNodeQueue.Count > 0 &&
                    this.State != ComputeState.Aborting)

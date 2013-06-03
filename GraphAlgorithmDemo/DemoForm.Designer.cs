@@ -44,11 +44,15 @@
             this.styleAlgDirectedCHK = new System.Windows.Forms.CheckBox();
             this.styleAlgTestBTN = new System.Windows.Forms.Button();
             this.styleAlgCMB = new System.Windows.Forms.ComboBox();
+            this.graphCreatorGRP = new System.Windows.Forms.GroupBox();
+            this.graphCreatorCMB = new System.Windows.Forms.ComboBox();
+            this.createGraphBTN = new System.Windows.Forms.Button();
             this.layoutGRP.SuspendLayout();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
             this.splitContainer1.SuspendLayout();
             this.styleAlgGRP.SuspendLayout();
+            this.graphCreatorGRP.SuspendLayout();
             this.SuspendLayout();
             // 
             // layoutAlgCMB
@@ -219,7 +223,7 @@
             // styleAlgTestBTN
             // 
             this.styleAlgTestBTN.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.styleAlgTestBTN.Location = new System.Drawing.Point(342, 17);
+            this.styleAlgTestBTN.Location = new System.Drawing.Point(347, 17);
             this.styleAlgTestBTN.Name = "styleAlgTestBTN";
             this.styleAlgTestBTN.Size = new System.Drawing.Size(37, 23);
             this.styleAlgTestBTN.TabIndex = 1;
@@ -236,11 +240,42 @@
             this.styleAlgCMB.TabIndex = 0;
             this.styleAlgCMB.SelectedValueChanged += new System.EventHandler(this.styleAlgSelectedValueChanged);
             // 
+            // graphCreatorGRP
+            // 
+            this.graphCreatorGRP.Controls.Add(this.createGraphBTN);
+            this.graphCreatorGRP.Controls.Add(this.graphCreatorCMB);
+            this.graphCreatorGRP.Location = new System.Drawing.Point(409, 62);
+            this.graphCreatorGRP.Name = "graphCreatorGRP";
+            this.graphCreatorGRP.Size = new System.Drawing.Size(257, 49);
+            this.graphCreatorGRP.TabIndex = 6;
+            this.graphCreatorGRP.TabStop = false;
+            this.graphCreatorGRP.Text = "Graph Creator";
+            // 
+            // graphCreatorCMB
+            // 
+            this.graphCreatorCMB.FormattingEnabled = true;
+            this.graphCreatorCMB.Location = new System.Drawing.Point(6, 19);
+            this.graphCreatorCMB.Name = "graphCreatorCMB";
+            this.graphCreatorCMB.Size = new System.Drawing.Size(192, 21);
+            this.graphCreatorCMB.TabIndex = 0;
+            // 
+            // createGraphBTN
+            // 
+            this.createGraphBTN.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.createGraphBTN.Location = new System.Drawing.Point(204, 17);
+            this.createGraphBTN.Name = "createGraphBTN";
+            this.createGraphBTN.Size = new System.Drawing.Size(47, 23);
+            this.createGraphBTN.TabIndex = 1;
+            this.createGraphBTN.Text = "Create";
+            this.createGraphBTN.UseVisualStyleBackColor = true;
+            this.createGraphBTN.Click += new System.EventHandler(this.createGraphClick);
+            // 
             // DemoForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(678, 546);
+            this.Controls.Add(this.graphCreatorGRP);
             this.Controls.Add(this.styleAlgGRP);
             this.Controls.Add(this.splitContainer1);
             this.Controls.Add(this.layoutGRP);
@@ -255,6 +290,7 @@
             this.splitContainer1.ResumeLayout(false);
             this.styleAlgGRP.ResumeLayout(false);
             this.styleAlgGRP.PerformLayout();
+            this.graphCreatorGRP.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
@@ -277,6 +313,9 @@
         private System.Windows.Forms.ComboBox styleAlgCMB;
         private System.Windows.Forms.CheckBox styleAlgDirectedCHK;
         private System.Windows.Forms.CheckBox styleAlgReversedCHK;
+        private System.Windows.Forms.GroupBox graphCreatorGRP;
+        private System.Windows.Forms.Button createGraphBTN;
+        private System.Windows.Forms.ComboBox graphCreatorCMB;
     }
 }
 

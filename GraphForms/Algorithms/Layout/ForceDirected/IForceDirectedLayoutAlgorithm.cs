@@ -6,7 +6,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
 {
     /// <summary>
     /// A simple interface for algorithms which calculate the layout of a given
-    /// <see cref="T:DirectionalGraph`2{Node,Edge}"/> instance by using physics
+    /// <see cref="T:Digraph`2{Node,Edge}"/> instance by using physics
     /// calculations to set the positions of its <c>Node</c> instances, 
     /// based on balancing forces carried along the <c>Edge</c> instances 
     /// connecting them and influenced by the parameter values within the 

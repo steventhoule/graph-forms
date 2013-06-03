@@ -6,7 +6,7 @@ namespace GraphForms.Algorithms.Layout
 {
     /// <summary>
     /// The base interface for algorithms which calculate the layout of a given
-    /// <see cref="T:DirectionalGraph`2{Node,Edge}"/> instance by setting the
+    /// <see cref="T:Digraph`2{Node,Edge}"/> instance by setting the
     /// positions of its <c>Node</c> instances based on the <c>Edge</c>
     /// instances connecting them and the parameter values within the 
     /// <see cref="LayoutParameters"/> instance.

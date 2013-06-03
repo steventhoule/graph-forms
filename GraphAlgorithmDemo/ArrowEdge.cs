@@ -90,6 +90,12 @@ namespace GraphAlgorithmDemo
         {
         }
 
+        public ArrowEdge(CircleNode srcNode, CircleNode dstNode,
+            CircleNodeScene scene, float weight, double angle)
+            : this(srcNode, dstNode, scene, weight, angle, null)
+        {
+        }
+
         public ArrowEdge(CircleNode srcNode, CircleNode dstNode, 
             CircleNodeScene scene, float weight, double angle, string aName)
         {
@@ -136,7 +142,14 @@ namespace GraphAlgorithmDemo
 
         public string AName
         {
-            get { return this.mAName; }
+            get 
+            {
+                if (string.IsNullOrEmpty(this.mAName))
+                    return string.Concat(this.mSrcNode.AName, "->", 
+                                         this.mDstNode.AName);
+                else
+                    return this.mAName;
+            }
             set { this.mAName = value; }
         }
 
