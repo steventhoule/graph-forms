@@ -45,14 +45,23 @@
             this.styleAlgTestBTN = new System.Windows.Forms.Button();
             this.styleAlgCMB = new System.Windows.Forms.ComboBox();
             this.graphCreatorGRP = new System.Windows.Forms.GroupBox();
-            this.graphCreatorCMB = new System.Windows.Forms.ComboBox();
             this.createGraphBTN = new System.Windows.Forms.Button();
+            this.graphCreatorCMB = new System.Windows.Forms.ComboBox();
+            this.graphStyleGRP = new System.Windows.Forms.GroupBox();
+            this.graphStyleResetOnCreateCHK = new System.Windows.Forms.CheckBox();
+            this.edgeAngNUM = new System.Windows.Forms.NumericUpDown();
+            this.edgeAngLBL = new System.Windows.Forms.Label();
+            this.nodeRadNUM = new System.Windows.Forms.NumericUpDown();
+            this.nodeRadLBL = new System.Windows.Forms.Label();
             this.layoutGRP.SuspendLayout();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
             this.splitContainer1.SuspendLayout();
             this.styleAlgGRP.SuspendLayout();
             this.graphCreatorGRP.SuspendLayout();
+            this.graphStyleGRP.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.edgeAngNUM)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.nodeRadNUM)).BeginInit();
             this.SuspendLayout();
             // 
             // layoutAlgCMB
@@ -104,8 +113,6 @@
             // 
             this.layoutOnNodeMovedCHK.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.layoutOnNodeMovedCHK.AutoSize = true;
-            this.layoutOnNodeMovedCHK.Checked = true;
-            this.layoutOnNodeMovedCHK.CheckState = System.Windows.Forms.CheckState.Checked;
             this.layoutOnNodeMovedCHK.Location = new System.Drawing.Point(286, 15);
             this.layoutOnNodeMovedCHK.Name = "layoutOnNodeMovedCHK";
             this.layoutOnNodeMovedCHK.Size = new System.Drawing.Size(128, 17);
@@ -138,9 +145,9 @@
             // 
             // splitContainer1
             // 
-            this.splitContainer1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            this.splitContainer1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
                         | System.Windows.Forms.AnchorStyles.Right)));
-            this.splitContainer1.Location = new System.Drawing.Point(12, 125);
+            this.splitContainer1.Location = new System.Drawing.Point(12, 169);
             this.splitContainer1.Name = "splitContainer1";
             // 
             // splitContainer1.Panel1
@@ -251,14 +258,6 @@
             this.graphCreatorGRP.TabStop = false;
             this.graphCreatorGRP.Text = "Graph Creator";
             // 
-            // graphCreatorCMB
-            // 
-            this.graphCreatorCMB.FormattingEnabled = true;
-            this.graphCreatorCMB.Location = new System.Drawing.Point(6, 19);
-            this.graphCreatorCMB.Name = "graphCreatorCMB";
-            this.graphCreatorCMB.Size = new System.Drawing.Size(192, 21);
-            this.graphCreatorCMB.TabIndex = 0;
-            // 
             // createGraphBTN
             // 
             this.createGraphBTN.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
@@ -270,11 +269,113 @@
             this.createGraphBTN.UseVisualStyleBackColor = true;
             this.createGraphBTN.Click += new System.EventHandler(this.createGraphClick);
             // 
+            // graphCreatorCMB
+            // 
+            this.graphCreatorCMB.FormattingEnabled = true;
+            this.graphCreatorCMB.Location = new System.Drawing.Point(6, 19);
+            this.graphCreatorCMB.Name = "graphCreatorCMB";
+            this.graphCreatorCMB.Size = new System.Drawing.Size(192, 21);
+            this.graphCreatorCMB.TabIndex = 0;
+            // 
+            // graphStyleGRP
+            // 
+            this.graphStyleGRP.Controls.Add(this.graphStyleResetOnCreateCHK);
+            this.graphStyleGRP.Controls.Add(this.edgeAngNUM);
+            this.graphStyleGRP.Controls.Add(this.edgeAngLBL);
+            this.graphStyleGRP.Controls.Add(this.nodeRadNUM);
+            this.graphStyleGRP.Controls.Add(this.nodeRadLBL);
+            this.graphStyleGRP.Location = new System.Drawing.Point(12, 118);
+            this.graphStyleGRP.Name = "graphStyleGRP";
+            this.graphStyleGRP.Size = new System.Drawing.Size(360, 41);
+            this.graphStyleGRP.TabIndex = 7;
+            this.graphStyleGRP.TabStop = false;
+            this.graphStyleGRP.Text = "Graph Style";
+            // 
+            // graphStyleResetOnCreateCHK
+            // 
+            this.graphStyleResetOnCreateCHK.AutoSize = true;
+            this.graphStyleResetOnCreateCHK.Checked = true;
+            this.graphStyleResetOnCreateCHK.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.graphStyleResetOnCreateCHK.Location = new System.Drawing.Point(249, 15);
+            this.graphStyleResetOnCreateCHK.Name = "graphStyleResetOnCreateCHK";
+            this.graphStyleResetOnCreateCHK.Size = new System.Drawing.Size(105, 17);
+            this.graphStyleResetOnCreateCHK.TabIndex = 4;
+            this.graphStyleResetOnCreateCHK.Text = "Reset On Create";
+            this.graphStyleResetOnCreateCHK.UseVisualStyleBackColor = true;
+            // 
+            // edgeAngNUM
+            // 
+            this.edgeAngNUM.Location = new System.Drawing.Point(208, 14);
+            this.edgeAngNUM.Maximum = new decimal(new int[] {
+            90,
+            0,
+            0,
+            0});
+            this.edgeAngNUM.Name = "edgeAngNUM";
+            this.edgeAngNUM.Size = new System.Drawing.Size(35, 20);
+            this.edgeAngNUM.TabIndex = 3;
+            this.edgeAngNUM.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
+            this.edgeAngNUM.Value = new decimal(new int[] {
+            30,
+            0,
+            0,
+            0});
+            this.edgeAngNUM.ValueChanged += new System.EventHandler(this.edgeAngValueChanged);
+            // 
+            // edgeAngLBL
+            // 
+            this.edgeAngLBL.AutoSize = true;
+            this.edgeAngLBL.Location = new System.Drawing.Point(137, 16);
+            this.edgeAngLBL.Name = "edgeAngLBL";
+            this.edgeAngLBL.Size = new System.Drawing.Size(65, 13);
+            this.edgeAngLBL.TabIndex = 2;
+            this.edgeAngLBL.Text = "Edge Angle:";
+            // 
+            // nodeRadNUM
+            // 
+            this.nodeRadNUM.DecimalPlaces = 1;
+            this.nodeRadNUM.Increment = new decimal(new int[] {
+            5,
+            0,
+            0,
+            65536});
+            this.nodeRadNUM.Location = new System.Drawing.Point(84, 14);
+            this.nodeRadNUM.Maximum = new decimal(new int[] {
+            25,
+            0,
+            0,
+            0});
+            this.nodeRadNUM.Minimum = new decimal(new int[] {
+            5,
+            0,
+            0,
+            0});
+            this.nodeRadNUM.Name = "nodeRadNUM";
+            this.nodeRadNUM.Size = new System.Drawing.Size(47, 20);
+            this.nodeRadNUM.TabIndex = 1;
+            this.nodeRadNUM.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
+            this.nodeRadNUM.Value = new decimal(new int[] {
+            15,
+            0,
+            0,
+            0});
+            this.nodeRadNUM.ValueChanged += new System.EventHandler(this.nodeRadValueChanged);
+            // 
+            // nodeRadLBL
+            // 
+            this.nodeRadLBL.AutoSize = true;
+            this.nodeRadLBL.Location = new System.Drawing.Point(6, 16);
+            this.nodeRadLBL.Name = "nodeRadLBL";
+            this.nodeRadLBL.Size = new System.Drawing.Size(72, 13);
+            this.nodeRadLBL.TabIndex = 0;
+            this.nodeRadLBL.Text = "Node Radius:";
+            // 
             // DemoForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(678, 546);
+            this.ClientSize = new System.Drawing.Size(678, 590);
+            this.Controls.Add(this.graphStyleGRP);
             this.Controls.Add(this.graphCreatorGRP);
             this.Controls.Add(this.styleAlgGRP);
             this.Controls.Add(this.splitContainer1);
@@ -291,6 +392,10 @@
             this.styleAlgGRP.ResumeLayout(false);
             this.styleAlgGRP.PerformLayout();
             this.graphCreatorGRP.ResumeLayout(false);
+            this.graphStyleGRP.ResumeLayout(false);
+            this.graphStyleGRP.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.edgeAngNUM)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.nodeRadNUM)).EndInit();
             this.ResumeLayout(false);
 
         }
@@ -316,6 +421,12 @@
         private System.Windows.Forms.GroupBox graphCreatorGRP;
         private System.Windows.Forms.Button createGraphBTN;
         private System.Windows.Forms.ComboBox graphCreatorCMB;
+        private System.Windows.Forms.GroupBox graphStyleGRP;
+        private System.Windows.Forms.NumericUpDown nodeRadNUM;
+        private System.Windows.Forms.Label nodeRadLBL;
+        private System.Windows.Forms.NumericUpDown edgeAngNUM;
+        private System.Windows.Forms.Label edgeAngLBL;
+        private System.Windows.Forms.CheckBox graphStyleResetOnCreateCHK;
     }
 }
 

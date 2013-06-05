@@ -6,14 +6,28 @@ namespace GraphAlgorithmDemo
 {
     public interface IGraphCreator
     {
-        void CreateGraph(CircleNodeScene scene);
+        void CreateGraph(CircleNodeScene scene, float rad, float ang);
+
+        float DefaultNodeRad { get; }
+
+        float DefaultEdgeAng { get; }
     }
 
     public class RandomGraphCreator : IGraphCreator
     {
+        public float DefaultNodeRad
+        {
+            get { return 15; }
+        }
+
+        public float DefaultEdgeAng
+        {
+            get { return 30; }//degrees
+        }
+
         private void GenerateRandomGraph(CircleNodeScene scene, 
-            int minNodes, int maxNodes, int minEdgesPerNode, 
-            int maxEdgeDiff, bool preventSelfLoops)
+            float rad, float ang, int minNodes, int maxNodes, 
+            int minEdgesPerNode, int maxEdgeDiff, bool preventSelfLoops)
         {
             Random rnd = new Random(DateTime.Now.Millisecond);
             int i, count = rnd.Next() % (maxNodes - minNodes) + minNodes;
@@ -21,11 +35,11 @@ namespace GraphAlgorithmDemo
             CircleNode node;
             for (i = 0; i < count; i++)
             {
-                node = new CircleNode(scene,
-                    (i + 1).ToString("n00"));
+                node = new CircleNode(scene, rad, (i + 1).ToString("n00"));
                 nodes[i] = node;
             }
             int j, k, eCount, mod = count - maxEdgeDiff - minEdgesPerNode;
+            float w = 1;
             ArrowEdge edge;
             for (i = 0; i < count; i++)
             {
@@ -39,14 +53,14 @@ namespace GraphAlgorithmDemo
                     {
                         k = rnd.Next() % count;
                     }
-                    edge = new ArrowEdge(node, nodes[k], scene);
+                    edge = new ArrowEdge(node, nodes[k], scene, w, ang);
                 }
             }
         }
 
-        public void CreateGraph(CircleNodeScene scene)
+        public void CreateGraph(CircleNodeScene scene, float rad, float ang)
         {
-            this.GenerateRandomGraph(scene, 5, 15, 2, 2, true);
+            this.GenerateRandomGraph(scene, rad, ang, 5, 15, 2, 2, true);
             scene.Layout.ShuffleNodePositions();
         }
 
@@ -61,88 +75,115 @@ namespace GraphAlgorithmDemo
     // Article: http://en.wikipedia.org/wiki/Biconnected_component
     public class BCCTestGraphCreator : IGraphCreator
     {
-        public void CreateGraph(CircleNodeScene scene)
+        public float DefaultNodeRad
         {
-            CircleNode n01 = new CircleNode(scene, "n01");
-            CircleNode n02 = new CircleNode(scene, "n02");
-            CircleNode n03 = new CircleNode(scene, "n03");
-            CircleNode n04 = new CircleNode(scene, "n04");
+            get { return 15; }
+        }
 
-            ArrowEdge e01 = new ArrowEdge(n01, n02, scene);
-            ArrowEdge e02 = new ArrowEdge(n01, n03, scene);
-            ArrowEdge e03 = new ArrowEdge(n02, n04, scene);
-            ArrowEdge e04 = new ArrowEdge(n03, n04, scene);
+        public float DefaultEdgeAng
+        {
+            get { return 30; }//degrees
+        }
 
-            CircleNode n05 = new CircleNode(scene, "n05");
-            ArrowEdge e05 = new ArrowEdge(n04, n05, scene);
+        private void CreateGraph(CircleNodeScene scene, float rad, float ang,
+            bool undirected, bool reversed)
+        {
+            CircleNode n01 = new CircleNode(scene, rad, "n01");
+            CircleNode n02 = new CircleNode(scene, rad, "n02");
+            CircleNode n03 = new CircleNode(scene, rad, "n03");
+            CircleNode n04 = new CircleNode(scene, rad, "n04");
 
-            CircleNode n06 = new CircleNode(scene, "n06");
-            ArrowEdge e06 = new ArrowEdge(n05, n06, scene);
+            CircleNode n05 = new CircleNode(scene, rad, "n05");
 
-            CircleNode n07 = new CircleNode(scene, "n07");
-            CircleNode n08 = new CircleNode(scene, "n08");
-            CircleNode n09 = new CircleNode(scene, "n09");
-            CircleNode n10 = new CircleNode(scene, "n10");
-            CircleNode n11 = new CircleNode(scene, "n11");
-            CircleNode n12 = new CircleNode(scene, "n12");
+            CircleNode n06 = new CircleNode(scene, rad, "n06");
+            
+            CircleNode n07 = new CircleNode(scene, rad, "n07");
+            CircleNode n08 = new CircleNode(scene, rad, "n08");
+            CircleNode n09 = new CircleNode(scene, rad, "n09");
+            CircleNode n10 = new CircleNode(scene, rad, "n10");
+            CircleNode n11 = new CircleNode(scene, rad, "n11");
+            CircleNode n12 = new CircleNode(scene, rad, "n12");
 
-            ArrowEdge e07 = new ArrowEdge(n07, n08, scene);
-            ArrowEdge e08 = new ArrowEdge(n07, n09, scene);
-            ArrowEdge e09 = new ArrowEdge(n08, n09, scene);
-            ArrowEdge e10 = new ArrowEdge(n08, n10, scene);
-            ArrowEdge e11 = new ArrowEdge(n10, n11, scene);
-            ArrowEdge e12 = new ArrowEdge(n09, n12, scene);
-            ArrowEdge e13 = new ArrowEdge(n11, n12, scene);
+            CircleNode n13 = new CircleNode(scene, rad, "n13");
 
-            ArrowEdge e14 = new ArrowEdge(n06, n10, scene);
+            CircleNode n14 = new CircleNode(scene, rad, "n14");
 
-            CircleNode n13 = new CircleNode(scene, "n13");
-            ArrowEdge e15 = new ArrowEdge(n10, n13, scene);
+            if (!reversed || undirected)
+            {
+                ArrowEdge e01 = new ArrowEdge(n01, n02, scene, 1, ang);
+                ArrowEdge e02 = new ArrowEdge(n03, n01, scene, 1, ang);
+                ArrowEdge e03 = new ArrowEdge(n02, n04, scene, 1, ang);
+                ArrowEdge e04 = new ArrowEdge(n04, n03, scene, 1, ang);
 
-            CircleNode n14 = new CircleNode(scene, "n14");
-            ArrowEdge e16 = new ArrowEdge(n11, n14, scene);
+                ArrowEdge e05 = new ArrowEdge(n04, n05, scene, 1, ang);
 
-            /*ArrowEdge e17 = new ArrowEdge(n02, n01, scene);
-            ArrowEdge e18 = new ArrowEdge(n03, n01, scene);
-            ArrowEdge e19 = new ArrowEdge(n04, n02, scene);
-            ArrowEdge e20 = new ArrowEdge(n04, n03, scene);
+                ArrowEdge e06 = new ArrowEdge(n05, n06, scene, 1, ang);
 
-            ArrowEdge e21 = new ArrowEdge(n05, n04, scene);
+                ArrowEdge e07 = new ArrowEdge(n07, n08, scene, 1, ang);
+                ArrowEdge e08 = new ArrowEdge(n09, n07, scene, 1, ang);
+                ArrowEdge e09 = new ArrowEdge(n08, n09, scene, 1, ang);
+                ArrowEdge e10 = new ArrowEdge(n08, n10, scene, 1, ang);
+                ArrowEdge e11 = new ArrowEdge(n10, n11, scene, 1, ang);
+                ArrowEdge e12 = new ArrowEdge(n09, n12, scene, 1, ang);
+                ArrowEdge e13 = new ArrowEdge(n11, n12, scene, 1, ang);
 
-            ArrowEdge e22 = new ArrowEdge(n06, n05, scene);
+                ArrowEdge e14 = new ArrowEdge(n06, n10, scene, 1, ang);
 
-            ArrowEdge e23 = new ArrowEdge(n08, n07, scene);
-            ArrowEdge e24 = new ArrowEdge(n09, n07, scene);
-            ArrowEdge e25 = new ArrowEdge(n09, n08, scene);
-            ArrowEdge e26 = new ArrowEdge(n10, n08, scene);
-            ArrowEdge e27 = new ArrowEdge(n11, n10, scene);
-            ArrowEdge e28 = new ArrowEdge(n12, n09, scene);
-            ArrowEdge e29 = new ArrowEdge(n12, n11, scene);
+                ArrowEdge e15 = new ArrowEdge(n10, n13, scene, 1, ang);
 
-            ArrowEdge e30 = new ArrowEdge(n10, n06, scene);
+                ArrowEdge e16 = new ArrowEdge(n11, n14, scene, 1, ang);
+            }
+            if (reversed || undirected)
+            {
+                ArrowEdge e17 = new ArrowEdge(n02, n01, scene, 1, ang);
+                ArrowEdge e18 = new ArrowEdge(n01, n03, scene, 1, ang);
+                ArrowEdge e19 = new ArrowEdge(n04, n02, scene, 1, ang);
+                ArrowEdge e20 = new ArrowEdge(n03, n04, scene, 1, ang);
 
-            ArrowEdge e31 = new ArrowEdge(n13, n10, scene);
+                ArrowEdge e21 = new ArrowEdge(n05, n04, scene, 1, ang);
 
-            ArrowEdge e32 = new ArrowEdge(n14, n11, scene);/* */
+                ArrowEdge e22 = new ArrowEdge(n06, n05, scene, 1, ang);
+
+                ArrowEdge e23 = new ArrowEdge(n08, n07, scene, 1, ang);
+                ArrowEdge e24 = new ArrowEdge(n07, n09, scene, 1, ang);
+                ArrowEdge e25 = new ArrowEdge(n09, n08, scene, 1, ang);
+                ArrowEdge e26 = new ArrowEdge(n10, n08, scene, 1, ang);
+                ArrowEdge e27 = new ArrowEdge(n11, n10, scene, 1, ang);
+                ArrowEdge e28 = new ArrowEdge(n12, n09, scene, 1, ang);
+                ArrowEdge e29 = new ArrowEdge(n12, n11, scene, 1, ang);
+
+                ArrowEdge e30 = new ArrowEdge(n10, n06, scene, 1, ang);
+
+                ArrowEdge e31 = new ArrowEdge(n13, n10, scene, 1, ang);
+
+                ArrowEdge e32 = new ArrowEdge(n14, n11, scene, 1, ang);
+            }
 
             float unit = 40;
+            float left = 200 - 4 * unit;
+            float top = 200 - 2 * unit;
 
-            n01.SetPosition(2 * unit, 2 * unit);
-            n02.SetPosition(1 * unit, 3 * unit);
-            n03.SetPosition(3 * unit, 3 * unit);
-            n04.SetPosition(2 * unit, 4 * unit);
-            n05.SetPosition(3 * unit, 5 * unit);
-            n06.SetPosition(4 * unit, 4 * unit);
-            n07.SetPosition(7 * unit, 2 * unit);
-            n08.SetPosition(5 * unit, 3 * unit);
-            n09.SetPosition(8 * unit, 3 * unit);
-            n10.SetPosition(6 * unit, 4 * unit);
-            n11.SetPosition(7 * unit, 5 * unit);
-            n12.SetPosition(9 * unit, 5 * unit);
-            n13.SetPosition(5 * unit, 5 * unit);
-            n14.SetPosition(6 * unit, 6 * unit);
+            n01.SetPosition(left + 1 * unit, top + 1 * unit);
+            n02.SetPosition(left + 0 * unit, top + 2 * unit);
+            n03.SetPosition(left + 2 * unit, top + 2 * unit);
+            n04.SetPosition(left + 1 * unit, top + 3 * unit);
+            n05.SetPosition(left + 2 * unit, top + 4 * unit);
+            n06.SetPosition(left + 3 * unit, top + 3 * unit);
+            n07.SetPosition(left + 6 * unit, top + 1 * unit);
+            n08.SetPosition(left + 4 * unit, top + 2 * unit);
+            n09.SetPosition(left + 7 * unit, top + 2 * unit);
+            n10.SetPosition(left + 5 * unit, top + 3 * unit);
+            n11.SetPosition(left + 6 * unit, top + 4 * unit);
+            n12.SetPosition(left + 8 * unit, top + 4 * unit);
+            n13.SetPosition(left + 4 * unit, top + 4 * unit);
+            n14.SetPosition(left + 5 * unit, top + 5 * unit);
 
             scene.UpdateEdges();
+        }
+
+        public void CreateGraph(CircleNodeScene scene, float rad, float ang)
+        {
+            this.CreateGraph(scene, rad, ang, false, false);
         }
 
         public override string ToString()
@@ -155,44 +196,56 @@ namespace GraphAlgorithmDemo
     // Article: http://en.wikipedia.org/wiki/Tarjan's_strongly_connected_components_algorithm
     public class SCCTestGraphCreator : IGraphCreator
     {
-        public void CreateGraph(CircleNodeScene scene)
+        public float DefaultNodeRad
         {
-            CircleNode n01 = new CircleNode(scene, "n01");
-            CircleNode n02 = new CircleNode(scene, "n02");
-            CircleNode n03 = new CircleNode(scene, "n03");
-            ArrowEdge e01 = new ArrowEdge(n01, n02, scene);
-            ArrowEdge e02 = new ArrowEdge(n02, n03, scene);
-            ArrowEdge e03 = new ArrowEdge(n03, n01, scene);
+            get { return 15; }
+        }
 
-            CircleNode n04 = new CircleNode(scene, "n04");
-            CircleNode n05 = new CircleNode(scene, "n05");
-            ArrowEdge e04 = new ArrowEdge(n04, n02, scene);
-            ArrowEdge e05 = new ArrowEdge(n04, n03, scene);
-            ArrowEdge e06 = new ArrowEdge(n04, n05, scene);
-            ArrowEdge e07 = new ArrowEdge(n05, n04, scene);
+        public float DefaultEdgeAng
+        {
+            get { return 30; }//degrees
+        }
 
-            CircleNode n06 = new CircleNode(scene, "n06");
-            CircleNode n07 = new CircleNode(scene, "n07");
-            ArrowEdge e08 = new ArrowEdge(n05, n06, scene);
-            ArrowEdge e09 = new ArrowEdge(n06, n07, scene);
-            ArrowEdge e10 = new ArrowEdge(n07, n06, scene);
-            ArrowEdge e11 = new ArrowEdge(n06, n03, scene);
+        public void CreateGraph(CircleNodeScene scene, float rad, float ang)
+        {
+            CircleNode n01 = new CircleNode(scene, rad, "n01");
+            CircleNode n02 = new CircleNode(scene, rad, "n02");
+            CircleNode n03 = new CircleNode(scene, rad, "n03");
+            ArrowEdge e01 = new ArrowEdge(n01, n02, scene, 1, ang);
+            ArrowEdge e02 = new ArrowEdge(n02, n03, scene, 1, ang);
+            ArrowEdge e03 = new ArrowEdge(n03, n01, scene, 1, ang);
 
-            CircleNode n08 = new CircleNode(scene, "n08");
-            ArrowEdge e12 = new ArrowEdge(n08, n05, scene);
-            ArrowEdge e13 = new ArrowEdge(n08, n07, scene);
-            ArrowEdge e14 = new ArrowEdge(n08, n08, scene);
+            CircleNode n04 = new CircleNode(scene, rad, "n04");
+            CircleNode n05 = new CircleNode(scene, rad, "n05");
+            ArrowEdge e04 = new ArrowEdge(n04, n02, scene, 1, ang);
+            ArrowEdge e05 = new ArrowEdge(n04, n03, scene, 1, ang);
+            ArrowEdge e06 = new ArrowEdge(n04, n05, scene, 1, ang);
+            ArrowEdge e07 = new ArrowEdge(n05, n04, scene, 1, ang);
+
+            CircleNode n06 = new CircleNode(scene, rad, "n06");
+            CircleNode n07 = new CircleNode(scene, rad, "n07");
+            ArrowEdge e08 = new ArrowEdge(n05, n06, scene, 1, ang);
+            ArrowEdge e09 = new ArrowEdge(n06, n07, scene, 1, ang);
+            ArrowEdge e10 = new ArrowEdge(n07, n06, scene, 1, ang);
+            ArrowEdge e11 = new ArrowEdge(n06, n03, scene, 1, ang);
+
+            CircleNode n08 = new CircleNode(scene, rad, "n08");
+            ArrowEdge e12 = new ArrowEdge(n08, n05, scene, 1, ang);
+            ArrowEdge e13 = new ArrowEdge(n08, n07, scene, 1, ang);
+            ArrowEdge e14 = new ArrowEdge(n08, n08, scene, 1, ang);
 
             float unit = 50;
+            float left = 200 - 3 * unit;
+            float top = 200 - unit;
 
-            n01.SetPosition(1 * unit, 3 * unit);
-            n02.SetPosition(1 * unit, 5 * unit);
-            n03.SetPosition(3 * unit, 3 * unit);
-            n04.SetPosition(3 * unit, 5 * unit);
-            n05.SetPosition(5 * unit, 5 * unit);
-            n06.SetPosition(5 * unit, 3 * unit);
-            n07.SetPosition(7 * unit, 3 * unit);
-            n08.SetPosition(7 * unit, 5 * unit);
+            n01.SetPosition(left + 0 * unit, top + 0 * unit);
+            n02.SetPosition(left + 0 * unit, top + 2 * unit);
+            n03.SetPosition(left + 2 * unit, top + 0 * unit);
+            n04.SetPosition(left + 2 * unit, top + 2 * unit);
+            n05.SetPosition(left + 4 * unit, top + 2 * unit);
+            n06.SetPosition(left + 4 * unit, top + 0 * unit);
+            n07.SetPosition(left + 6 * unit, top + 0 * unit);
+            n08.SetPosition(left + 6 * unit, top + 2 * unit);
 
             scene.UpdateEdges();
         }
@@ -207,9 +260,18 @@ namespace GraphAlgorithmDemo
     // Article: http://en.wikipedia.org/wiki/Bor%C5%AFvka%27s_algorithm
     public class MinSpanTreeTestGraphCreator : IGraphCreator
     {
-        public void CreateGraph(CircleNodeScene scene)
+        public float DefaultNodeRad
         {
-            float rad = 20;
+            get { return 20; }
+        }
+
+        public float DefaultEdgeAng
+        {
+            get { return 30; }//degrees
+        }
+
+        public void CreateGraph(CircleNodeScene scene, float rad, float ang)
+        {
             CircleNode nA = new CircleNode(scene, rad, "nA");
             CircleNode nB = new CircleNode(scene, rad, "nB");
             CircleNode nC = new CircleNode(scene, rad, "nC");
@@ -218,30 +280,32 @@ namespace GraphAlgorithmDemo
             CircleNode nF = new CircleNode(scene, rad, "nF");
             CircleNode nG = new CircleNode(scene, rad, "nG");
 
-            ArrowEdge eAB = new ArrowEdge(nA, nB, scene, 7, "eAB");
-            ArrowEdge eAD = new ArrowEdge(nA, nD, scene, 4, "eAD");
-            ArrowEdge eBC = new ArrowEdge(nB, nC, scene, 11, "eBC");
-            ArrowEdge eBD = new ArrowEdge(nB, nD, scene, 9, "eBD");
-            ArrowEdge eBE = new ArrowEdge(nB, nE, scene, 10, "eBE");
-            ArrowEdge eCE = new ArrowEdge(nC, nE, scene, 5, "eCE");
-            ArrowEdge eDE = new ArrowEdge(nD, nE, scene, 15, "eDE");
-            ArrowEdge eDF = new ArrowEdge(nD, nF, scene, 6, "eDF");
-            ArrowEdge eEF = new ArrowEdge(nE, nF, scene, 12, "eEF");
-            ArrowEdge eEG = new ArrowEdge(nE, nG, scene, 8, "eEG");
-            ArrowEdge eFG = new ArrowEdge(nF, nG, scene, 13, "eFG");
+            ArrowEdge eAB = new ArrowEdge(nA, nB, scene,  7, ang, "eAB");
+            ArrowEdge eAD = new ArrowEdge(nA, nD, scene,  4, ang, "eAD");
+            ArrowEdge eBC = new ArrowEdge(nB, nC, scene, 11, ang, "eBC");
+            ArrowEdge eBD = new ArrowEdge(nB, nD, scene,  9, ang, "eBD");
+            ArrowEdge eBE = new ArrowEdge(nB, nE, scene, 10, ang, "eBE");
+            ArrowEdge eCE = new ArrowEdge(nC, nE, scene,  5, ang, "eCE");
+            ArrowEdge eDE = new ArrowEdge(nD, nE, scene, 15, ang, "eDE");
+            ArrowEdge eDF = new ArrowEdge(nD, nF, scene,  6, ang, "eDF");
+            ArrowEdge eEF = new ArrowEdge(nE, nF, scene, 12, ang, "eEF");
+            ArrowEdge eEG = new ArrowEdge(nE, nG, scene,  8, ang, "eEG");
+            ArrowEdge eFG = new ArrowEdge(nF, nG, scene, 13, ang, "eFG");
 
-            //ArrowEdge eAD = new ArrowEdge(nD, nA, scene,  4, "eDA");
-            //ArrowEdge eBD = new ArrowEdge(nD, nB, scene,  9, "eDB");
+            //ArrowEdge eDA = new ArrowEdge(nD, nA, scene,  4, ang, "eDA");
+            //ArrowEdge eDB = new ArrowEdge(nD, nB, scene,  9, ang, "eDB");
 
             float unit = 50;
+            float left = 200 - 2 * unit;
+            float top = 200 - 2 * unit;
 
-            nA.SetPosition(2 * unit, 2 * unit);
-            nB.SetPosition(4 * unit, 3 * unit);
-            nC.SetPosition(6 * unit, 2 * unit);
-            nD.SetPosition(3 * unit, 4 * unit);
-            nE.SetPosition(5 * unit, 4 * unit);
-            nF.SetPosition(4 * unit, 5 * unit);
-            nG.SetPosition(6 * unit, 6 * unit);
+            nA.SetPosition(left + 0 * unit, top + 0 * unit);
+            nB.SetPosition(left + 2 * unit, top + 1 * unit);
+            nC.SetPosition(left + 4 * unit, top + 0 * unit);
+            nD.SetPosition(left + 1 * unit, top + 2 * unit);
+            nE.SetPosition(left + 3 * unit, top + 2 * unit);
+            nF.SetPosition(left + 2 * unit, top + 3 * unit);
+            nG.SetPosition(left + 4 * unit, top + 4 * unit);
 
             scene.UpdateEdges();
         }
@@ -257,11 +321,18 @@ namespace GraphAlgorithmDemo
     // Article: http://en.wikipedia.org/wiki/SPQR_tree
     public class SPQRTestGraphCreator : IGraphCreator
     {
-        public void CreateGraph(CircleNodeScene scene)
+        public float DefaultNodeRad
         {
-            float rad = 10;
-            float ang = 10;
+            get { return 10; }
+        }
 
+        public float DefaultEdgeAng
+        {
+            get { return 10; }//degrees
+        }
+
+        public void CreateGraph(CircleNodeScene scene, float rad, float ang)
+        {
             CircleNode nA1 = new CircleNode(scene, rad, "A1");
             CircleNode nA2 = new CircleNode(scene, rad, "A2");
             CircleNode nA3 = new CircleNode(scene, rad, "A3");
@@ -348,32 +419,73 @@ namespace GraphAlgorithmDemo
 
     public class WagonWheelGraphCreator : IGraphCreator
     {
-        private void GenerateWagonWheelGraph(CircleNodeScene scene, 
-            int spokeCount)
+        public float DefaultNodeRad
         {
-            ArrowEdge edge;
-            CircleNode center = new CircleNode(scene, "n00");
-            CircleNode first = new CircleNode(scene, "n01");
-            edge = new ArrowEdge(first, center, scene);
-            //edge = new ArrowEdge(center, first, scene);
-            CircleNode curr, prev = first;
-            for (int i = 1; i < spokeCount; i++)
-            {
-                curr = new CircleNode(scene, (i + 1).ToString("n00"));
-                edge = new ArrowEdge(prev, curr, scene);
-                //edge = new ArrowEdge(curr, prev, scene);
-                edge = new ArrowEdge(curr, center, scene);
-                //edge = new ArrowEdge(center, curr, scene);
-                prev = curr;
-            }
-            edge = new ArrowEdge(prev, first, scene);
-            //edge = new ArrowEdge(first, prev, scene);
+            get { return 10; }
         }
 
-        public void CreateGraph(CircleNodeScene scene)
+        public float DefaultEdgeAng
         {
-            this.GenerateWagonWheelGraph(scene, 15);
-            scene.Layout.ShuffleNodePositions();
+            get { return 10; }//degrees
+        }
+
+        private void GenerateWagonWheelGraph(CircleNodeScene scene, 
+            float rad, float ang, int spokeCount, 
+            float freeArc, float minRadius, bool clockwise,
+            bool rimUndirected, bool spokesUndirected, 
+            bool rimReversed, bool spokesOutward)
+        {
+            int i;
+            ArrowEdge edge;
+            CircleNode[] nodes = new CircleNode[spokeCount + 1];
+            CircleNode center = new CircleNode(scene, rad, "n00");
+            CircleNode curr = new CircleNode(scene, rad, "n01");
+            if (!spokesOutward || spokesUndirected)
+                edge = new ArrowEdge(curr, center, scene, 1, ang);
+            if (spokesOutward || spokesUndirected)
+                edge = new ArrowEdge(center, curr, scene, 1, ang);
+            nodes[0] = center;
+            nodes[1] = curr;
+            CircleNode prev = curr;
+            for (i = 1; i < spokeCount; i++)
+            {
+                curr = new CircleNode(scene, rad, (i + 1).ToString("n00"));
+                if (!rimReversed || rimUndirected)
+                    edge = new ArrowEdge(prev, curr, scene, 1, ang);
+                if (rimReversed || rimUndirected)
+                    edge = new ArrowEdge(curr, prev, scene, 1, ang);
+                if (!spokesOutward || spokesUndirected)
+                    edge = new ArrowEdge(curr, center, scene, 1, ang);
+                if (spokesOutward || spokesUndirected)
+                    edge = new ArrowEdge(center, curr, scene, 1, ang);
+                prev = curr;
+                nodes[i + 1] = curr;
+            }
+            if (!rimReversed || rimUndirected)
+                edge = new ArrowEdge(prev, nodes[1], scene, 1, ang);
+            if (rimReversed || rimUndirected)
+                edge = new ArrowEdge(nodes[1], prev, scene, 1, ang);
+
+            center.SetPosition(200, 200);
+            double radius = Math.Max(minRadius, 
+                spokeCount * (rad + freeArc / 2.0) / Math.PI);
+            double a = 2 * Math.PI / spokeCount;
+            double angle = 0;
+            for (i = 1; i <= spokeCount; i++)
+            {
+                nodes[i].SetPosition(
+                    (float)(200.0 + radius * Math.Cos(angle)),
+                    (float)(200.0 + radius * Math.Sin(angle)));
+                angle += clockwise ? -a : a;
+            }
+            scene.UpdateEdges();
+        }
+
+        public void CreateGraph(CircleNodeScene scene, float rad, float ang)
+        {
+            this.GenerateWagonWheelGraph(scene, rad, ang, 15, 
+                10f, 50f, false,
+                false, false, false, false);
         }
 
         public override string ToString()

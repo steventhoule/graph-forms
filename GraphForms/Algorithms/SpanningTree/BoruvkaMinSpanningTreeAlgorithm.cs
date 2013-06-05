@@ -69,13 +69,16 @@ namespace GraphForms.Algorithms.SpanningTree
 
             Digraph<Node, Edge>.GEdge edge;
             int j, si, di, newCompCount;
-            List<int> remEdges;
+            bool[] removeEdge = new bool[edges.Length];
             // TODO: Does checking edges.Length fully compensate for
             // a graph with multiple connected components?
             while (compCount > 1 && edges.Length > 0)
             {
                 newCompCount = 0;
-                remEdges = new List<int>(edges.Length);
+                for (i = 0; i < edges.Length; i++)
+                {
+                    removeEdge[i] = false;
+                }
                 for (i = 0; i < compCount; i++)
                 {
                     edge = null;
@@ -89,13 +92,13 @@ namespace GraphForms.Algorithms.SpanningTree
                         this.OnExamineEdge(edge.mData, si, di);
                         if (this.mDatas[si].CompId == i)
                         {
-                            remEdges.Add(j);
+                            removeEdge[j] = true;
                             if (this.mDatas[di].CompId != i)
                                 break;
                         }
                         else if (this.mDatas[di].CompId == i)
                         {
-                            remEdges.Add(j);
+                            removeEdge[j] = true;
                             if (this.mDatas[si].CompId != i)
                                 break;
                         }
@@ -122,11 +125,13 @@ namespace GraphForms.Algorithms.SpanningTree
                     }
                 }
                 si = edges.Length;
-                for (j = remEdges.Count - 1; j >= 0; j--)
+                for (j = edges.Length - 1; j >= 0; j--)
                 {
-                    si--;
-                    Array.Copy(edges, remEdges[j] + 1,
-                        edges, remEdges[j], si - remEdges[j]);
+                    if (removeEdge[j])
+                    {
+                        si--;
+                        Array.Copy(edges, j + 1, edges, j, si - j);
+                    }
                 }
                 Digraph<Node, Edge>.GEdge[] newEdges
                     = new Digraph<Node, Edge>.GEdge[si];

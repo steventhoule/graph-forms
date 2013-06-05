@@ -44,7 +44,8 @@ namespace GraphForms.Algorithms.Layout.Circular
             // Calculate an initial embedding circle based on
             // the longest path in the graph.
             DFLongestPathAlgorithm<Node, Edge> alg 
-                = new DFLongestPathAlgorithm<Node, Edge>(this.mGraph);
+                = new DFLongestPathAlgorithm<Node, Edge>(this.mGraph, 
+                    false, false);
             alg.Compute();
             int[] nis = alg.PathNodeIndexes;
 
@@ -317,10 +318,6 @@ namespace GraphForms.Algorithms.Layout.Circular
             for (i = 0; i < nodes.Length; i++)
             {
                 angle += Math.Sin(halfSize[i] / this.mRadius) * 4;
-                //a = Math.Sin(halfSize[i] / this.mRadius) * 2;
-                //angle += a;
-                //this.mAngles[i] = angle;
-                //angle += a;
             }
 
             //base.EndIteration(0, 0.5, "Precalculation done.");

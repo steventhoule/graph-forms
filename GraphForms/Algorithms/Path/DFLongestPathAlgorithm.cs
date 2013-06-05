@@ -181,22 +181,8 @@ namespace GraphForms.Algorithms.Path
                 vData = this.mDatas[dstIndex];
             }
             double len = vData.Length + (this.bUseWeights ? e.Weight : 1);
-            if (this.bUndirected && uData.NextNode != -1 &&
-                this.mStartIndex == (reversed ? dstIndex : srcIndex) &&
-                len > this.mStart.Length)
-            {
-                if (len > uData.Length)
-                {
-                    this.mStart = new NodeData(uData);
-                }
-                else
-                {
-                    this.mStart = new NodeData();
-                    this.mStart.Length = len;
-                    this.mStart.Next = e;
-                    this.mStart.NextNode = reversed ? srcIndex : dstIndex;
-                }
-            }
+            // Putting the mStart block here causes problems when the edge
+            // is connected to a node in the longest path from the root
             if (len > uData.Length)
             {
                 uData.Length = len;

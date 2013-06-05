@@ -115,10 +115,10 @@ namespace GraphAlgorithmDemo
         }
 
         /// <summary>
-        /// Whether moving an node in the <see cref="Graph"/> restarts the 
+        /// Whether moving a node in the <see cref="Graph"/> restarts the 
         /// <see cref="Layout"/> algorithm, and resets it if it is not paused.
         /// </summary>
-        public bool LayoutOnNodeMoved = true;
+        public bool LayoutOnNodeMoved = false;
         /// <summary>
         /// If true, the <see cref="Layout"/> algorithm will not iterate and 
         /// will not be reset by moving a node in the <see cref="Graph"/>.

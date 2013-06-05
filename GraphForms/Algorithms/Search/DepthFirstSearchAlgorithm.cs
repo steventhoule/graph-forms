@@ -133,7 +133,7 @@ namespace GraphForms.Algorithms.Search
             Digraph<Node, Edge>.GEdge e;
             Digraph<Node, Edge>.GEdge[] edges;
             int depth, edgeIndex;
-            bool rev;
+            bool reversed;
 
             if (this.bUndirected)
                 edges = root.AllInternalEdges(this.bReversed);
@@ -175,19 +175,19 @@ namespace GraphForms.Algorithms.Search
                         return;
 
                     v = e.mDstNode;
-                    rev = v.Equals(u);
-                    if (rev)
+                    reversed = v.Index == u.Index;//v.Equals(u);
+                    if (reversed)
                         v = e.mSrcNode;
                     this.OnExamineEdge(e.mData, e.mSrcNode.Index,
-                        e.mDstNode.Index, rev);
+                        e.mDstNode.Index, reversed);
                     
                     switch (v.Color)
                     {
                         case GraphColor.White:
                             this.OnTreeEdge(e.mData, e.mSrcNode.Index,
-                                e.mDstNode.Index, rev);
+                                e.mDstNode.Index, reversed);
                             todo.Push(new SearchFrame(u, edges, depth, 
-                                edgeIndex, rev));
+                                edgeIndex, reversed));
                             u = v;
                             edgeIndex = 0;
                             depth++;
@@ -203,12 +203,12 @@ namespace GraphForms.Algorithms.Search
                         case GraphColor.Gray:
                             // OnBackEdge
                             this.OnGrayEdge(e.mData, e.mSrcNode.Index,
-                                e.mDstNode.Index, rev);
+                                e.mDstNode.Index, reversed);
                             break;
                         case GraphColor.Black:
                             // OnForwardOrCrossEdge
                             this.OnBlackEdge(e.mData, e.mSrcNode.Index,
-                                e.mDstNode.Index, rev);
+                                e.mDstNode.Index, reversed);
                             break;
                     }
                 }
@@ -244,7 +244,7 @@ namespace GraphForms.Algorithms.Search
                     return;
 
                 v = e.mDstNode;
-                reversed = v.Equals(u);
+                reversed = v.Index == u.Index;//v.Equals(u);
                 if (reversed)
                     v = e.mSrcNode;
                 this.OnExamineEdge(e.mData, e.mSrcNode.Index, 
