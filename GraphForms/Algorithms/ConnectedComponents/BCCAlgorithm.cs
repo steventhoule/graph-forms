@@ -9,7 +9,7 @@ namespace GraphForms.Algorithms.ConnectedComponents
     // This article was the biggest help in implementing this algorithm:
     // http://www.cs.umd.edu/class/fall2005/cmsc451/biconcomps.pdf
     public class BCCAlgorithm<Node, Edge> 
-        : DepthFirstSearchAlgorithm<Node, Edge>
+        : DepthFirstSearch<Node, Edge>
         where Node : class
         where Edge : class, IGraphEdge<Node>
     {
@@ -74,6 +74,19 @@ namespace GraphForms.Algorithms.ConnectedComponents
             get
             {
                 return this.mCompGroups.ToArray();
+            }
+        }
+
+        public int[] CompactGroupIds
+        {
+            get
+            {
+                int[] gids = new int[this.mDatas.Length];
+                for (int i = 0; i < this.mDatas.Length; i++)
+                {
+                    gids[i] = this.mDatas[i].GroupID;
+                }
+                return gids;
             }
         }
 
@@ -144,8 +157,7 @@ namespace GraphForms.Algorithms.ConnectedComponents
                 {
                     if (this.mDatas[i].IsCut)
                     {
-                        grps[count].Add(this.mDatas[i].Data);
-                        count++;
+                        grps[count++].Add(this.mDatas[i].Data);
                     }
                     else
                     {
@@ -162,8 +174,25 @@ namespace GraphForms.Algorithms.ConnectedComponents
             }
         }
 
+        public int[] IsolatedGroupIds
+        {
+            get
+            {
+                int i, count = this.mArtNodes.Count + this.mComponents.Count;
+                int[] gids = new int[count];
+                count = this.mComponents.Count;
+                for (i = 0; i < this.mDatas.Length; i++)
+                {
+                    gids[i] = this.mDatas[i].IsCut 
+                        ? count++ : this.mDatas[i].GroupID;
+                }
+                return gids;
+            }
+        }
+
         public override void Initialize()
         {
+            base.Initialize();
             this.mDepth = 0;
             this.mNodeStack.Clear();
             this.mEdgeStack.Clear();
@@ -174,7 +203,6 @@ namespace GraphForms.Algorithms.ConnectedComponents
             {
                 this.mDatas[i] = new NodeData(nodes[i].mData);
             }
-            base.Initialize();
         }
 
         protected override void OnStartNode(Node n, int index)

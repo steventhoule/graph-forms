@@ -121,10 +121,10 @@ namespace GraphForms.Algorithms.Layout.Tree
             switch (this.mSpanTreeGen)
             {
                 case SearchMethod.BFS:
-                    alg = new BFSpanningTreeAlgorithm<Node, Edge>(this.mGraph);
+                    alg = new BFSpanningTree<Node, Edge>(this.mGraph);
                     break;
                 case SearchMethod.DFS:
-                    alg = new DFSpanningTreeAlgorithm<Node, Edge>(this.mGraph);
+                    alg = new DFSpanningTree<Node, Edge>(this.mGraph);
                     break;
             }
             alg.Compute();

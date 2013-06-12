@@ -127,5 +127,29 @@ namespace GraphForms.Algorithms
                 }
             }
         }
+
+        /// <summary>
+        /// Resets the algorithm to be ready to begin its computation again,
+        /// but only if the algorithm isn't currently running or aborting.
+        /// </summary>
+        public virtual void Reset()
+        {
+            lock (this.mSyncRoot)
+            {
+                ComputeState oldState = this.mState;
+                switch (this.mState)
+                {
+                    case ComputeState.None:
+                        break;
+                    case ComputeState.Finished:
+                    case ComputeState.Aborted:
+                        this.mState = ComputeState.None;
+                        this.OnStateChanged(oldState);
+                        break;
+                    default:
+                        throw new InvalidOperationException();
+                }
+            }
+        }
     }
 }

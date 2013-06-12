@@ -5,7 +5,7 @@ using GraphForms.Algorithms.Collections;
 
 namespace GraphForms.Algorithms.SpanningTree
 {
-    public class BoruvkaMinSpanningTreeAlgorithm<Node, Edge>
+    public class BoruvkaMinSpanningTree<Node, Edge>
         : AAlgorithm, ISpanningTreeAlgorithm<Node, Edge>
         where Node : class
         where Edge : class, IGraphEdge<Node>
@@ -26,8 +26,7 @@ namespace GraphForms.Algorithms.SpanningTree
         private NodeData[] mDatas;
         private Digraph<Node, Edge> mSpanningTree;
 
-        public BoruvkaMinSpanningTreeAlgorithm(
-            Digraph<Node, Edge> graph)
+        public BoruvkaMinSpanningTree(Digraph<Node, Edge> graph)
         {
             this.mGraph = graph;
         }

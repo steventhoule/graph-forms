@@ -53,6 +53,11 @@
             this.edgeAngLBL = new System.Windows.Forms.Label();
             this.nodeRadNUM = new System.Windows.Forms.NumericUpDown();
             this.nodeRadLBL = new System.Windows.Forms.Label();
+            this.shortPathGRP = new System.Windows.Forms.GroupBox();
+            this.shortPathAlgCMB = new System.Windows.Forms.ComboBox();
+            this.shortPathOnOffBTN = new System.Windows.Forms.Button();
+            this.shortPathDirectedCHK = new System.Windows.Forms.CheckBox();
+            this.shortPathReversedCHK = new System.Windows.Forms.CheckBox();
             this.layoutGRP.SuspendLayout();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
@@ -62,6 +67,7 @@
             this.graphStyleGRP.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.edgeAngNUM)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nodeRadNUM)).BeginInit();
+            this.shortPathGRP.SuspendLayout();
             this.SuspendLayout();
             // 
             // layoutAlgCMB
@@ -147,7 +153,7 @@
             // 
             this.splitContainer1.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
                         | System.Windows.Forms.AnchorStyles.Right)));
-            this.splitContainer1.Location = new System.Drawing.Point(12, 169);
+            this.splitContainer1.Location = new System.Drawing.Point(12, 179);
             this.splitContainer1.Name = "splitContainer1";
             // 
             // splitContainer1.Panel1
@@ -286,7 +292,7 @@
             this.graphStyleGRP.Controls.Add(this.nodeRadLBL);
             this.graphStyleGRP.Location = new System.Drawing.Point(12, 118);
             this.graphStyleGRP.Name = "graphStyleGRP";
-            this.graphStyleGRP.Size = new System.Drawing.Size(360, 41);
+            this.graphStyleGRP.Size = new System.Drawing.Size(360, 49);
             this.graphStyleGRP.TabIndex = 7;
             this.graphStyleGRP.TabStop = false;
             this.graphStyleGRP.Text = "Graph Style";
@@ -296,7 +302,7 @@
             this.graphStyleResetOnCreateCHK.AutoSize = true;
             this.graphStyleResetOnCreateCHK.Checked = true;
             this.graphStyleResetOnCreateCHK.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.graphStyleResetOnCreateCHK.Location = new System.Drawing.Point(249, 15);
+            this.graphStyleResetOnCreateCHK.Location = new System.Drawing.Point(249, 21);
             this.graphStyleResetOnCreateCHK.Name = "graphStyleResetOnCreateCHK";
             this.graphStyleResetOnCreateCHK.Size = new System.Drawing.Size(105, 17);
             this.graphStyleResetOnCreateCHK.TabIndex = 4;
@@ -305,7 +311,7 @@
             // 
             // edgeAngNUM
             // 
-            this.edgeAngNUM.Location = new System.Drawing.Point(208, 14);
+            this.edgeAngNUM.Location = new System.Drawing.Point(208, 20);
             this.edgeAngNUM.Maximum = new decimal(new int[] {
             90,
             0,
@@ -325,7 +331,7 @@
             // edgeAngLBL
             // 
             this.edgeAngLBL.AutoSize = true;
-            this.edgeAngLBL.Location = new System.Drawing.Point(137, 16);
+            this.edgeAngLBL.Location = new System.Drawing.Point(137, 22);
             this.edgeAngLBL.Name = "edgeAngLBL";
             this.edgeAngLBL.Size = new System.Drawing.Size(65, 13);
             this.edgeAngLBL.TabIndex = 2;
@@ -339,7 +345,7 @@
             0,
             0,
             65536});
-            this.nodeRadNUM.Location = new System.Drawing.Point(84, 14);
+            this.nodeRadNUM.Location = new System.Drawing.Point(84, 20);
             this.nodeRadNUM.Maximum = new decimal(new int[] {
             25,
             0,
@@ -364,17 +370,72 @@
             // nodeRadLBL
             // 
             this.nodeRadLBL.AutoSize = true;
-            this.nodeRadLBL.Location = new System.Drawing.Point(6, 16);
+            this.nodeRadLBL.Location = new System.Drawing.Point(6, 22);
             this.nodeRadLBL.Name = "nodeRadLBL";
             this.nodeRadLBL.Size = new System.Drawing.Size(72, 13);
             this.nodeRadLBL.TabIndex = 0;
             this.nodeRadLBL.Text = "Node Radius:";
             // 
+            // shortPathGRP
+            // 
+            this.shortPathGRP.Controls.Add(this.shortPathReversedCHK);
+            this.shortPathGRP.Controls.Add(this.shortPathDirectedCHK);
+            this.shortPathGRP.Controls.Add(this.shortPathOnOffBTN);
+            this.shortPathGRP.Controls.Add(this.shortPathAlgCMB);
+            this.shortPathGRP.Location = new System.Drawing.Point(378, 118);
+            this.shortPathGRP.Name = "shortPathGRP";
+            this.shortPathGRP.Size = new System.Drawing.Size(288, 49);
+            this.shortPathGRP.TabIndex = 8;
+            this.shortPathGRP.TabStop = false;
+            this.shortPathGRP.Text = "Shortest Path";
+            // 
+            // shortPathAlgCMB
+            // 
+            this.shortPathAlgCMB.FormattingEnabled = true;
+            this.shortPathAlgCMB.Location = new System.Drawing.Point(6, 19);
+            this.shortPathAlgCMB.Name = "shortPathAlgCMB";
+            this.shortPathAlgCMB.Size = new System.Drawing.Size(91, 21);
+            this.shortPathAlgCMB.TabIndex = 0;
+            this.shortPathAlgCMB.SelectedValueChanged += new System.EventHandler(this.shortPathAlgSelectedValueChanged);
+            // 
+            // shortPathOnOffBTN
+            // 
+            this.shortPathOnOffBTN.Location = new System.Drawing.Point(251, 17);
+            this.shortPathOnOffBTN.Name = "shortPathOnOffBTN";
+            this.shortPathOnOffBTN.Size = new System.Drawing.Size(31, 23);
+            this.shortPathOnOffBTN.TabIndex = 1;
+            this.shortPathOnOffBTN.Text = "Off";
+            this.shortPathOnOffBTN.UseVisualStyleBackColor = true;
+            this.shortPathOnOffBTN.Click += new System.EventHandler(this.shortPathOnOffClick);
+            // 
+            // shortPathDirectedCHK
+            // 
+            this.shortPathDirectedCHK.AutoSize = true;
+            this.shortPathDirectedCHK.Location = new System.Drawing.Point(103, 21);
+            this.shortPathDirectedCHK.Name = "shortPathDirectedCHK";
+            this.shortPathDirectedCHK.Size = new System.Drawing.Size(66, 17);
+            this.shortPathDirectedCHK.TabIndex = 2;
+            this.shortPathDirectedCHK.Text = "Directed";
+            this.shortPathDirectedCHK.UseVisualStyleBackColor = true;
+            this.shortPathDirectedCHK.CheckedChanged += new System.EventHandler(this.shortPathDirectedCheckedChanged);
+            // 
+            // shortPathReversedCHK
+            // 
+            this.shortPathReversedCHK.AutoSize = true;
+            this.shortPathReversedCHK.Location = new System.Drawing.Point(175, 21);
+            this.shortPathReversedCHK.Name = "shortPathReversedCHK";
+            this.shortPathReversedCHK.Size = new System.Drawing.Size(72, 17);
+            this.shortPathReversedCHK.TabIndex = 3;
+            this.shortPathReversedCHK.Text = "Reversed";
+            this.shortPathReversedCHK.UseVisualStyleBackColor = true;
+            this.shortPathReversedCHK.CheckedChanged += new System.EventHandler(this.shortPathReversedCheckedChanged);
+            // 
             // DemoForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(678, 590);
+            this.ClientSize = new System.Drawing.Size(678, 600);
+            this.Controls.Add(this.shortPathGRP);
             this.Controls.Add(this.graphStyleGRP);
             this.Controls.Add(this.graphCreatorGRP);
             this.Controls.Add(this.styleAlgGRP);
@@ -396,6 +457,8 @@
             this.graphStyleGRP.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.edgeAngNUM)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.nodeRadNUM)).EndInit();
+            this.shortPathGRP.ResumeLayout(false);
+            this.shortPathGRP.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -427,6 +490,11 @@
         private System.Windows.Forms.NumericUpDown edgeAngNUM;
         private System.Windows.Forms.Label edgeAngLBL;
         private System.Windows.Forms.CheckBox graphStyleResetOnCreateCHK;
+        private System.Windows.Forms.GroupBox shortPathGRP;
+        private System.Windows.Forms.ComboBox shortPathAlgCMB;
+        private System.Windows.Forms.Button shortPathOnOffBTN;
+        private System.Windows.Forms.CheckBox shortPathDirectedCHK;
+        private System.Windows.Forms.CheckBox shortPathReversedCHK;
     }
 }
 

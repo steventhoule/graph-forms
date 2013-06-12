@@ -5,8 +5,8 @@ using GraphForms.Algorithms.Search;
 
 namespace GraphForms.Algorithms.Path
 {
-    public class DFLongestPathAlgorithm<Node, Edge>
-        : DepthFirstSearchAlgorithm<Node, Edge>
+    public class DFLongestPath<Node, Edge>
+        : DepthFirstSearch<Node, Edge>
         where Node : class
         where Edge : class, IGraphEdge<Node>
     {
@@ -53,12 +53,12 @@ namespace GraphForms.Algorithms.Path
         private Node[] mPathNodes;
         private Edge[] mPathEdges;
 
-        public DFLongestPathAlgorithm(Digraph<Node, Edge> graph)
+        public DFLongestPath(Digraph<Node, Edge> graph)
             : base(graph)
         {
         }
 
-        public DFLongestPathAlgorithm(Digraph<Node, Edge> graph,
+        public DFLongestPath(Digraph<Node, Edge> graph,
             bool directed, bool reversed)
             : base(graph, directed, reversed)
         {

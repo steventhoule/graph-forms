@@ -43,8 +43,8 @@ namespace GraphForms.Algorithms.Layout.Circular
                 return this.mGraph.InternalNodes;
             // Calculate an initial embedding circle based on
             // the longest path in the graph.
-            DFLongestPathAlgorithm<Node, Edge> alg 
-                = new DFLongestPathAlgorithm<Node, Edge>(this.mGraph, 
+            DFLongestPath<Node, Edge> alg 
+                = new DFLongestPath<Node, Edge>(this.mGraph, 
                     false, false);
             alg.Compute();
             int[] nis = alg.PathNodeIndexes;

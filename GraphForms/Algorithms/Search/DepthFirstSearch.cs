@@ -4,7 +4,7 @@ using System.Text;
 
 namespace GraphForms.Algorithms.Search
 {
-    public class DepthFirstSearchAlgorithm<Node, Edge>
+    public class DepthFirstSearch<Node, Edge>
         : AGraphTraversalAlgorithm<Node, Edge>
         where Node : class
         where Edge : class, IGraphEdge<Node>
@@ -12,12 +12,12 @@ namespace GraphForms.Algorithms.Search
         private bool bImplicit = false;
         private int mMaxDepth = int.MaxValue;
 
-        public DepthFirstSearchAlgorithm(Digraph<Node, Edge> graph)
+        public DepthFirstSearch(Digraph<Node, Edge> graph)
             : base(graph, true, false)
         {
         }
 
-        public DepthFirstSearchAlgorithm(Digraph<Node, Edge> graph,
+        public DepthFirstSearch(Digraph<Node, Edge> graph,
             bool directed, bool reversed)
             : base(graph, directed, reversed)
         {
@@ -58,48 +58,13 @@ namespace GraphForms.Algorithms.Search
         }
         #endregion
 
-        protected override void InternalCompute()
+        protected override void ComputeFromRoot(
+            Digraph<Node, Edge>.GNode root)
         {
-            if (this.mGraph.NodeCount == 0 || this.mGraph.EdgeCount == 0)
-                return;
-
-            // put all nodes to white
-            this.Initialize();
-
-            Digraph<Node, Edge>.GNode node;
-
-            // if there is a starting node, start with it
-            if (this.HasRoot)
-            {
-                int index = this.mGraph.IndexOfNode(this.TryGetRoot());
-                if (index >= 0)
-                {
-                    node = this.mGraph.InternalNodeAt(index);
-                    this.OnStartNode(node.mData, index);
-                    if (this.bImplicit)
-                        this.ImplicitVisit(node, 0);
-                    else
-                        this.Visit(node);
-                }
-            }
-
-            // process each node
-            Digraph<Node, Edge>.GNode[] nodes
-                = this.mGraph.InternalNodes;
-            for (int i = 0; i < nodes.Length; i++)
-            {
-                if (this.State == ComputeState.Aborting)
-                    return;
-                node = nodes[i];
-                if (node.Color == GraphColor.White)
-                {
-                    this.OnStartNode(node.mData, i);
-                    if (this.bImplicit)
-                        this.ImplicitVisit(node, 0);
-                    else
-                        this.Visit(node);
-                }
-            }
+            if (this.bImplicit)
+                this.ImplicitVisit(root, 0);
+            else
+                this.Visit(root);
         }
 
         private class SearchFrame

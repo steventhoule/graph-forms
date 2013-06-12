@@ -8,7 +8,7 @@ namespace GraphForms.Algorithms.ConnectedComponents
     // Based on Tarjan's Algorithm for Strongly Connected Components
     // http://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm
     public class SCCAlgorithm<Node, Edge>
-        : DepthFirstSearchAlgorithm<Node, Edge>
+        : DepthFirstSearch<Node, Edge>
         where Node : class
         where Edge : class, IGraphEdge<Node>
     {

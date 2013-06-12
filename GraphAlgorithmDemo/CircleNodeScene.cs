@@ -25,24 +25,36 @@ namespace GraphAlgorithmDemo
             this.mLayoutTimer.Tick += new EventHandler(OnLayoutTimerTick);
 
             this.mLayout = new ElasticLayoutForCircles(this);
+
+            this.mMouseUpHistory = new int[3];
+            for (int i = 0; i < this.mMouseUpHistory.Length; i++)
+            {
+                this.mMouseUpHistory[i] = -1;
+            }
         }
 
         public void ClearGraph()
         {
+            int i;
             Digraph<CircleNode, ArrowEdge>.GEdge[] edges
                 = this.mGraph.InternalEdges;
-            for (int i = 0; i < edges.Length; i++)
+            for (i = 0; i < edges.Length; i++)
             {
                 this.RemoveItem(edges[i].Data);
             }
             this.mGraph.ClearEdges();
             Digraph<CircleNode, ArrowEdge>.GNode[] nodes
                 = this.mGraph.InternalNodes;
-            for (int j = 0; j < nodes.Length; j++)
+            for (i = 0; i < nodes.Length; i++)
             {
-                this.RemoveItem(nodes[j].Data);
+                this.RemoveItem(nodes[i].Data);
             }
             this.mGraph.ClearNodes();
+
+            for (i = 0; i < this.mMouseUpHistory.Length; i++)
+            {
+                this.mMouseUpHistory[i] = -1;
+            }
         }
 
         public void UpdateEdges()
@@ -124,6 +136,26 @@ namespace GraphAlgorithmDemo
         /// will not be reset by moving a node in the <see cref="Graph"/>.
         /// </summary>
         public bool LayoutPaused = false;
+
+        private int[] mMouseUpHistory;
+
+        public int[] MouseUpHistory
+        {
+            get { return this.mMouseUpHistory; }
+        }
+
+        public void OnNodeMouseUp(CircleNode node)
+        {
+            //this.mMouseUpHistory[2] = this.mMouseUpHistory[1];
+            //this.mMouseUpHistory[1] = this.mMouseUpHistory[0];
+            Array.Copy(this.mMouseUpHistory, 0, this.mMouseUpHistory, 1, 
+                this.mMouseUpHistory.Length - 1);
+            this.mMouseUpHistory[0] = this.mGraph.IndexOfNode(node);
+            if (this.NodeMouseUp != null)
+                this.NodeMouseUp(node);
+        }
+
+        public event Action<CircleNode> NodeMouseUp;
 
         public void OnNodeMovedByMouse(CircleNode node)
         {

@@ -6,7 +6,7 @@ using GraphForms.Algorithms.Search;
 namespace GraphForms.Algorithms.ConnectedComponents
 {
     public class WCCAlgorithm<Node, Edge>
-        : DepthFirstSearchAlgorithm<Node, Edge>
+        : DepthFirstSearch<Node, Edge>
         where Node : class
         where Edge : class, IGraphEdge<Node>
     {

@@ -232,7 +232,7 @@ namespace GraphAlgorithmDemo
         protected override ISpanningTreeAlgorithm<CircleNode, ArrowEdge> a(
             CircleNodeScene scene)
         {
-            return new BFSpanningTreeAlgorithm<CircleNode, ArrowEdge>(
+            return new BFSpanningTree<CircleNode, ArrowEdge>(
                 scene.Graph, this.Directed, this.Reversed);
         }
 
@@ -252,7 +252,7 @@ namespace GraphAlgorithmDemo
         protected override ISpanningTreeAlgorithm<CircleNode, ArrowEdge> a(
             CircleNodeScene scene)
         {
-            return new DFSpanningTreeAlgorithm<CircleNode, ArrowEdge>(
+            return new DFSpanningTree<CircleNode, ArrowEdge>(
                 scene.Graph, this.Directed, this.Reversed);
         }
 
@@ -282,7 +282,7 @@ namespace GraphAlgorithmDemo
         protected override ISpanningTreeAlgorithm<CircleNode, ArrowEdge> a(
             CircleNodeScene scene)
         {
-            return new KruskalMinSpanningTreeAlgorithm<CircleNode, ArrowEdge>(
+            return new KruskalMinSpanningTree<CircleNode, ArrowEdge>(
                 scene.Graph);
         }
 
@@ -312,7 +312,7 @@ namespace GraphAlgorithmDemo
         protected override ISpanningTreeAlgorithm<CircleNode, ArrowEdge> a(
             CircleNodeScene scene)
         {
-            return new BoruvkaMinSpanningTreeAlgorithm<CircleNode, ArrowEdge>(
+            return new BoruvkaMinSpanningTree<CircleNode, ArrowEdge>(
                 scene.Graph);
         }
 
@@ -322,9 +322,40 @@ namespace GraphAlgorithmDemo
         }
     }
 
+    public class PrimSpanTreeStyleAlgorithm : SpanTreeStyleAlgorithm
+    {
+        public PrimSpanTreeStyleAlgorithm()
+            : base(false, false)
+        {
+        }
+
+        public override bool EnableDirected
+        {
+            get { return false; }
+        }
+
+        public override bool EnableReversed
+        {
+            get { return false; }
+        }
+
+        protected override ISpanningTreeAlgorithm<CircleNode, ArrowEdge> a(
+            CircleNodeScene scene)
+        {
+            return new PrimMinSpanningTree<CircleNode, ArrowEdge>(
+                scene.Graph);
+        }
+
+        public override string ToString()
+        {
+            return "Prim Minimum Spanning Tree";
+        }
+    }
+
+
     public class DFLongestPathStyleAlgorithm : StyleAlgorithm
     {
-        private DFLongestPathAlgorithm<CircleNode, ArrowEdge> mAlg;
+        private DFLongestPath<CircleNode, ArrowEdge> mAlg;
 
         public DFLongestPathStyleAlgorithm()
             : base(true, false)
@@ -333,7 +364,7 @@ namespace GraphAlgorithmDemo
 
         public override void Compute(CircleNodeScene scene)
         {
-            this.mAlg = new DFLongestPathAlgorithm<CircleNode, ArrowEdge>(
+            this.mAlg = new DFLongestPath<CircleNode, ArrowEdge>(
                 scene.Graph, this.Directed, this.Reversed);
             this.mAlg.Compute();
             Digraph<CircleNode, ArrowEdge>.GEdge[] edges
@@ -352,6 +383,47 @@ namespace GraphAlgorithmDemo
         public override string ToString()
         {
             return "Depth First Longest Path";
+        }
+    }
+
+    public class AddColorToDashedStyleAlgorithm : StyleAlgorithm
+    {
+        private int mColor = 0;
+
+        public AddColorToDashedStyleAlgorithm()
+            : base(false, false)
+        {
+        }
+
+        public override bool EnableDirected
+        {
+            get { return false; }
+        }
+
+        public override bool EnableReversed
+        {
+            get { return false; }
+        }
+
+        public override void Compute(CircleNodeScene scene)
+        {
+            Digraph<CircleNode, ArrowEdge>.GEdge[] edges
+                = scene.Graph.InternalEdges;
+            Color color = sLineColors[this.mColor];
+            for (int i = 0; i < edges.Length; i++)
+            {
+                if (edges[i].Data.LineDashStyle == DashStyle.Dash)
+                {
+                    edges[i].Data.LineColor = color;
+                }
+            }
+            this.mColor = (this.mColor + 1) % sLineColors.Length;
+        }
+
+        public override string ToString()
+        {
+            return "Add Color"// + sLineColors[this.mColor].Name
+                + " to Dashed Edges";
         }
     }
 

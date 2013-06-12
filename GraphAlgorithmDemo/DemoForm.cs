@@ -22,6 +22,12 @@ namespace GraphAlgorithmDemo
         private IGraphCreator[] mGraphCreators;
         private bool bPendingGraphCreation;
 
+        private ShortPathColorAlg[] mShortPathAlgs;
+        private bool bShortPathOn;
+        private bool bShortPathDirected;
+        private bool bShortPathReversed;
+        private int mShortPathAlgIndex;
+
         public DemoForm()
         {
             InitializeComponent();
@@ -55,7 +61,9 @@ namespace GraphAlgorithmDemo
                 new DFSpanTreeStyleAlgorithm(),
                 new KruskalSpanTreeStyleAlgorithm(),
                 new BoruvkaSpanTreeStyleAlgorithm(),
+                new PrimSpanTreeStyleAlgorithm(),
                 new DFLongestPathStyleAlgorithm(),
+                new AddColorToDashedStyleAlgorithm(),
                 new ClearAllStyleAlgorithm()
             };
             this.styleAlgCMB.Items.AddRange(this.mStyleAlgs);
@@ -71,6 +79,20 @@ namespace GraphAlgorithmDemo
             };
             this.graphCreatorCMB.Items.AddRange(this.mGraphCreators);
 
+            this.mShortPathAlgs = new ShortPathColorAlg[]
+            {
+                new FloydWarshallShortPathColorAlg(),
+                new BellManFordShortPathColorAlg(),
+                new DijkstraShortPathColorAlg()
+            };
+            this.shortPathAlgCMB.Items.AddRange(this.mShortPathAlgs);
+
+            this.bShortPathOn = false;
+            this.shortPathOnOffBTN.Text = "On";
+            this.bShortPathDirected = this.shortPathDirectedCHK.Checked;
+            this.bShortPathReversed = this.shortPathReversedCHK.Checked;
+            this.mShortPathAlgIndex = this.shortPathAlgCMB.SelectedIndex;
+
             IGraphCreator gc = new BCCTestGraphCreator();
             if (this.graphStyleResetOnCreateCHK.Checked)
             {
@@ -85,7 +107,9 @@ namespace GraphAlgorithmDemo
                     (float)this.nodeRadNUM.Value,
                     (float)this.edgeAngNUM.Value);
             }
+            this.RefreshShortPathAlgs();
 
+            this.mScene.NodeMouseUp += new Action<CircleNode>(sceneNodeMouseUp);
             this.mScene.NodeMoved += new Action<CircleNode>(sceneNodeMoved);
             this.mScene.LayoutStopped += new EventHandler(sceneLayoutStopped);
 
@@ -131,6 +155,21 @@ namespace GraphAlgorithmDemo
             this.mScene.Layout.ShuffleNodePositions();
         }
 
+        private void sceneNodeMouseUp(CircleNode obj)
+        {
+            if (this.bShortPathOn)
+            {
+                // Force the selected shortest path algorithm
+                // to color the shortest path between last two nodes
+                // in the scene's MouseUpHistory
+                ShortPathColorAlg spca = this.shortPathAlgCMB.SelectedItem as ShortPathColorAlg;
+                if (spca != null)
+                {
+                    spca.ColorShortestPath(this.mScene);
+                }
+            }
+        }
+
         private void sceneNodeMoved(CircleNode obj)
         {
             if (this.mScene.LayoutOnNodeMoved)
@@ -145,6 +184,7 @@ namespace GraphAlgorithmDemo
                 IGraphCreator gc = this.graphCreatorCMB.SelectedItem as IGraphCreator;
                 if (gc != null)
                 {
+                    this.TurnOffShortPath();
                     this.mScene.ClearGraph();
                     if (this.graphStyleResetOnCreateCHK.Checked)
                     {
@@ -159,7 +199,11 @@ namespace GraphAlgorithmDemo
                             (float)this.nodeRadNUM.Value,
                             (float)this.edgeAngNUM.Value);
                     }
+                    this.RefreshShortPathAlgs();
                     this.graphCreatorCMB.Enabled = true;
+                    this.shortPathAlgCMB.Enabled = true;
+                    this.shortPathDirectedCHK.Enabled = true;
+                    this.shortPathReversedCHK.Enabled = true;
                 }
                 this.bPendingGraphCreation = false;
             }
@@ -209,6 +253,7 @@ namespace GraphAlgorithmDemo
             IGraphCreator gc = this.graphCreatorCMB.SelectedItem as IGraphCreator;
             if (gc != null)
             {
+                this.TurnOffShortPath();
                 if (this.mScene.IsLayoutRunning)
                 {
                     this.mScene.IsLayoutRunning = false;
@@ -217,6 +262,11 @@ namespace GraphAlgorithmDemo
                     this.layoutPausedCHK.Checked = false;
                     
                     this.graphCreatorCMB.Enabled = false;
+
+                    this.shortPathAlgCMB.Enabled = false;
+                    this.shortPathDirectedCHK.Enabled = false;
+                    this.shortPathReversedCHK.Enabled = false;
+
                     this.bPendingGraphCreation = true;
                 }
                 else
@@ -235,6 +285,7 @@ namespace GraphAlgorithmDemo
                             (float)this.nodeRadNUM.Value,
                             (float)this.edgeAngNUM.Value);
                     }
+                    this.RefreshShortPathAlgs();
                 }
             }
         }
@@ -259,6 +310,86 @@ namespace GraphAlgorithmDemo
             for (int i = 0; i < edges.Length; i++)
             {
                 edges[i].Data.Angle = ang;
+            }
+        }
+
+        private void shortPathAlgSelectedValueChanged(object sender, EventArgs e)
+        {
+            ShortPathColorAlg spca 
+                = this.shortPathAlgCMB.SelectedItem as ShortPathColorAlg;
+            if (spca != null)
+            {
+                this.shortPathDirectedCHK.Checked = spca.Directed;
+                this.shortPathReversedCHK.Checked = spca.Reversed;
+                spca.RefreshAlgorithm(this.mScene);
+            }
+        }
+
+        private void shortPathDirectedCheckedChanged(object sender, EventArgs e)
+        {
+            ShortPathColorAlg spca 
+                = this.shortPathAlgCMB.SelectedItem as ShortPathColorAlg;
+            if (spca != null && spca.Directed != this.shortPathDirectedCHK.Checked)
+            {
+                spca.Directed = this.shortPathDirectedCHK.Checked;
+                spca.IsDirty = true;
+                spca.RefreshAlgorithm(this.mScene);
+            }
+        }
+
+        private void shortPathReversedCheckedChanged(object sender, EventArgs e)
+        {
+            ShortPathColorAlg spca 
+                = this.shortPathAlgCMB.SelectedItem as ShortPathColorAlg;
+            if (spca != null && spca.Reversed != this.shortPathReversedCHK.Checked)
+            {
+                spca.Reversed = this.shortPathReversedCHK.Checked;
+                spca.IsDirty = true;
+                spca.RefreshAlgorithm(this.mScene);
+            }
+        }
+
+        private void TurnOffShortPath()
+        {
+            if (this.bShortPathOn)
+            {
+                this.bShortPathOn = false;
+                this.shortPathOnOffBTN.Text = "On";
+                //this.shortPathAlgCMB.Enabled = true;
+                //this.shortPathDirectedCHK.Enabled = true;
+                //this.shortPathReversedCHK.Enabled = true;
+            }
+        }
+
+        private void RefreshShortPathAlgs()
+        {
+            for (int i = 0; i < this.mShortPathAlgs.Length; i++)
+            {
+                this.mShortPathAlgs[i].IsDirty = true;
+            }
+        }
+
+        private void shortPathOnOffClick(object sender, EventArgs e)
+        {
+            this.bShortPathOn = !this.bShortPathOn;
+            this.shortPathOnOffBTN.Text = this.bShortPathOn ? "Off" : "On";
+            if (this.bShortPathOn)
+            {
+                ShortPathColorAlg spca 
+                    = this.shortPathAlgCMB.SelectedItem as ShortPathColorAlg;
+                if (spca != null)
+                {
+                    spca.RefreshAlgorithm(this.mScene);
+                }
+                //this.shortPathAlgCMB.Enabled = false;
+                //this.shortPathDirectedCHK.Enabled = false;
+                //this.shortPathReversedCHK.Enabled = false;
+            }
+            else
+            {
+                //this.shortPathAlgCMB.Enabled = true;
+                //this.shortPathDirectedCHK.Enabled = true;
+                //this.shortPathReversedCHK.Enabled = true;
             }
         }
     }

@@ -44,6 +44,7 @@
     <Compile Include="CircleNode.cs" />
     <Compile Include="CircleNodeScene.cs" />
     <Compile Include="GraphCreator.cs" />
+    <Compile Include="ShortPathColorAlg.cs" />
     <Compile Include="StyleAlgorithm.cs" />
     <Compile Include="DemoForm.cs">
       <SubType>Form</SubType>

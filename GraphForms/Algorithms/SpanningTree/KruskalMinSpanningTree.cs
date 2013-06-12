@@ -5,17 +5,16 @@ using GraphForms.Algorithms.Collections;
 
 namespace GraphForms.Algorithms.SpanningTree
 {
-    public class KruskalMinSpanningTreeAlgorithm<Node, Edge>
+    public class KruskalMinSpanningTree<Node, Edge>
         : AAlgorithm, ISpanningTreeAlgorithm<Node, Edge>
         where Node : class
         where Edge : class, IGraphEdge<Node>
     {
-        protected readonly Digraph<Node, Edge> mGraph;
+        private readonly Digraph<Node, Edge> mGraph;
         private Tree<Node>[] mTrees;
         private Digraph<Node, Edge> mSpanningTree;
 
-        public KruskalMinSpanningTreeAlgorithm(
-            Digraph<Node, Edge> graph)
+        public KruskalMinSpanningTree(Digraph<Node, Edge> graph)
         {
             this.mGraph = graph;
         }

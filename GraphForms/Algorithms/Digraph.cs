@@ -810,20 +810,23 @@ namespace GraphForms.Algorithms
             if (this.mEdges.Count == 0)
             {
                 for (index = 0; index < count; index++)
+                {
                     for (i = 0; i < count; i++)
-                        distances[index, i] = i == index ? 0 : float.MaxValue;
+                        distances[index, i] = float.MaxValue;
+                    distances[index, index] = 0;
+                }
             }
             float distance;
             GNode n, current;
-            for (i = 0; i < count; i++)
-            {
-                current = this.mNodes[i];
-                current.Color = GraphColor.White;
-                current.Distance = float.MaxValue;
-            }
             Queue<GNode> queue = new Queue<GNode>(count);
             for (index = 0; index < count; index++)
             {
+                for (i = 0; i < count; i++)
+                {
+                    current = this.mNodes[i];
+                    current.Color = GraphColor.White;
+                    current.Distance = float.MaxValue;
+                }
                 current = this.mNodes[index];
                 current.Distance = 0f;
                 current.Color = GraphColor.Gray;
@@ -846,10 +849,14 @@ namespace GraphForms.Algorithms
                         else if (distance < n.Distance)
                         {
                             n.Distance = distance;
-                            if (!queue.Contains(n))
+                            if (n.Color == GraphColor.Black)
+                            {
+                                n.Color = GraphColor.Gray;
                                 queue.Enqueue(n);
+                            }
                         }
                     }
+                    current.Color = GraphColor.Black;
                 }
                 count = this.mNodes.Count;
                 for (i = 0; i < count; i++)
@@ -898,7 +905,8 @@ namespace GraphForms.Algorithms
             {
                 float[] dist = new float[count];
                 for (i = 0; i < count; i++)
-                    dist[i] = i == nodeIndex ? 0 : float.MaxValue;
+                    dist[i] = float.MaxValue;
+                dist[nodeIndex] = 0;
             }
             float distance;
             GNode n, current;
@@ -931,10 +939,14 @@ namespace GraphForms.Algorithms
                     else if (distance < n.Distance)
                     {
                         n.Distance = distance;
-                        if (!queue.Contains(n))
+                        if (n.Color == GraphColor.Black)
+                        {
+                            n.Color = GraphColor.Gray;
                             queue.Enqueue(n);
+                        }
                     }
                 }
+                current.Color = GraphColor.Black;
             }
             count = this.mNodes.Count;
             float[] distances = new float[count];

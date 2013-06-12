@@ -25,5 +25,10 @@ namespace GraphForms.Algorithms
         /// Stop the running algorithm and abort its computation.
         /// </summary>
         void Abort();
+        /// <summary>
+        /// Resets the algorithm to be ready to begin its computation again,
+        /// but only if the algorithm isn't currently running or aborting.
+        /// </summary>
+        void Reset();
     }
 }

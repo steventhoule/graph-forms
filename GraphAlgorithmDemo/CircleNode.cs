@@ -218,6 +218,7 @@ namespace GraphAlgorithmDemo
                 this.Invalidate();
                 e.Handled = true;
             }
+            this.mScene.OnNodeMouseUp(this);
         }
 
         #region ILayoutNode Members

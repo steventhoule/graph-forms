@@ -5,15 +5,15 @@ using GraphForms.Algorithms.Search;
 
 namespace GraphForms.Algorithms.SpanningTree
 {
-    public class BFSpanningTreeAlgorithm<Node, Edge> 
-        : BreadthFirstSearchAlgorithm<Node, Edge>, 
+    public class BFSpanningTree<Node, Edge> 
+        : BreadthFirstSearch<Node, Edge>, 
           ISpanningTreeAlgorithm<Node, Edge>
         where Node : class
         where Edge : class, IGraphEdge<Node>
     {
         private Digraph<Node, Edge> mSpanningTree;
 
-        public BFSpanningTreeAlgorithm(Digraph<Node, Edge> graph)
+        public BFSpanningTree(Digraph<Node, Edge> graph)
             : base(graph)
         {
             this.mSpanningTree = new Digraph<Node, Edge>(
@@ -21,7 +21,7 @@ namespace GraphForms.Algorithms.SpanningTree
             //this.mSpanningTree.AddNodeRange(graph.Nodes);
         }
 
-        public BFSpanningTreeAlgorithm(Digraph<Node, Edge> graph,
+        public BFSpanningTree(Digraph<Node, Edge> graph,
             bool directed, bool reversed)
             : base(graph, directed, reversed)
         {
