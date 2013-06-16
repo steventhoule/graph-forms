@@ -179,9 +179,14 @@ namespace GraphAlgorithmDemo
                 RectangleF inset = new RectangleF(
                     mRadius * sInsetPos, mRadius * sInsetPos,
                     mRadius * sInsetDim, mRadius * sInsetDim);
-                g.DrawString(text, this.mTextFont, this.mTextBrush, 
-                    inset, this.mTextFormat);
-
+                try
+                {
+                    g.DrawString(text, this.mTextFont, this.mTextBrush,
+                        inset, this.mTextFormat);
+                }
+                catch (OverflowException)
+                {
+                }
             }
         }
 
@@ -234,15 +239,18 @@ namespace GraphAlgorithmDemo
         public float NewX
         {
             get { return this.mNewX; }
-            set { this.mNewX = value; }
         }
 
         public float NewY
         {
             get { return this.mNewY; }
-            set { this.mNewY = value; }
         }
 
+        public void SetNewPosition(float newX, float newY)
+        {
+            this.mNewX = newX;
+            this.mNewY = newY;
+        }
         #endregion
 
         protected override void OnPositionChanged()

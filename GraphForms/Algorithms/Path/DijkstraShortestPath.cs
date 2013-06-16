@@ -7,10 +7,8 @@ namespace GraphForms.Algorithms.Path
 {
     public class DijkstraShortestPath<Node, Edge>
         : AShortestPath<Node, Edge>
-        where Node : class
-        where Edge : class, IGraphEdge<Node>
+        where Edge : IGraphEdge<Node>
     {
-
         private bool bUsePriorityQueue;
 
         public DijkstraShortestPath(Digraph<Node, Edge> graph)
@@ -24,11 +22,6 @@ namespace GraphForms.Algorithms.Path
             : base(graph, directed, reversed)
         {
             this.bUsePriorityQueue = true;
-        }
-
-        public Digraph<Node, Edge> Graph
-        {
-            get { return this.mGraph; }
         }
 
         public bool UsePriorityQueue

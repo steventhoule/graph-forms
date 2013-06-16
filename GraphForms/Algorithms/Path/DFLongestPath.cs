@@ -7,8 +7,7 @@ namespace GraphForms.Algorithms.Path
 {
     public class DFLongestPath<Node, Edge>
         : DepthFirstSearch<Node, Edge>
-        where Node : class
-        where Edge : class, IGraphEdge<Node>
+        where Edge : IGraphEdge<Node>
     {
         private class NodeData
         {

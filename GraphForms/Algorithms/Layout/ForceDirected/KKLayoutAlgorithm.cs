@@ -1,17 +1,20 @@
 ﻿using System;
 using System.Drawing;
+using GraphForms.Algorithms.Path;
 
 namespace GraphForms.Algorithms.Layout.ForceDirected
 {
     public class KKLayoutAlgorithm<Node, Edge>
-        : ForceDirectedLayoutAlgorithm<Node, Edge, KKLayoutParameters>
-        where Node : GraphElement, ILayoutNode
-        where Edge : class, IGraphEdge<Node>, IUpdateable
+        //: ForceDirectedLayoutAlgorithm<Node, Edge, KKLayoutParameters>
+        : LayoutAlgorithm<Node, Edge>
+        where Node : ILayoutNode
+        where Edge : IGraphEdge<Node>, IUpdateable
     {
+        private AAllShortestPaths<Node, Edge> mShortestPathsAlg;
         /// <summary>
         /// Minimal distances between the nodes;
         /// </summary>
-        private float[,] mDistances;
+        private double[][] mDistances;
 #if KKExtraCache
         private float[,] mEdgeLengths;
         private float[,] mSpringConstants;
@@ -27,14 +30,17 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         /// </summary>
         private double[] mYPositions;
 
-        private double mK;
+        private float mK = 1;
         private bool bAdjustForGravity;
         private bool bExchangeVertices;
-        private float mDiameter;
-        private float mIdealEdgeLength;
-        private float mMaxDistance;
+        private float mLengthFactor = 1;
+        private float mDisconnectedMultiplier = 0.5f;
 
-        public KKLayoutAlgorithm(Digraph<Node, Edge> graph)
+        private double mDiameter;
+        private double mIdealEdgeLength;
+        private double mMaxDistance;
+
+        /*public KKLayoutAlgorithm(Digraph<Node, Edge> graph)
             : base(graph, null)
         {
         }
@@ -43,13 +49,112 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             KKLayoutParameters oldParameters)
             : base(graph, oldParameters)
         {
+        }/* */
+
+        public KKLayoutAlgorithm(Digraph<Node, Edge> graph,
+            IClusterNode clusterNode)
+            : base(graph, clusterNode)
+        {
+            this.mShortestPathsAlg
+                = new BasicAllShortestPaths<Node, Edge>(
+                    new DijkstraShortestPath<Node, Edge>(
+                        graph, false, false));
+            this.MaxIterations = 200;
         }
 
-        protected override bool OnBeginIteration(bool paramsDirty,
+        public KKLayoutAlgorithm(Digraph<Node, Edge> graph,
+            RectangleF boundingBox)
+            : base(graph, boundingBox)
+        {
+            this.mShortestPathsAlg
+                = new BasicAllShortestPaths<Node, Edge>(
+                    new DijkstraShortestPath<Node, Edge>(
+                        graph, false, false));
+            this.MaxIterations = 200;
+        }
+
+        public float K
+        {
+            get { return this.mK; }
+            set
+            {
+                if (this.mK != value)
+                {
+                    this.mK = value;
+#if KKExtraCache
+                    this.MarkDirty();
+#endif
+                }
+            }
+        }
+
+        /// <summary>
+        /// If true, then after the layout process, the nodes will be moved, 
+        /// so the barycenter will be in the center point of the 
+        /// <see cref="LayoutParameters.BoundingBox"/>. </summary>
+        public bool AdjustForGravity
+        {
+            get { return this.bAdjustForGravity; }
+            set
+            {
+                if (this.bAdjustForGravity != value)
+                {
+                    this.bAdjustForGravity = value;
+                }
+            }
+        }
+
+        public bool ExchangeVertices
+        {
+            get { return this.bExchangeVertices; }
+            set
+            {
+                if (this.bExchangeVertices != value)
+                {
+                    this.bExchangeVertices = value;
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Multiplier of the ideal edge length. 
+        /// (With this parameter the user can modify the ideal edge length).
+        /// </summary>
+        public float LengthFactor
+        {
+            get { return this.mLengthFactor; }
+            set
+            {
+                if (this.mLengthFactor != value)
+                {
+                    this.mLengthFactor = value;
+                    this.MarkDirty();
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Ideal distance between the disconnected points 
+        /// (1 is equal the ideal edge length).
+        /// </summary>
+        public float DisconnectedMultiplier
+        {
+            get { return this.mDisconnectedMultiplier; }
+            set
+            {
+                if (this.mDisconnectedMultiplier != value)
+                {
+                    this.mDisconnectedMultiplier = value;
+                    this.MarkDirty();
+                }
+            }
+        }
+
+        protected override void OnBeginIteration(uint iteration, bool dirty,//bool paramsDirty,
             int lastNodeCount, int lastEdgeCount)
         {
-            bool dirty = lastNodeCount != this.mGraph.NodeCount;
-            if (dirty)
+            bool isDirty = lastNodeCount != this.mGraph.NodeCount;
+            if (isDirty)
             {
                 // Cache the nodes for speed-up and in case the graph
                 // is modified during the iteration.
@@ -58,41 +163,50 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                 this.mYPositions = new double[this.mNodes.Length];
             }
 
-            dirty = dirty || lastEdgeCount != this.mGraph.EdgeCount;
-            if (dirty)
+            isDirty = isDirty || lastEdgeCount != this.mGraph.EdgeCount;
+            if (isDirty)
             {
                 // Calculate the distances and diameter of the graph.
-                this.mDistances = this.mGraph.GetDistances();
-                this.mDiameter = Digraph<Node, Edge>.GetDiameter(this.mDistances);
+                //this.mDistances = this.mGraph.GetDistances();
+                //this.mDiameter = Digraph<Node, Edge>.GetDiameter(this.mDistances);
+                this.mShortestPathsAlg.Reset();
+                this.mShortestPathsAlg.Compute();
+                this.mDistances = this.mShortestPathsAlg.Distances;
+                this.mDiameter = this.mShortestPathsAlg.GetDiameter();
             }
 
-            if (paramsDirty)
+            if (dirty)
             {
-                KKLayoutParameters param = this.Parameters;
-                this.mK = param.K;
-                this.bAdjustForGravity = param.AdjustForGravity;
-                this.bExchangeVertices = param.ExchangeVertices;
+                //KKLayoutParameters param = this.Parameters;
+                //this.mK = param.K;
+                //this.bAdjustForGravity = param.AdjustForGravity;
+                //this.bExchangeVertices = param.ExchangeVertices;
+                RectangleF bbox = this.mClusterNode == null
+                    ? this.BoundingBox : this.mClusterNode.BoundingBox;
 
                 // L0 is the length of a side of the display area
-                float L0 = Math.Min(param.Width, param.Height);
+                //float L0 = Math.Min(param.Width, param.Height);
+                float L0 = Math.Min(bbox.Width, bbox.Height);
 
                 // ideal length = L0 / max distance
-                this.mIdealEdgeLength = L0 * param.LengthFactor / this.mDiameter;
+                //this.mIdealEdgeLength = L0 * param.LengthFactor / this.mDiameter;
+                this.mIdealEdgeLength = L0 * this.mLengthFactor / this.mDiameter;
 
-                this.mMaxDistance = this.mDiameter * param.DisconnectedMultiplier;
+                //this.mMaxDistance = this.mDiameter * param.DisconnectedMultiplier;
+                this.mMaxDistance = this.mDiameter * this.mDisconnectedMultiplier;
 
                 // Calculate the ideal distances between the nodes
-                float dist;
+                double dist;
                 int i, j, count = this.mNodes.Length;
                 for (i = 0; i < count; i++)
                 {
                     for (j = 0; j < count; j++)
                     {
                         // distance between non-adjacent nodes
-                        dist = Math.Min(this.mDistances[i, j], this.mMaxDistance);
+                        dist = Math.Min(this.mDistances[i][j], this.mMaxDistance);
 
                         // calculate the minimal distance between the vertices
-                        this.mDistances[i, j] = dist;
+                        this.mDistances[i][j] = dist;
 #if KKExtraCache
                     this.mEdgeLengths[i, j] = this.mIdealEdgeLength * dist;
                     this.mSpringConstants[i, j] = (float)(this.mK / (dist * dist));
@@ -100,25 +214,27 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                     }
                 }
             }
-            return base.OnBeginIteration(paramsDirty, lastNodeCount, lastEdgeCount);
+            base.OnBeginIteration(iteration, dirty, lastNodeCount, lastEdgeCount);
         }
 
         // TODO: Can the position copying from mXPositions and mYPositions
         // be reduced to the barycenter node that changes position and any nodes
         // which have been swapped on each iteration?
-        protected override void PerformIteration(int iteration, int maxIterations)
+        protected override void PerformIteration(uint iteration)//, int maxIterations)
         {
             int i, j, count = this.mNodes.Length;
 
             // copy positions into array
             // necessary each time because node positions can change outside
             // this algorithm, by constraining to bbox and by user code.
-            SizeF pos;
+            //SizeF pos;
             for (i = 0; i < count; i++)
             {
-                pos = this.mNodes[i].SceneTranslate();
-                this.mXPositions[i] = pos.Width;
-                this.mYPositions[i] = pos.Height;
+                //pos = this.mNodes[i].SceneTranslate();
+                //this.mXPositions[i] = pos.Width;
+                //this.mYPositions[i] = pos.Height;
+                this.mXPositions[i] = this.mNodes[i].X;
+                this.mYPositions[i] = this.mNodes[i].Y;
             }
 
             double deltaM, maxDeltaM = double.NegativeInfinity;
@@ -181,18 +297,23 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                     }
                 }
             }
-            float[] newXs = this.NewXPositions;
-            float[] newYs = this.NewYPositions;
+            //float[] newXs = this.NewXPositions;
+            //float[] newYs = this.NewYPositions;
             Node node;
-            SizeF sPos;
+            //SizeF sPos;
             for (i = 0; i < count; i++)
             {
                 node = this.mNodes[i];
-                sPos = node.SceneTranslate();
+                //sPos = node.SceneTranslate();
+                //node.SetNewPosition(
+                //    node.X + (float)this.mXPositions[i] - sPos.Width,
+                //    node.Y + (float)this.mYPositions[i] - sPos.Height);             
                 //node.NewX = node.X + (float)this.mXPositions[i] - sPos.Width;
                 //node.NewY = node.Y + (float)this.mYPositions[i] - sPos.Height;
-                newXs[i] = node.X + (float)this.mXPositions[i] - sPos.Width;
-                newYs[i] = node.Y + (float)this.mYPositions[i] - sPos.Height;
+                node.SetNewPosition((float)this.mXPositions[i], 
+                                    (float)this.mYPositions[i]);
+                //newXs[i] = node.X + (float)this.mXPositions[i] - sPos.Width;
+                //newYs[i] = node.Y + (float)this.mYPositions[i] - sPos.Height;
             }
         }
 
@@ -223,7 +344,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                     l_ij = this.mEdgeLengths[i, j];
                     k_ij = this.mSpringConstants[i, j];
 #else
-                    k_ij = Math.Min(this.mDistances[i, j], this.mMaxDistance);
+                    k_ij = Math.Min(this.mDistances[i][j], this.mMaxDistance);
                     l_ij = this.mIdealEdgeLength * k_ij;
                     k_ij = this.mK / (k_ij * k_ij);
 #endif
@@ -251,7 +372,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                 {
                     if (i == j)
                         continue;
-                    dist = Math.Min(this.mDistances[i, j], this.mMaxDistance);
+                    dist = Math.Min(this.mDistances[i][j], this.mMaxDistance);
 #if KKExtraCache
                     l_ij = this.mEdgeLengths[i, j];
                     k_ij = this.mSpringConstants[i, j];
@@ -290,7 +411,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                     l = this.mEdgeLengths[m, i];
                     k = this.mSpringConstants[m, i];
 #else
-                    k = Math.Min(this.mDistances[m, i], this.mMaxDistance);
+                    k = Math.Min(this.mDistances[m][i], this.mMaxDistance);
                     l = this.mIdealEdgeLength * k;
                     k = this.mK / (k * k);
 #endif
@@ -346,7 +467,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
 #if KKExtraCache
                 factor = this.mSpringConstants[m, i] * (1 - this.mEdgeLengths[m, i] / d);
 #else
-                factor = Math.Min(this.mDistances[m, i], this.mMaxDistance);
+                factor = Math.Min(this.mDistances[m][i], this.mMaxDistance);
                 factor = (this.mK / (factor * factor)) *
                     (1 - this.mIdealEdgeLength * factor / d);
 #endif

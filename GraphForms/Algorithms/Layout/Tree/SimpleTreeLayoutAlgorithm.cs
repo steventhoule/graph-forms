@@ -8,7 +8,8 @@ using GraphForms.Algorithms.SpanningTree;
 namespace GraphForms.Algorithms.Layout.Tree
 {
     public class SimpleTreeLayoutAlgorithm<Node, Edge>
-        : LayoutAlgorithm<Node, Edge, SimpleTreeLayoutParameters>
+        //: LayoutAlgorithm<Node, Edge, SimpleTreeLayoutParameters>
+        : LayoutAlgorithm<Node, Edge>
         where Node : GraphElement, ILayoutNode
         where Edge : class, IGraphEdge<Node>, IUpdateable
     {
@@ -33,10 +34,10 @@ namespace GraphForms.Algorithms.Layout.Tree
             public double position;
         }
 
-        private double mVertexGap;
-        private double mLayerGap;
-        private LayoutDirection mDirection;
-        private SearchMethod mSpanTreeGen;
+        private double mVertexGap = 10;
+        private double mLayerGap = 10;
+        private LayoutDirection mDirection = LayoutDirection.TopToBottom;
+        private SearchMethod mSpanTreeGen = SearchMethod.DFS;
 
         private Digraph<Node, Edge> mSpanningTree;
         private SizeF[] mSizes;
@@ -45,7 +46,7 @@ namespace GraphForms.Algorithms.Layout.Tree
         private List<Layer> mLayers = new List<Layer>();
         
 
-        public SimpleTreeLayoutAlgorithm(Digraph<Node, Edge> graph)
+        /*public SimpleTreeLayoutAlgorithm(Digraph<Node, Edge> graph)
             : base(graph, null)
         {
         }
@@ -54,15 +55,106 @@ namespace GraphForms.Algorithms.Layout.Tree
             SimpleTreeLayoutParameters oldParameters)
             : base(graph, oldParameters)
         {
+        }/* */
+
+        public SimpleTreeLayoutAlgorithm(Digraph<Node, Edge> graph,
+            IClusterNode clusterNode)
+            : base(graph, clusterNode)
+        {
+            //this.Spring = new LayoutLinearSpring();
         }
 
-        protected override void InternalCompute()
+        public SimpleTreeLayoutAlgorithm(Digraph<Node, Edge> graph,
+            RectangleF boundingBox)
+            : base(graph, boundingBox)
         {
-            SimpleTreeLayoutParameters param = this.Parameters;
-            this.mVertexGap = param.VertexGap;
-            this.mLayerGap = param.LayerGap;
-            this.mDirection = param.Direction;
-            this.mSpanTreeGen = param.SpanningTreeGeneration;
+            //this.Spring = new LayoutLinearSpring();
+        }
+
+        /// <summary>
+        /// Gets or sets the gap between the vertices.
+        /// </summary>
+        public double VertexGap
+        {
+            get { return this.mVertexGap; }
+            set
+            {
+                if (this.mVertexGap != value)
+                {
+                    this.mVertexGap = value;
+                    this.MarkDirty();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the gap between the layers.
+        /// </summary>
+        public double LayerGap
+        {
+            get { return this.mLayerGap; }
+            set
+            {
+                if (this.mLayerGap != value)
+                {
+                    this.mLayerGap = value;
+                    this.MarkDirty();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the direction of the layout.
+        /// </summary>
+        public LayoutDirection Direction
+        {
+            get { return this.mDirection; }
+            set
+            {
+                if (this.mDirection != value)
+                {
+                    this.mDirection = value;
+                    this.MarkDirty();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the search pattern the algorithm uses to build its
+        /// internal sparsely connected spanning tree for traversing its graph.
+        /// </summary>
+        public SearchMethod SpanningTreeGeneration
+        {
+            get { return this.mSpanTreeGen; }
+            set
+            {
+                if (this.mSpanTreeGen != value)
+                {
+                    this.mSpanTreeGen = value;
+                    this.MarkDirty();
+                }
+            }
+        }
+
+        protected override void OnBeginIteration(uint iteration,
+            bool dirty, int lastNodeCount, int lastEdgeCount)
+        {
+            if (lastNodeCount != this.mGraph.NodeCount ||
+                lastEdgeCount != this.mGraph.EdgeCount || dirty)
+            {
+                this.ComputePositions();
+            }
+            base.OnBeginIteration(iteration, dirty,
+                lastNodeCount, lastEdgeCount);
+        }
+
+        private void ComputePositions()
+        {
+            //SimpleTreeLayoutParameters param = this.Parameters;
+            //this.mVertexGap = param.VertexGap;
+            //this.mLayerGap = param.LayerGap;
+            //this.mDirection = param.Direction;
+            //this.mSpanTreeGen = param.SpanningTreeGeneration;
 
             int i;
             Digraph<Node, Edge>.GNode[] nodes
@@ -78,7 +170,6 @@ namespace GraphForms.Algorithms.Layout.Tree
                 {
                     bbox = nodes[i].Data.BoundingBox;
                     this.mSizes[i] = new SizeF(bbox.Height, bbox.Width);
-                    this.mDatas[i] = new NodeData();
                 }
             }
             else
@@ -87,7 +178,6 @@ namespace GraphForms.Algorithms.Layout.Tree
                 {
                     bbox = nodes[i].Data.BoundingBox;
                     this.mSizes[i] = new SizeF(bbox.Width, bbox.Height);
-                    this.mDatas[i] = new NodeData();
                 }
             }
 
@@ -100,6 +190,11 @@ namespace GraphForms.Algorithms.Layout.Tree
             this.GenerateSpanningTree();
 
             nodes = this.mSpanningTree.InternalNodes;
+            for (i = 0; i < nodes.Length; i++)
+            {
+                nodes[i].Index = i;
+                nodes[i].Color = GraphColor.White;
+            }
             // first layout the nodes with 0 src edges
             for (i = 0; i < nodes.Length; i++)
             {
@@ -117,7 +212,7 @@ namespace GraphForms.Algorithms.Layout.Tree
 
         private void GenerateSpanningTree()
         {
-            ISpanningTreeAlgorithm<Node, Edge> alg = null;
+            IRootedSpanningTreeAlgorithm<Node, Edge> alg = null;
             switch (this.mSpanTreeGen)
             {
                 case SearchMethod.BFS:
@@ -127,6 +222,8 @@ namespace GraphForms.Algorithms.Layout.Tree
                     alg = new DFSpanningTree<Node, Edge>(this.mGraph);
                     break;
             }
+            Digraph<Node, Edge>.GNode root = this.TryGetGraphRoot();
+            alg.SetRoot(root.mData);
             alg.Compute();
             this.mSpanningTree = alg.SpanningTree;
         }
@@ -147,7 +244,7 @@ namespace GraphForms.Algorithms.Layout.Tree
             this.mDatas[n.Index] = d;
             n.Color = GraphColor.Gray;
 
-            layer.NextPosition += size.Width;
+            layer.NextPosition += size.Width / 2.0;
             if (l > 0)
             {
                 layer.NextPosition += this.mLayers[l - 1].LastTranslate;
@@ -179,7 +276,7 @@ namespace GraphForms.Algorithms.Layout.Tree
                     }
                 }
                 if (minPos != double.MaxValue)
-                    d.position = (minPos + maxPos) / 2;
+                    d.position = (minPos + maxPos) / 2.0;
                 else
                     d.position = layer.NextPosition;
                 d.translate = Math.Max(layer.NextPosition - d.position, 0);
@@ -188,7 +285,7 @@ namespace GraphForms.Algorithms.Layout.Tree
                 d.position += d.translate;
                 layer.NextPosition = d.position;
             }
-            layer.NextPosition += size.Width / 2 + this.mVertexGap;
+            layer.NextPosition += size.Width / 2.0 + this.mVertexGap;
 
             return d.position;
         }
@@ -196,16 +293,17 @@ namespace GraphForms.Algorithms.Layout.Tree
         private void AssignPositions()
         {
             double layerSize = 0;
-            bool hori = 
+            bool horizontal = 
                 this.mDirection == LayoutDirection.LeftToRight || 
                 this.mDirection == LayoutDirection.RightToLeft;
 
-            float[] newXs = this.NewXPositions;
-            float[] newYs = this.NewYPositions;
+            //float[] newXs = this.NewXPositions;
+            //float[] newYs = this.NewYPositions;
             List<Digraph<Node, Edge>.GNode> nodes;
             Digraph<Node, Edge>.GNode node;
             SizeF size;
             NodeData d;
+            double x, y;
             int i, j;
             for (i = 0; i < this.mLayers.Count; i++)
             {
@@ -220,11 +318,21 @@ namespace GraphForms.Algorithms.Layout.Tree
                         d.position += this.mDatas[d.parent.Index].translate;
                         d.translate += this.mDatas[d.parent.Index].translate;
                     }
-
-                    //node.Data.NewX = (float)(hori ? this.mDir * (layerSize + size.Height / 2) : d.position);
-                    //node.Data.NewY = (float)(hori ? d.position : this.mDir * (layerSize + size.Height / 2));
-                    newXs[node.Index] = (float)(hori ? this.mDir * (layerSize + size.Height / 2) : d.position);
-                    newYs[node.Index] = (float)(hori ? d.position : this.mDir * (layerSize + size.Height / 2));
+                    if (horizontal)
+                    {
+                        x = this.mDir * (layerSize + size.Height / 2.0);
+                        y = d.position;
+                    }
+                    else
+                    {
+                        x = d.position;
+                        y = this.mDir * (layerSize + size.Height / 2.0);
+                    }
+                    //node.Data.NewX = (float)x;
+                    //node.Data.NewY = (float)y;
+                    node.Data.SetNewPosition((float)x, (float)y);
+                    //newXs[node.Index] = (float)x;
+                    //newYs[node.Index] = (float)y;
                 }
                 layerSize += this.mLayers[i].Size;
             }

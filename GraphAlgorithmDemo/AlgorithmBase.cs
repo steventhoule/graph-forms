@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Drawing;
 using GraphForms;
 using GraphForms.Algorithms;
-using GraphForms.Algorithms.Layout.ForceDirected;
+using GraphForms.Algorithms.Layout;
 using GraphForms.Algorithms.Layout.Circular;
+using GraphForms.Algorithms.Layout.ForceDirected;
+using GraphForms.Algorithms.Layout.Tree;
 
 namespace GraphAlgorithmDemo
 {
@@ -11,25 +14,26 @@ namespace GraphAlgorithmDemo
     {
         private CircleNodeScene mScene;
 
-        public ElasticLayoutForCircles(CircleNodeScene scene)
-            : base(scene.Graph, null)
+        public ElasticLayoutForCircles(CircleNodeScene scene,
+            RectangleF boundingBox)
+            : base(scene.Graph, boundingBox)
         {
             this.mScene = scene;
         }
 
-        protected override bool OnIterationEnded(int iteration, 
-            double statusInPercent, double distanceChange, 
-            double maxDistanceChange, string message)
+        public ElasticLayoutForCircles(CircleNodeScene scene,
+            IClusterNode clusterNode)
+            : base(scene.Graph, clusterNode)
         {
-            bool keep = false;
-            if (base.OnIterationEnded(iteration, statusInPercent, 
-                distanceChange, maxDistanceChange, message))
-            {
-                keep = this.mScene.OnLayoutIterEnded(iteration, 
-                    statusInPercent, distanceChange, 
-                    maxDistanceChange, message);
-            }
-            return keep;
+            this.mScene = scene;
+        }
+
+        protected override void OnEndIteration(uint iteration, 
+            double totalDistanceChange)
+        {
+            this.mScene.OnLayoutIterEnded(iteration,
+                totalDistanceChange);
+            base.OnEndIteration(iteration, totalDistanceChange);
         }
 
         public override string ToString()
@@ -39,29 +43,30 @@ namespace GraphAlgorithmDemo
     }
 
     public class FRFreeLayoutForCircles
-        : FRLayoutAlgorithm<CircleNode, ArrowEdge>
+        : FRFreeLayoutAlgorithm<CircleNode, ArrowEdge>
     {
         private CircleNodeScene mScene;
 
-        public FRFreeLayoutForCircles(CircleNodeScene scene)
-            : base(scene.Graph, null)
+        public FRFreeLayoutForCircles(CircleNodeScene scene,
+            RectangleF boundingBox)
+            : base(scene.Graph, boundingBox)
         {
             this.mScene = scene;
         }
 
-        protected override bool OnIterationEnded(int iteration, 
-            double statusInPercent, double distanceChange, 
-            double maxDistanceChange, string message)
+        public FRFreeLayoutForCircles(CircleNodeScene scene,
+            IClusterNode clusterNode)
+            : base(scene.Graph, clusterNode)
         {
-            bool keep = false;
-            if (base.OnIterationEnded(iteration, statusInPercent,
-                distanceChange, maxDistanceChange, message))
-            {
-                keep = this.mScene.OnLayoutIterEnded(iteration, 
-                    statusInPercent, distanceChange, 
-                    maxDistanceChange, message);
-            }
-            return keep;
+            this.mScene = scene;
+        }
+
+        protected override void OnEndIteration(uint iteration,
+            double totalDistanceChange)
+        {
+            this.mScene.OnLayoutIterEnded(iteration,
+                totalDistanceChange);
+            base.OnEndIteration(iteration, totalDistanceChange);
         }
 
         public override string ToString()
@@ -71,34 +76,30 @@ namespace GraphAlgorithmDemo
     }
 
     public class FRBoundedLayoutForCircles
-        : FRLayoutAlgorithm<CircleNode, ArrowEdge>
+        : FRBoundedLayoutAlgorithm<CircleNode, ArrowEdge>
     {
         private CircleNodeScene mScene;
 
-        public FRBoundedLayoutForCircles(CircleNodeScene scene)
-            : base(scene.Graph, null)
+        public FRBoundedLayoutForCircles(CircleNodeScene scene,
+            RectangleF boundingBox)
+            : base(scene.Graph, boundingBox)
         {
             this.mScene = scene;
         }
 
-        protected override FRLayoutParameters DefaultParameters
+        public FRBoundedLayoutForCircles(CircleNodeScene scene,
+            IClusterNode clusterNode)
+            : base(scene.Graph, clusterNode)
         {
-            get { return new FRBoundedLayoutParameters(); }
+            this.mScene = scene;
         }
 
-        protected override bool OnIterationEnded(int iteration,
-            double statusInPercent, double distanceChange,
-            double maxDistanceChange, string message)
+        protected override void OnEndIteration(uint iteration,
+            double totalDistanceChange)
         {
-            bool keep = false;
-            if (base.OnIterationEnded(iteration, statusInPercent,
-                distanceChange, maxDistanceChange, message))
-            {
-                keep = this.mScene.OnLayoutIterEnded(iteration,
-                    statusInPercent, distanceChange,
-                    maxDistanceChange, message);
-            }
-            return keep;
+            this.mScene.OnLayoutIterEnded(iteration,
+                totalDistanceChange);
+            base.OnEndIteration(iteration, totalDistanceChange);
         }
 
         public override string ToString()
@@ -112,25 +113,26 @@ namespace GraphAlgorithmDemo
     {
         private CircleNodeScene mScene;
 
-        public ISOMLayoutForCircles(CircleNodeScene scene)
-            : base(scene.Graph, null)
+        public ISOMLayoutForCircles(CircleNodeScene scene,
+            RectangleF boundingBox)
+            : base(scene.Graph, boundingBox)
         {
             this.mScene = scene;
         }
 
-        protected override bool OnIterationEnded(int iteration,
-            double statusInPercent, double distanceChange,
-            double maxDistanceChange, string message)
+        public ISOMLayoutForCircles(CircleNodeScene scene,
+            IClusterNode clusterNode)
+            : base(scene.Graph, clusterNode)
         {
-            bool keep = false;
-            if (base.OnIterationEnded(iteration, statusInPercent,
-                distanceChange, maxDistanceChange, message))
-            {
-                keep = this.mScene.OnLayoutIterEnded(iteration,
-                    statusInPercent, distanceChange,
-                    maxDistanceChange, message);
-            }
-            return keep;
+            this.mScene = scene;
+        }
+
+        protected override void OnEndIteration(uint iteration,
+            double totalDistanceChange)
+        {
+            this.mScene.OnLayoutIterEnded(iteration,
+                totalDistanceChange);
+            base.OnEndIteration(iteration, totalDistanceChange);
         }
 
         public override string ToString()
@@ -144,25 +146,26 @@ namespace GraphAlgorithmDemo
     {
         private CircleNodeScene mScene;
 
-        public KKLayoutForCircles(CircleNodeScene scene)
-            : base(scene.Graph, null)
+        public KKLayoutForCircles(CircleNodeScene scene,
+            RectangleF boundingBox)
+            : base(scene.Graph, boundingBox)
         {
             this.mScene = scene;
         }
 
-        protected override bool OnIterationEnded(int iteration,
-            double statusInPercent, double distanceChange,
-            double maxDistanceChange, string message)
+        public KKLayoutForCircles(CircleNodeScene scene,
+            IClusterNode clusterNode)
+            : base(scene.Graph, clusterNode)
         {
-            bool keep = false;
-            if (base.OnIterationEnded(iteration, statusInPercent,
-                distanceChange, maxDistanceChange, message))
-            {
-                keep = this.mScene.OnLayoutIterEnded(iteration,
-                    statusInPercent, distanceChange,
-                    maxDistanceChange, message);
-            }
-            return keep;
+            this.mScene = scene;
+        }
+
+        protected override void OnEndIteration(uint iteration,
+            double totalDistanceChange)
+        {
+            this.mScene.OnLayoutIterEnded(iteration,
+                totalDistanceChange);
+            base.OnEndIteration(iteration, totalDistanceChange);
         }
 
         public override string ToString()
@@ -176,25 +179,26 @@ namespace GraphAlgorithmDemo
     {
         private CircleNodeScene mScene;
 
-        public LinLogLayoutForCircles(CircleNodeScene scene)
-            : base(scene.Graph, null)
+        public LinLogLayoutForCircles(CircleNodeScene scene,
+            RectangleF boundingBox)
+            : base(scene.Graph, boundingBox)
         {
             this.mScene = scene;
         }
 
-        protected override bool OnIterationEnded(int iteration,
-            double statusInPercent, double distanceChange,
-            double maxDistanceChange, string message)
+        public LinLogLayoutForCircles(CircleNodeScene scene,
+            IClusterNode clusterNode)
+            : base(scene.Graph, clusterNode)
         {
-            bool keep = false;
-            if (base.OnIterationEnded(iteration, statusInPercent,
-                distanceChange, maxDistanceChange, message))
-            {
-                keep = this.mScene.OnLayoutIterEnded(iteration,
-                    statusInPercent, distanceChange,
-                    maxDistanceChange, message);
-            }
-            return keep;
+            this.mScene = scene;
+        }
+
+        protected override void OnEndIteration(uint iteration,
+            double totalDistanceChange)
+        {
+            this.mScene.OnLayoutIterEnded(iteration,
+                totalDistanceChange);
+            base.OnEndIteration(iteration, totalDistanceChange);
         }
 
         public override string ToString()
@@ -203,35 +207,102 @@ namespace GraphAlgorithmDemo
         }
     }
 
-    public class FDSingleCircleLayoutForCircles
+    public class FDSCircleLayoutForCircles
         : FDSingleCircleLayoutAlgorithm<CircleNode, ArrowEdge>
     {
         private CircleNodeScene mScene;
 
-        public FDSingleCircleLayoutForCircles(CircleNodeScene scene)
-            : base(scene.Graph, null)
+        public FDSCircleLayoutForCircles(CircleNodeScene scene,
+            RectangleF boundingBox)
+            : base(scene.Graph, boundingBox)
         {
             this.mScene = scene;
         }
 
-        protected override bool OnIterationEnded(int iteration,
-            double statusInPercent, double distanceChange,
-            double maxDistanceChange, string message)
+        public FDSCircleLayoutForCircles(CircleNodeScene scene,
+            IClusterNode clusterNode)
+            : base(scene.Graph, clusterNode)
         {
-            bool keep = false;
-            if (base.OnIterationEnded(iteration, statusInPercent,
-                distanceChange, maxDistanceChange, message))
-            {
-                keep = this.mScene.OnLayoutIterEnded(iteration,
-                    statusInPercent, distanceChange,
-                    maxDistanceChange, message);
-            }
-            return keep;
+            this.mScene = scene;
+        }
+
+        protected override void OnEndIteration(uint iteration,
+            double totalDistanceChange)
+        {
+            this.mScene.OnLayoutIterEnded(iteration,
+                totalDistanceChange);
+            base.OnEndIteration(iteration, totalDistanceChange);
         }
 
         public override string ToString()
         {
             return "Single Circle";
+        }
+    }
+
+    public class BalloonTreeLayoutForCircles
+        : BalloonTreeLayoutAlgorithm<CircleNode, ArrowEdge>
+    {
+        private CircleNodeScene mScene;
+
+        public BalloonTreeLayoutForCircles(CircleNodeScene scene,
+            RectangleF boundingBox)
+            : base(scene.Graph, boundingBox)
+        {
+            this.mScene = scene;
+        }
+
+        public BalloonTreeLayoutForCircles(CircleNodeScene scene,
+            IClusterNode clusterNode)
+            : base(scene.Graph, clusterNode)
+        {
+            this.mScene = scene;
+        }
+
+        protected override void OnEndIteration(uint iteration,
+            double totalDistanceChange)
+        {
+            this.mScene.OnLayoutIterEnded(iteration,
+                totalDistanceChange);
+            base.OnEndIteration(iteration, totalDistanceChange);
+        }
+
+        public override string ToString()
+        {
+            return "Balloon Tree";
+        }
+    }
+
+    public class SimpleTreeLayoutForCircles
+        : SimpleTreeLayoutAlgorithm<CircleNode, ArrowEdge>
+    {
+        private CircleNodeScene mScene;
+
+        public SimpleTreeLayoutForCircles(CircleNodeScene scene,
+            RectangleF boundingBox)
+            : base(scene.Graph, boundingBox)
+        {
+            this.mScene = scene;
+        }
+
+        public SimpleTreeLayoutForCircles(CircleNodeScene scene,
+            IClusterNode clusterNode)
+            : base(scene.Graph, clusterNode)
+        {
+            this.mScene = scene;
+        }
+
+        protected override void OnEndIteration(uint iteration,
+            double totalDistanceChange)
+        {
+            this.mScene.OnLayoutIterEnded(iteration,
+                totalDistanceChange);
+            base.OnEndIteration(iteration, totalDistanceChange);
+        }
+
+        public override string ToString()
+        {
+            return "Simple Tree";
         }
     }
 }

@@ -6,8 +6,7 @@ namespace GraphForms.Algorithms.Path
 {
     public abstract class AShortestPath<Node, Edge>
         : ARootedAlgorithm<Node>
-        where Node : class
-        where Edge : class, IGraphEdge<Node>
+        where Edge : IGraphEdge<Node>
     {
         protected readonly Digraph<Node, Edge> mGraph;
         protected readonly bool bUndirected;

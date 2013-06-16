@@ -6,8 +6,7 @@ namespace GraphForms.Algorithms.Search
 {
     public abstract class AGraphTraversalAlgorithm<Node, Edge>
         : ARootedAlgorithm<Node>
-        where Node : class
-        where Edge : class, IGraphEdge<Node>
+        where Edge : IGraphEdge<Node>
     {
         /// <summary>
         /// The graph traversed by this algorithm.
@@ -26,6 +25,13 @@ namespace GraphForms.Algorithms.Search
         /// nodes instead of from source nodes to destination nodes.
         /// </summary>
         protected readonly bool bReversed;
+        /// <summary>
+        /// If true, all nodes in the graph that implement the
+        /// <see cref="ISpecialNode"/> interface, along with the edges 
+        /// connecting them to the rest of the graph are skipped over 
+        /// in the traversal and left unexplored.
+        /// </summary>
+        protected bool bExSpecial = false;
 
         private bool bRootOnly;
 
@@ -71,6 +77,22 @@ namespace GraphForms.Algorithms.Search
         public bool Directed
         {
             get { return !this.bUndirected; }
+        }
+
+        /// <summary>
+        /// If true, all nodes in the graph that implement the
+        /// <see cref="ISpecialNode"/> interface, along with the edges 
+        /// connecting them to the rest of the graph are skipped over 
+        /// in the traversal and left unexplored.
+        /// </summary>
+        public bool ExcludeSpecialNodes
+        {
+            get { return this.bExSpecial; }
+            set
+            {
+                if (this.State != ComputeState.Running)
+                    this.bExSpecial = value;
+            }
         }
 
         /// <summary>
@@ -276,6 +298,19 @@ namespace GraphForms.Algorithms.Search
                 if (index >= 0)
                 {
                     node = this.mGraph.InternalNodeAt(index);
+                    if (this.bExSpecial && node.mData is ISpecialNode)
+                    {
+                        int count = this.mGraph.NodeCount;
+                        for (index = 0; index < count && 
+                            node.mData is ISpecialNode; index++)
+                        {
+                            node = this.mGraph.InternalNodeAt(index);
+                        }
+                        if (index == count)
+                            return;
+                        else
+                            index--;
+                    }
                     this.OnStartNode(node.mData, index);//node.Index);
                     this.ComputeFromRoot(node);
                 }
@@ -291,7 +326,8 @@ namespace GraphForms.Algorithms.Search
                     if (this.State == ComputeState.Aborting)
                         return;
                     node = nodes[i];
-                    if (node.Color == GraphColor.White)
+                    if (node.Color == GraphColor.White &&
+                        !(this.bExSpecial && node.mData is ISpecialNode))
                     {
                         this.OnStartNode(node.mData, i);//node.Index);
                         this.ComputeFromRoot(node);

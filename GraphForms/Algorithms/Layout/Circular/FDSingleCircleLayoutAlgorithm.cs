@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Text;
 using GraphForms.Algorithms.Layout.ForceDirected;
 using GraphForms.Algorithms.Path;
@@ -7,26 +8,28 @@ using GraphForms.Algorithms.Path;
 namespace GraphForms.Algorithms.Layout.Circular
 {
     public class FDSingleCircleLayoutAlgorithm<Node, Edge>
-        : ForceDirectedLayoutAlgorithm<Node, Edge, FDSingleCircleLayoutParameters>
+        //: ForceDirectedLayoutAlgorithm<Node, Edge, FDSingleCircleLayoutParameters>
+        : LayoutAlgorithm<Node, Edge>
         where Node : GraphElement, ILayoutNode
         where Edge : class, IGraphEdge<Node>, IUpdateable
     {
         private Digraph<Node, Edge>.GNode[] mEmbeddingCircle;
+        private Digraph<Node, Edge>.GNode[] mPortNodes;
 
-        private double mMinRadius;
-        private double mFreeArc;
+        private double mMinRadius = 10;
+        private double mFreeArc = 5;
 
         private double mRadius;
         private double[] mAngles;
 
-        private bool bCalcCenter;
+        private bool bCalcCenter = false;
         private double mCenterX;
         private double mCenterY;
-        private double mSpringMult;
-        private double mMagnetMult;
-        private double mAngleExp;
+        private double mSpringMult = 1;
+        private double mMagnetMult = 1;
+        private double mAngleExp = 1;
 
-        public FDSingleCircleLayoutAlgorithm(Digraph<Node, Edge> graph)
+        /*public FDSingleCircleLayoutAlgorithm(Digraph<Node, Edge> graph)
             : base(graph, null)
         {
         }
@@ -35,48 +38,156 @@ namespace GraphForms.Algorithms.Layout.Circular
             FDSingleCircleLayoutParameters oldParameters)
             : base(graph, oldParameters)
         {
+        }/* */
+
+        public FDSingleCircleLayoutAlgorithm(Digraph<Node, Edge> graph,
+            IClusterNode clusterNode)
+            : base(graph, clusterNode)
+        {
         }
 
-        Digraph<Node, Edge>.GNode[] CalculateEmbeddingCircle()
+        public FDSingleCircleLayoutAlgorithm(Digraph<Node, Edge> graph,
+            RectangleF boundingBox)
+            : base(graph, boundingBox)
         {
+        }
+
+        public double MinRadius
+        {
+            get { return this.mMinRadius; }
+            set
+            {
+                if (this.mMinRadius != value)
+                {
+                    this.mMinRadius = value;
+                    this.MarkDirty();
+                }
+            }
+        }
+
+        public double FreeArc
+        {
+            get { return this.mFreeArc; }
+            set
+            {
+                if (this.mFreeArc != value)
+                {
+                    this.mFreeArc = value;
+                    this.MarkDirty();
+                }
+            }
+        }
+
+        public double SpringMultiplier
+        {
+            get { return this.mSpringMult; }
+            set
+            {
+                if (this.mSpringMult != value)
+                {
+                    this.mSpringMult = value;
+                }
+            }
+        }
+
+        public double MagneticMultiplier
+        {
+            get { return this.mMagnetMult; }
+            set
+            {
+                if (this.mMagnetMult != value)
+                {
+                    this.mMagnetMult = value;
+                }
+            }
+        }
+
+        public double AngleExponent
+        {
+            get { return this.mAngleExp; }
+            set
+            {
+                if (this.mAngleExp != value)
+                {
+                    this.mAngleExp = value;
+                }
+            }
+        }
+
+        public bool CenterInBounds
+        {
+            get { return !this.bCalcCenter; }
+            set
+            {
+                if (this.bCalcCenter == value)
+                {
+                    this.bCalcCenter = !value;
+                }
+            }
+        }
+
+        private void CalculateEmbeddingCircle()
+        {
+            Digraph<Node, Edge>.GNode[] nodes
+                = this.mGraph.InternalNodes;
+            List<Digraph<Node, Edge>.GNode> ecNodes, pNodes;
+            int j, count = nodes.Length;
             if (this.mGraph.EdgeCount == 0)
-                return this.mGraph.InternalNodes;
+            {
+                ecNodes = new List<Digraph<Node, Edge>.GNode>(count + 1);
+                pNodes = new List<Digraph<Node, Edge>.GNode>(count + 1);
+                for (j = 0; j < count; j++)
+                {
+                    if (nodes[j].mData is IPortNode)
+                        pNodes.Add(nodes[j]);
+                    else
+                        ecNodes.Add(nodes[j]);
+                }
+                this.mEmbeddingCircle = ecNodes.ToArray();
+                this.mPortNodes = pNodes.ToArray();
+                return;// ecNodes.ToArray();
+            }
             // Calculate an initial embedding circle based on
             // the longest path in the graph.
             DFLongestPath<Node, Edge> alg 
                 = new DFLongestPath<Node, Edge>(this.mGraph, 
                     false, false);
+            alg.ExcludeSpecialNodes = true;
             alg.Compute();
             int[] nis = alg.PathNodeIndexes;
-
-            int j, count = this.mGraph.NodeCount;
-            List<Digraph<Node, Edge>.GNode> nodes 
-                = new List<Digraph<Node, Edge>.GNode>(count + 1);
+            ecNodes = new List<Digraph<Node, Edge>.GNode>(count + 1);
             bool[] flags = new bool[count];
             // Here flags are used to determine which nodes in the graph
             // are not currently part of the embedding circle.
             for (j = 0; j < nis.Length; j++)
             {
                 flags[nis[j]] = true;
-                nodes.Add(this.mGraph.InternalNodeAt(nis[j]));
+                ecNodes.Add(nodes[nis[j]]);
             }
             // Find all nodes not currently in the embedding circle
+            
             Digraph<Node, Edge>.GNode[] remNodes 
                 = new Digraph<Node, Edge>.GNode[count - nis.Length];
+            pNodes = new List<Digraph<Node, Edge>.GNode>(count - nis.Length);
             count = 0;
             for (j = 0; j < flags.Length; j++)
             {
                 if (!flags[j])
                 {
-                    remNodes[count] = this.mGraph.InternalNodeAt(j);
-                    count++;
+                    remNodes[count] = nodes[j];
+                    if (remNodes[count].mData is IPortNode)
+                        pNodes.Add(nodes[j]);
+                    else
+                        count++;
                 }
             }
             // Here flags are used to determine which nodes are neighbors 
             // of the current node to be added to the embedding circle.
             Digraph<Node, Edge>.GEdge[] edges;
+            Digraph<Node, Edge>.GNode node;
             bool placed;
-            for (int k = 0; k < remNodes.Length; k++)
+            int eCount;
+            for (int k = 0; k < count; k++)
             {
                 // Clear neighbor flags from previous iteration
                 for (j = 0; j < flags.Length; j++)
@@ -84,51 +195,53 @@ namespace GraphForms.Algorithms.Layout.Circular
                     flags[j] = false;
                 }
                 // Set which nodes are neighbors to the current node
-                count = 0;
+                eCount = 0;
                 edges = remNodes[k].InternalDstEdges;
                 for (j = 0; j < edges.Length; j++)
                 {
-                    flags[edges[j].mDstNode.Index] = true;
+                    node = edges[j].mDstNode;
+                    flags[node.Index] = !(node.mData is IPortNode);
                 }
                 if (flags[remNodes[k].Index])
                 {
                     flags[remNodes[k].Index] = false;
-                    count++;
+                    eCount++;
                 }
                 edges = remNodes[k].InternalSrcEdges;
                 for (j = 0; j < edges.Length; j++)
                 {
-                    flags[edges[j].mSrcNode.Index] = true;
+                    node = edges[j].mSrcNode;
+                    flags[node.Index] = !(node.mData is IPortNode);
                 }
                 if (flags[remNodes[k].Index])
                 {
                     flags[remNodes[k].Index] = false;
-                    count++;
+                    eCount++;
                 }
-                count = remNodes[k].AllEdgeCount - count;
+                eCount = remNodes[k].AllEdgeCount - eCount;
                 placed = false;
                 // Look for two consecutive neighbors in the list
-                if (count >= 2)
+                if (eCount >= 2)
                 {
-                    for (j = 0; j < nodes.Count; j++)
+                    for (j = 0; j < ecNodes.Count; j++)
                     {
-                        if (flags[nodes[j].Index] &&
-                            flags[nodes[(j + 1) % nodes.Count].Index])
+                        if (flags[ecNodes[j].Index] &&
+                            flags[ecNodes[(j + 1) % ecNodes.Count].Index])
                         {
-                            nodes.Insert((j + 1) % nodes.Count, remNodes[k]);
+                            ecNodes.Insert((j + 1) % ecNodes.Count, remNodes[k]);
                             placed = true;
                             break;
                         }
                     }
                 }
                 // Find any neighbor in the list
-                if (!placed && count > 0)
+                if (!placed && eCount > 0)
                 {
-                    for (j = 0; j < nodes.Count; j++)
+                    for (j = 0; j < ecNodes.Count; j++)
                     {
-                        if (flags[nodes[j].Index])
+                        if (flags[ecNodes[j].Index])
                         {
-                            nodes.Insert((j + 1) % nodes.Count, remNodes[k]);
+                            ecNodes.Insert((j + 1) % ecNodes.Count, remNodes[k]);
                             placed = true;
                             break;
                         }
@@ -136,10 +249,12 @@ namespace GraphForms.Algorithms.Layout.Circular
                 }
                 // Place all orphaned nodes at the end of the list
                 if (!placed)
-                    nodes.Add(remNodes[k]);
+                    ecNodes.Add(remNodes[k]);
             }
-            this.Swapping(nodes, 50);
-            return nodes.ToArray();
+            this.Swapping(ecNodes, 50);
+            this.mEmbeddingCircle = ecNodes.ToArray();
+            this.mPortNodes = pNodes.ToArray();
+            //return ecNodes.ToArray();
         }
         
         private void Swapping(List<Digraph<Node, Edge>.GNode> nodes,
@@ -182,6 +297,8 @@ namespace GraphForms.Algorithms.Layout.Circular
                             // right before one of its neighbors
                             x = j < uDstCount ? uEdges[j].mDstNode 
                                               : uEdges[j].mSrcNode;
+                            if (x.mData is IPortNode)
+                                continue;
                             k = (pos[x.Index] + n - 1) % n;
                             if (k == i)
                                 continue;
@@ -194,7 +311,8 @@ namespace GraphForms.Algorithms.Layout.Circular
                             {
                                 x = k < uDstCount ? uEdges[k].mDstNode
                                                   : uEdges[k].mSrcNode;
-                                if (x.Index == v.Index)
+                                if (x.Index == v.Index ||
+                                    x.mData is IPortNode)
                                     continue;
                                 // posX = (pos[x] - pos[u]) mod n
                                 posX = (pos[x.Index] + offset) % n;
@@ -203,7 +321,8 @@ namespace GraphForms.Algorithms.Layout.Circular
                                 {
                                     y = vEdges[m].mDstNode;
                                     if (y.Index == u.Index || 
-                                        y.Index == x.Index)
+                                        y.Index == x.Index ||
+                                        y.mData is IPortNode)
                                         continue;
                                     // posY = (pos[y] - pos[u]) mod n
                                     posY = (pos[y.Index] + offset) % n;
@@ -250,7 +369,8 @@ namespace GraphForms.Algorithms.Layout.Circular
                                 {
                                     y = vEdges[m].mSrcNode;
                                     if (y.Index == u.Index || 
-                                        y.Index == x.Index)
+                                        y.Index == x.Index ||
+                                        y.mData is IPortNode)
                                         continue;
                                     posY = (pos[y.Index] + offset) % n;
                                     if (posX > posV && posY > posV)
@@ -294,9 +414,9 @@ namespace GraphForms.Algorithms.Layout.Circular
             System.Drawing.RectangleF bbox;
             Digraph<Node, Edge>.GNode[] nodes 
                 = this.mEmbeddingCircle;
-            int i;
-            double perimeter, angle, a;
-            double[] halfSize = new double[nodes.Length];
+            int i, count = this.mGraph.NodeCount;
+            double perimeter, ang, a;
+            double[] halfSize = new double[count];
 
             // calculate the size of the circle
             perimeter = 0;
@@ -311,36 +431,95 @@ namespace GraphForms.Algorithms.Layout.Circular
             perimeter += nodes.Length * this.mFreeArc;
 
             this.mRadius = perimeter / (2 * Math.PI);
-            this.mAngles = new double[nodes.Length];
+            this.mAngles = new double[count];
 
             // precalculation
-            angle = 0;
+            ang = 0;
             for (i = 0; i < nodes.Length; i++)
             {
-                angle += Math.Sin(halfSize[i] / this.mRadius) * 4;
+                a = Math.Sin(halfSize[nodes[i].Index] / this.mRadius) * 4;
+                ang += a;
             }
 
             //base.EndIteration(0, 0.5, "Precalculation done.");
 
             // recalculate radius
-            this.mRadius = angle / (2 * Math.PI) * this.mRadius;
+            this.mRadius = ang / (2 * Math.PI) * this.mRadius;
 
             // calculation
-            angle = -Math.PI;
+            ang = -Math.PI;
             for (i = 0; i < nodes.Length; i++)
             {
-                a = Math.Sin(halfSize[i] / this.mRadius) * 2;
-                angle += a;
-                this.mAngles[nodes[i].Index] = angle;
-                angle += a;
+                a = Math.Sin(halfSize[nodes[i].Index] / this.mRadius) * 2;
+                ang += a;
+                this.mAngles[nodes[i].Index] = ang;
+                ang += a;
             }
 
             this.mRadius = Math.Max(this.mRadius, this.mMinRadius);
 
+            this.CalculatePortAngles();
+
             //base.EndIteration(1, 1, "Calculation done.");
         }
 
-        protected override bool OnBeginIteration(bool paramsDirty, 
+        private void CalculatePortAngles()
+        {
+            if (this.mPortNodes.Length > 0)
+            {
+                double a1, a2;
+                int i, j, count;
+                double[] angs = new double[this.mPortNodes.Length];
+                Digraph<Node, Edge>.GEdge[] edges;
+                IPortNode pNode;
+                for (i = 0; i < this.mPortNodes.Length; i++)
+                {
+                    a1 = 0;
+                    count = 0;
+                    edges = this.mPortNodes[i].InternalDstEdges;
+                    for (j = 0; j < edges.Length; j++)
+                    {
+                        a1 += this.mAngles[edges[j].mDstNode.Index];
+                        count++;
+                    }
+                    edges = this.mPortNodes[i].InternalSrcEdges;
+                    for (j = 0; i < edges.Length; j++)
+                    {
+                        a1 += this.mAngles[edges[j].mSrcNode.Index];
+                        count++;
+                    }
+                    angs[i] = a1 / count;
+                }
+                // Line tangent to embedding circle at port point
+                // ArcTan(length of this line / this.mRadius)
+                double maxA = Math.Atan(2);
+                count = angs.Length;
+                if (count > 1)
+                {
+                    Array.Sort(angs, this.mPortNodes, 0, count, null);
+                    a1 = angs[count - 1];
+                    a2 = angs[1];
+                    for (i = 0; i < count; i++)
+                    {
+                        pNode = this.mPortNodes[i].mData as IPortNode;
+                        pNode.MinAngle
+                            = Math.Max((a1 + angs[i]) / 2, angs[i] - maxA);
+                        pNode.MaxAngle
+                            = Math.Min((angs[i] + a2) / 2, angs[i] + maxA);
+                        a1 = angs[i];
+                        a2 = angs[(i + 1) % count];
+                    }
+                }
+                else
+                {
+                    pNode = this.mPortNodes[0].mData as IPortNode;
+                    pNode.MinAngle = angs[0] - maxA;
+                    pNode.MaxAngle = angs[0] + maxA;
+                }
+            }
+        }
+
+        /*protected override bool OnBeginIteration(bool paramsDirty, 
             int lastNodeCount, int lastEdgeCount)
         {
             bool recalc = false;
@@ -367,7 +546,7 @@ namespace GraphForms.Algorithms.Layout.Circular
             if (lastNodeCount != this.mGraph.NodeCount ||
                 lastEdgeCount != this.mGraph.EdgeCount)
             {
-                this.mEmbeddingCircle = this.CalculateEmbeddingCircle();
+                this.CalculateEmbeddingCircle();
             }
             if (recalc || lastNodeCount != this.mGraph.NodeCount)
             {
@@ -375,14 +554,36 @@ namespace GraphForms.Algorithms.Layout.Circular
             }
             return base.OnBeginIteration(paramsDirty, 
                 lastNodeCount, lastEdgeCount);
+        }/* */
+
+        protected override void OnBeginIteration(uint iteration, 
+            bool dirty, int lastNodeCount, int lastEdgeCount)
+        {
+            RectangleF bbox = this.mClusterNode == null
+                ? this.BoundingBox : this.mClusterNode.BoundingBox;
+            this.mCenterX = (bbox.X + bbox.Width) / 2;
+            this.mCenterY = (bbox.Y + bbox.Height) / 2;
+
+            bool nodesDirty = lastNodeCount != this.mGraph.NodeCount;
+            if (nodesDirty || lastEdgeCount != this.mGraph.EdgeCount)
+            {
+                this.CalculateEmbeddingCircle();
+            }
+            if (dirty || nodesDirty)
+            {
+                this.InitCircle();
+            }
+            base.OnBeginIteration(iteration, dirty, 
+                lastNodeCount, lastEdgeCount);
         }
 
-        protected override void PerformIteration(int iteration, 
-            int maxIterations)
+        protected override void PerformIteration(uint iteration)
         {
-            System.Drawing.SizeF pos;
+            //System.Drawing.SizeF pos;
             double dx, dy, r, force, fx, fy;
-            Node[] nodes = this.mGraph.Nodes;
+            Node node;
+            Digraph<Node, Edge>.GNode[] nodes 
+                = this.mGraph.InternalNodes;
             int i;
             // Compute Center
             if (this.bCalcCenter)
@@ -391,32 +592,35 @@ namespace GraphForms.Algorithms.Layout.Circular
                 this.mCenterY = 0;
                 for (i = 0; i < nodes.Length; i++)
                 {
-                    pos = nodes[i].SceneTranslate();
-                    this.mCenterX += pos.Width;
-                    this.mCenterY += pos.Height;
+                    node = nodes[i].mData;
+                    //pos = nodes[i].SceneTranslate();
+                    this.mCenterX += node.X;//pos.Width;
+                    this.mCenterY += node.Y;//pos.Height;
                 }
                 this.mCenterX /= nodes.Length;
                 this.mCenterY /= nodes.Length;
             }
             // Compute new positions 
-            float[] newXs = this.NewXPositions;
-            float[] newYs = this.NewYPositions;
+            //float[] newXs = this.NewXPositions;
+            //float[] newYs = this.NewYPositions;
             for (i = 0; i < nodes.Length; i++)
             {
-                if (nodes[i].PositionFixed)
+                node = nodes[i].mData;
+                if (node.PositionFixed)
                 {
-                    newXs[i] = nodes[i].X;
-                    newYs[i] = nodes[i].Y;
+                    //newXs[i] = nodes[i].X;
+                    //newYs[i] = nodes[i].Y;
+                    node.SetNewPosition(node.NewX, node.NewY);
                 }
                 else
                 {
                     // TODO: make sure all the signs (+/-) are right
-                    pos = nodes[i].SceneTranslate();
-                    dx = this.mCenterX - pos.Width;
-                    dy = this.mCenterY - pos.Height;
+                    //pos = node.SceneTranslate();
+                    dx = this.mCenterX - node.X;//pos.Width;
+                    dy = this.mCenterY - node.Y;//pos.Height;
                     r = Math.Max(dx * dx + dy * dy, 0.000001);
                     // Magnetic Torque
-                    force = Math.Atan2(dy, dx) - this.mAngles[i];
+                    force = Math.Atan2(dy, dx) - this.mAngles[nodes[i].Index];
                     force = this.mMagnetMult * Math.Pow(force, this.mAngleExp) / r;
                     fx = force * -dy;
                     fy = force * dx;
@@ -426,8 +630,10 @@ namespace GraphForms.Algorithms.Layout.Circular
                     fx += force * dx / r;
                     fy += force * dy / r;
                     // Add force to position
-                    newXs[i] = (float)(nodes[i].X + fx);
-                    newYs[i] = (float)(nodes[i].Y + fy);
+                    node.SetNewPosition((float)(node.X + fx), 
+                                        (float)(node.Y + fy));
+                    //newXs[i] = (float)(node.X + fx);
+                    //newYs[i] = (float)(node.Y + fy);
                 }
             }
         }

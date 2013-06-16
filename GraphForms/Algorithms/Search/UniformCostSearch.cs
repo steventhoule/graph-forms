@@ -6,8 +6,7 @@ namespace GraphForms.Algorithms.Search
 {
     public class UniformCostSearch<Node, Edge>
         : AstarSearch<Node, Edge>
-        where Node : class
-        where Edge : class, IGraphEdge<Node>
+        where Edge : IGraphEdge<Node>
     {
         private readonly double mCost;
 

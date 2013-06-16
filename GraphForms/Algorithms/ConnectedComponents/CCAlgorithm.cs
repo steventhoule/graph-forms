@@ -6,10 +6,10 @@ using GraphForms.Algorithms.Search;
 namespace GraphForms.Algorithms.ConnectedComponents
 {
     public class CCAlgorithm<Node, Edge>
-        : DepthFirstSearch<Node, Edge>
-        where Node : class
-        where Edge : class, IGraphEdge<Node>
+        : DepthFirstSearch<Node, Edge>, ICCAlgorithm<Node>
+        where Edge : IGraphEdge<Node>
     {
+        private List<Node> mRoots;
         private List<List<Node>> mComponents;
 
         public CCAlgorithm(Digraph<Node, Edge> graph)
@@ -35,8 +35,14 @@ namespace GraphForms.Algorithms.ConnectedComponents
             }
         }
 
+        public Node[] Roots
+        {
+            get { return this.mRoots.ToArray(); }
+        }
+
         protected override void OnStartNode(Node n, int index)
         {
+            this.mRoots.Add(n);
             this.mComponents.Add(new List<Node>());
             base.OnStartNode(n, index);
         }
@@ -45,12 +51,6 @@ namespace GraphForms.Algorithms.ConnectedComponents
         {
             this.mComponents[this.mComponents.Count - 1].Add(n);
             base.OnDiscoverNode(n, index);
-        }
-
-        protected override void OnBlackEdge(Edge e, 
-            int srcIndex, int dstIndex, bool reversed)
-        {
-            base.OnBlackEdge(e, srcIndex, dstIndex, reversed);
         }
     }
 }

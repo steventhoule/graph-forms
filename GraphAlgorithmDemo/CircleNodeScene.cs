@@ -5,16 +5,18 @@ using System.Text;
 using System.Windows.Forms;
 using GraphForms;
 using GraphForms.Algorithms;
+using GraphForms.Algorithms.Layout;
 using GraphForms.Algorithms.Layout.ForceDirected;
 
 namespace GraphAlgorithmDemo
 {
-    public class CircleNodeScene : GraphScene
+    public class CircleNodeScene : GraphScene, IClusterNode
     {
         private Digraph<CircleNode, ArrowEdge> mGraph;
         private Timer mLayoutTimer;
 
-        private IForceDirectedLayoutAlgorithm mLayout;
+        //private IForceDirectedLayoutAlgorithm mLayout;
+        private LayoutAlgorithm<CircleNode, ArrowEdge> mLayout;
 
         public CircleNodeScene()
         {
@@ -24,7 +26,7 @@ namespace GraphAlgorithmDemo
             this.mLayoutTimer.Interval = 1000 / 25;
             this.mLayoutTimer.Tick += new EventHandler(OnLayoutTimerTick);
 
-            this.mLayout = new ElasticLayoutForCircles(this);
+            this.mLayout = new ElasticLayoutForCircles(this, this.BoundingBox);
 
             this.mMouseUpHistory = new int[3];
             for (int i = 0; i < this.mMouseUpHistory.Length; i++)
@@ -81,7 +83,8 @@ namespace GraphAlgorithmDemo
         /// in the <see cref="Graph"/>. Setting this to a different value
         /// aborts the current algorithm.
         /// </summary>
-        public IForceDirectedLayoutAlgorithm Layout
+        public LayoutAlgorithm<CircleNode, ArrowEdge> Layout
+        //public IForceDirectedLayoutAlgorithm Layout
         {
             get { return this.mLayout; }
             set
@@ -171,6 +174,13 @@ namespace GraphAlgorithmDemo
 
         public event Action<CircleNode> NodeMoved;
 
+        private float mMinX;
+        private float mMinY;
+        private float mCenX;
+        private float mCenY;
+        private float mMaxX;
+        private float mMaxY;
+
         public void UpdateBounds()
         {
             const float padding = 10;
@@ -179,10 +189,16 @@ namespace GraphAlgorithmDemo
             //int y = (int)Math.Floor(bbox.Y) + padding;
             //int w = (int)Math.Ceiling(bbox.X + bbox.Width) - x - padding;
             //int h = (int)Math.Ceiling(bbox.Y + bbox.Height) - y - padding;
-            this.mLayout.Parameters.BoundingBox
-                = new RectangleF(bbox.X + padding, bbox.Y + padding,
-                    bbox.Width - 2 * padding, bbox.Height - 2 * padding);
-        }
+            //this.mLayout.Parameters.BoundingBox
+            //    = new RectangleF(bbox.X + padding, bbox.Y + padding,
+            //        bbox.Width - 2 * padding, bbox.Height - 2 * padding);
+            this.mMinX = bbox.X + padding;
+            this.mMinY = bbox.Y + padding;
+            this.mMaxX = this.mMinX + bbox.Width - 2 * padding;
+            this.mMaxY = this.mMinY + bbox.Height - 2 * padding;
+            this.mCenX = this.mMaxX / 2;
+            this.mCenY = this.mMaxY / 2;
+        }/* */
 
         //private bool bTimerTicked = false;
 
@@ -214,28 +230,28 @@ namespace GraphAlgorithmDemo
 
         public class LayoutIterEndedEventArgs : EventArgs
         {
-            private int mIteration;
-            private double mStatusInPercent;
+            private uint mIteration;
+            //private double mStatusInPercent;
             private double mDistChange;
-            private double mMaxDistChange;
-            private string mMessage;
+            //private double mMaxDistChange;
+            //private string mMessage;
 
-            public int Iteration
+            public uint Iteration
             {
                 get { return this.mIteration; }
             }
 
-            public double StatusInPercent
+            /*public double StatusInPercent
             {
                 get { return this.mStatusInPercent; }
-            }
+            }/* */
 
             public double DistanceChange
             {
                 get { return this.mDistChange; }
             }
 
-            public double MaxDistanceChange
+            /*public double MaxDistanceChange
             {
                 get { return this.mMaxDistChange; }
             }
@@ -243,21 +259,21 @@ namespace GraphAlgorithmDemo
             public string Message
             {
                 get { return this.mMessage; }
-            }
+            }/* */
 
-            public LayoutIterEndedEventArgs(int iteration, double statusInPercent,
-                double distanceChange, double maxDistanceChange, string message)
+            public LayoutIterEndedEventArgs(uint iteration, double distChange)//statusInPercent,
+                //double distanceChange, double maxDistanceChange, string message)
             {
                 this.mIteration = iteration;
-                this.mStatusInPercent = statusInPercent;
-                this.mDistChange = distanceChange;
-                this.mMaxDistChange = maxDistanceChange;
-                this.mMessage = message;
+                //this.mStatusInPercent = statusInPercent;
+                this.mDistChange = distChange;//distanceChange;
+                //this.mMaxDistChange = maxDistanceChange;
+                //this.mMessage = message;
             }
         }
 
-        public bool OnLayoutIterEnded(int iteration, double statusInPercent,
-            double distanceChange, double maxDistanceChange, string message)
+        public bool OnLayoutIterEnded(uint iteration, double distChange)//statusInPercent,
+            //double distanceChange, double maxDistanceChange, string message)
         {
             // Wait for timer to tick before ending layout iteration
             /*while (!this.bTimerTicked)
@@ -269,8 +285,8 @@ namespace GraphAlgorithmDemo
             if (this.LayoutIterEnded != null)
             {
                 LayoutIterEndedEventArgs e = new LayoutIterEndedEventArgs(
-                    iteration, statusInPercent, distanceChange,
-                    maxDistanceChange, message);
+                    iteration, distChange);//statusInPercent, distanceChange,
+                    //maxDistanceChange, message);
                 this.LayoutIterEnded(this, e);
             }
 
@@ -318,5 +334,55 @@ namespace GraphAlgorithmDemo
             }
             e.Handled = true;
         }
+
+        #region IClusterNode Members
+
+        public PointF GetPortNodePos(double angle)
+        {
+            double dx = Math.Cos(angle);
+            double dy = Math.Sin(angle);
+            double t = Math.Min(
+                Math.Abs(this.mCenX / dx), Math.Abs(this.mCenY / dy));
+            dx = dx * t + this.mCenX;
+            dy = dy * t + this.mCenY;
+            return new PointF((float)dx, (float)dy);
+        }
+
+        public PointF AugmentNodePos(float x, float y)
+        {
+            float dx = Math.Min(Math.Max(x, this.mMinX), this.mMaxX);
+            float dy = Math.Min(Math.Max(y, this.mMinY), this.mMaxY);
+            return new PointF(dx, dy);
+        }
+
+        #endregion
+
+        #region ILayoutNode Members
+
+        private float mNewX;
+        private float mNewY;
+
+        public bool PositionFixed
+        {
+            get { return true; }
+        }
+
+        public float NewX
+        {
+            get { return this.mNewX; }
+        }
+
+        public float NewY
+        {
+            get { return this.mNewY; }
+        }
+
+        public void SetNewPosition(float newX, float newY)
+        {
+            this.mNewX = newX;
+            this.mNewY = newY;
+        }
+
+        #endregion
     }
 }

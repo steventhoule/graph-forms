@@ -7,8 +7,7 @@ namespace GraphForms.Algorithms.Collections
     public class EdgeWeightComparer<Node, Edge>
         : IComparer<Digraph<Node, Edge>.GEdge>,
           IComparer<Edge>
-        where Node : class
-        where Edge : class, IGraphEdge<Node>
+        where Edge : IGraphEdge<Node>
     {
         private bool bReversed;
 

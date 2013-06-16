@@ -10,14 +10,13 @@ namespace GraphForms.Algorithms.ConnectedComponents
     // http://www.cs.umd.edu/class/fall2005/cmsc451/biconcomps.pdf
     public class BCCAlgorithm<Node, Edge> 
         : DepthFirstSearch<Node, Edge>
-        where Node : class
-        where Edge : class, IGraphEdge<Node>
+        where Edge : IGraphEdge<Node>
     {
         private class NodeData
         {
             public Node Data;
             public int Depth;
-            public int LowPoint;
+            public int LowLink;
             public int Parent;
 
             public bool IsCut;
@@ -33,8 +32,22 @@ namespace GraphForms.Algorithms.ConnectedComponents
             }
         }
 
+        private class EdgeData
+        {
+            public readonly Edge Data;
+            public readonly int SrcIndex;
+            public readonly int DstIndex;
+
+            public EdgeData(Edge data, int srcIndex, int dstIndex)
+            {
+                this.Data = data;
+                this.SrcIndex = srcIndex;
+                this.DstIndex = dstIndex;
+            }
+        }
+
         private Stack<NodeData> mNodeStack;
-        private Stack<Edge> mEdgeStack;
+        private Stack<EdgeData> mEdgeStack;
         private NodeData[] mDatas;
         private int mDepth;
         private bool mFlag = false;
@@ -53,7 +66,7 @@ namespace GraphForms.Algorithms.ConnectedComponents
             : base(graph, false, reversed)
         {
             this.mNodeStack = new Stack<NodeData>(graph.NodeCount + 1);
-            this.mEdgeStack = new Stack<Edge>(graph.EdgeCount + 1);
+            this.mEdgeStack = new Stack<EdgeData>(graph.EdgeCount + 1);
             this.mArtNodes = new List<Node>();
             this.mComponents = new List<Edge[]>();
             this.mCompGroups = new List<Node[]>();
@@ -88,6 +101,11 @@ namespace GraphForms.Algorithms.ConnectedComponents
                 }
                 return gids;
             }
+        }
+
+        public int CompactGroupCount
+        {
+            get { return this.mCompGroups.Count; }
         }
 
         public void ArticulateToLargerCompactGroups()
@@ -190,6 +208,11 @@ namespace GraphForms.Algorithms.ConnectedComponents
             }
         }
 
+        public int IsolatedGroupCount
+        {
+            get { return this.mArtNodes.Count + this.mComponents.Count; }
+        }
+
         public override void Initialize()
         {
             base.Initialize();
@@ -215,7 +238,7 @@ namespace GraphForms.Algorithms.ConnectedComponents
         {
             NodeData nData = this.mDatas[index];
             nData.Depth = this.mDepth;
-            nData.LowPoint = this.mDepth;
+            nData.LowLink = this.mDepth;
             this.mDepth++;
             base.OnDiscoverNode(n, index);
         }
@@ -223,7 +246,7 @@ namespace GraphForms.Algorithms.ConnectedComponents
         protected override void OnTreeEdge(Edge e, 
             int srcIndex, int dstIndex, bool reversed)
         {
-            this.mEdgeStack.Push(e);
+            this.mEdgeStack.Push(new EdgeData(e, srcIndex, dstIndex));
             NodeData vData = this.mDatas[reversed ? srcIndex : dstIndex];
             vData.Parent = reversed ? dstIndex : srcIndex;
             this.mNodeStack.Push(vData);
@@ -233,33 +256,35 @@ namespace GraphForms.Algorithms.ConnectedComponents
         protected override void OnFinishEdge(Edge e, 
             int srcIndex, int dstIndex, bool reversed)
         {
-            NodeData uData, vData;
+            NodeData uDat, vDat;
             if (reversed)
             {
-                uData = this.mDatas[dstIndex];
-                vData = this.mDatas[srcIndex];
+                uDat = this.mDatas[dstIndex];
+                vDat = this.mDatas[srcIndex];
             }
             else
             {
-                uData = this.mDatas[srcIndex];
-                vData = this.mDatas[dstIndex];
+                uDat = this.mDatas[srcIndex];
+                vDat = this.mDatas[dstIndex];
             }
-            if (vData.LowPoint >= uData.Depth)
-                this.OnComponent(e, reversed ? dstIndex : srcIndex);
-            uData.LowPoint = Math.Min(uData.LowPoint, vData.LowPoint);
+            if (vDat.LowLink >= uDat.Depth)
+            {
+                this.OnComponent(e, srcIndex, dstIndex, reversed);
+            }
+            uDat.LowLink = Math.Min(uDat.LowLink, vDat.LowLink);
             base.OnFinishEdge(e, srcIndex, dstIndex, reversed);
         }
 
-        private void OnComponent(Edge edge, int fromNodeIndex)
+        private void OnComponent(Edge edge, int src, int dst, bool rev)
         {
             List<Node> cGrp = new List<Node>(this.mNodeStack.Count + 1);
             List<Edge> comp = new List<Edge>(this.mEdgeStack.Count + 1);
             NodeData data;
-            Edge e = null;
-            while (e != edge)
+            EdgeData e = new EdgeData(edge, -1, -1);
+            while (e.SrcIndex != src || e.DstIndex != dst)
             {
                 e = this.mEdgeStack.Pop();
-                comp.Add(e);
+                comp.Add(e.Data);
                 data = this.mNodeStack.Pop();
                 if (data.GroupID == -1)
                 {
@@ -281,7 +306,7 @@ namespace GraphForms.Algorithms.ConnectedComponents
             {
                 if (this.mFlag)
                 {
-                    this.OnArticulationNode(fromNodeIndex);
+                    this.OnArticulationNode(rev ? dst : src);
                 }
                 else
                 {
@@ -290,7 +315,7 @@ namespace GraphForms.Algorithms.ConnectedComponents
             }
             else
             {
-                this.OnArticulationNode(fromNodeIndex);
+                this.OnArticulationNode(rev ? dst : src);
             }
             this.mCompGroups.Add(cGrp.ToArray());
         }
@@ -308,23 +333,23 @@ namespace GraphForms.Algorithms.ConnectedComponents
             int srcIndex, int dstIndex, bool reversed)
         {
             
-            NodeData uData;
-            int vi;
+            NodeData uDat;
+            int v;
             if (reversed)
             {
-                uData = this.mDatas[dstIndex];
-                vi = srcIndex;
+                uDat = this.mDatas[dstIndex];
+                v = srcIndex;
             }
             else
             {
-                uData = this.mDatas[srcIndex];
-                vi = dstIndex;
+                uDat = this.mDatas[srcIndex];
+                v = dstIndex;
             }
-            if (uData.Parent != vi)
+            if (uDat.Parent != v)
             {
-                this.mEdgeStack.Push(e);
-                this.mNodeStack.Push(this.mDatas[vi]);
-                uData.LowPoint = Math.Min(uData.LowPoint, this.mDatas[vi].Depth);
+                this.mEdgeStack.Push(new EdgeData(e, srcIndex, dstIndex));
+                this.mNodeStack.Push(this.mDatas[v]);
+                uDat.LowLink = Math.Min(uDat.LowLink, this.mDatas[v].Depth);
             }
             base.OnGrayEdge(e, srcIndex, dstIndex, reversed);
         }

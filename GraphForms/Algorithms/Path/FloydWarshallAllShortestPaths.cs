@@ -6,8 +6,7 @@ namespace GraphForms.Algorithms.Path
 {
     public class FloydWarshallAllShortestPaths<Node, Edge>
         : AAllShortestPaths<Node, Edge>
-        where Node : class
-        where Edge : class, IGraphEdge<Node>
+        where Edge : IGraphEdge<Node>
     {
         private double[][] mDists;
         private int[][] mNextNodes;

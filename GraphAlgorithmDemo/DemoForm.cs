@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Text;
 using System.Windows.Forms;
 using GraphForms.Algorithms;
+using GraphForms.Algorithms.Layout;
 using GraphForms.Algorithms.Layout.ForceDirected;
 
 namespace GraphAlgorithmDemo
@@ -14,7 +15,8 @@ namespace GraphAlgorithmDemo
     {
         private CircleNodeScene mScene;
 
-        private IForceDirectedLayoutAlgorithm[] mLayouts;
+        //private IForceDirectedLayoutAlgorithm[] mLayouts;
+        private LayoutAlgorithm<CircleNode, ArrowEdge>[] mLayouts;
         private int mPrevLayoutIndex;
 
         private StyleAlgorithm[] mStyleAlgs;
@@ -36,7 +38,7 @@ namespace GraphAlgorithmDemo
             this.mScene.UpdateBounds();
             this.mScene.AddView(this.graphPanel);
 
-            this.mLayouts = new IForceDirectedLayoutAlgorithm[]
+            /*this.mLayouts = new IForceDirectedLayoutAlgorithm[]
             {
                 new ElasticLayoutForCircles(this.mScene),
                 new FRFreeLayoutForCircles(this.mScene),
@@ -44,8 +46,32 @@ namespace GraphAlgorithmDemo
                 new ISOMLayoutForCircles(this.mScene),
                 new KKLayoutForCircles(this.mScene),
                 new LinLogLayoutForCircles(this.mScene),
-                new FDSingleCircleLayoutForCircles(this.mScene)
-            };
+                new FDSCircleLayoutForCircles(this.mScene)
+            };/* */
+            this.mLayouts = new LayoutAlgorithm<CircleNode, ArrowEdge>[]
+            {
+                new ElasticLayoutForCircles(mScene, mScene.BoundingBox),
+                new FRFreeLayoutForCircles(mScene, mScene.BoundingBox),
+                new FRBoundedLayoutForCircles(mScene, mScene.BoundingBox),
+                new ISOMLayoutForCircles(mScene, mScene.BoundingBox),
+                new KKLayoutForCircles(mScene, mScene.BoundingBox),
+                new LinLogLayoutForCircles(mScene, mScene.BoundingBox),
+                new FDSCircleLayoutForCircles(mScene, mScene.BoundingBox),
+                //new BalloonTreeLayoutForCircles(mScene, mScene.BoundingBox),
+                new SimpleTreeLayoutForCircles(mScene, mScene.BoundingBox)
+            };/* */
+            /*this.mLayouts = new NewLayoutAlgorithm<CircleNode, ArrowEdge>[]
+            {
+                new ElasticLayoutForCircles(this.mScene, this.mScene),
+                new FRFreeLayoutForCircles(this.mScene, this.mScene),
+                new FRBoundedLayoutForCircles(this.mScene, this.mScene),
+                new ISOMLayoutForCircles(this.mScene, this.mScene),
+                new KKLayoutForCircles(this.mScene, this.mScene),
+                new LinLogLayoutForCircles(this.mScene, this.mScene),
+                new FDSCircleLayoutForCircles(this.mScene, this.mScene),
+                //new BalloonTreeLayoutForCircles(this.mScene, this.mScene),
+                new SimpleTreeLayoutForCircles(this.mScene, this.mScene)
+            };/* */
             this.layoutAlgCMB.Items.AddRange(this.mLayouts);
             this.mPrevLayoutIndex = this.layoutAlgCMB.SelectedIndex;
 
@@ -55,6 +81,7 @@ namespace GraphAlgorithmDemo
             this.mStyleAlgs = new StyleAlgorithm[]
             {
                 new BCCStyleAlgorithm(),
+                new CCStyleAlgorithm(),
                 new SCCStyleAlgorithm(),
                 new WCCStyleAlgorithm(),
                 new BFSpanTreeStyleAlgorithm(),
@@ -128,8 +155,18 @@ namespace GraphAlgorithmDemo
                 this.mPrevLayoutIndex = this.layoutAlgCMB.SelectedIndex;
                 this.mScene.Layout = this.mLayouts[this.mPrevLayoutIndex];
                 this.layoutStartStopBTN.Text = "Start";
-                this.layoutParamsGrid.SelectedObject 
-                    = this.mLayouts[this.mPrevLayoutIndex].Parameters;
+                LayoutAlgorithm<CircleNode, ArrowEdge> alg
+                    = this.mLayouts[this.mPrevLayoutIndex];
+                /*if (alg.Spring == null)
+                {
+                    this.layoutParamsGrid.SelectedObject = alg;//.Parameters;
+                }
+                else
+                {
+                    this.layoutParamsGrid.SelectedObjects
+                        = new object[] { alg, alg.Spring };
+                }/* */
+                this.layoutParamsGrid.SelectedObject = alg;//.Parameters;
             }
         }
 
@@ -152,7 +189,7 @@ namespace GraphAlgorithmDemo
 
         private void layoutShuffleClick(object sender, EventArgs e)
         {
-            this.mScene.Layout.ShuffleNodePositions();
+            this.mScene.Layout.ShuffleNodes(true);
         }
 
         private void sceneNodeMouseUp(CircleNode obj)

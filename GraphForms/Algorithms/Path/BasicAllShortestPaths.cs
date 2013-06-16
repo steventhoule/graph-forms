@@ -6,8 +6,7 @@ namespace GraphForms.Algorithms.Path
 {
     public class BasicAllShortestPaths<Node, Edge>
         : AAllShortestPaths<Node, Edge>
-        where Node : class
-        where Edge : class, IGraphEdge<Node>
+        where Edge : IGraphEdge<Node>
     {
         private AShortestPath<Node, Edge> mAlg;
 
@@ -45,11 +44,11 @@ namespace GraphForms.Algorithms.Path
             this.mPathEdges = new Edge[nodes.Length][];
             for (int i = 0; i < nodes.Length; i++)
             {
+                this.mAlg.Reset();
                 this.mAlg.Compute(nodes[i].mData);
                 this.mDistances[i] = this.mAlg.Distances;
                 this.mPathNodes[i] = this.mAlg.PathNodes;
                 this.mPathEdges[i] = this.mAlg.PathEdges;
-                this.mAlg.Reset();
             }
         }
     }

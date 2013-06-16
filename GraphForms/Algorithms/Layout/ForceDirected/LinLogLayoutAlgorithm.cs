@@ -7,11 +7,12 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
     // Copied from Graph#, which was copied from this:
     // https://code.google.com/p/linloglayout/source/browse/trunk/src/MinimizerBarnesHut.java
     public partial class LinLogLayoutAlgorithm<Node, Edge>
-        : ForceDirectedLayoutAlgorithm<Node, Edge, LinLogLayoutParameters>
-        where Node : GraphElement, ILayoutNode
-        where Edge : class, IGraphEdge<Node>, IUpdateable
+        //: ForceDirectedLayoutAlgorithm<Node, Edge, LinLogLayoutParameters>
+        : LayoutAlgorithm<Node, Edge>
+        where Node : ILayoutNode
+        where Edge : IGraphEdge<Node>, IUpdateable
     {
-        public LinLogLayoutAlgorithm(Digraph<Node, Edge> graph)
+        /*public LinLogLayoutAlgorithm(Digraph<Node, Edge> graph)
             : base(graph, null)
         {
         }
@@ -20,7 +21,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             LinLogLayoutParameters oldParameters)
             : base(graph, oldParameters)
         {
-        }
+        }/* */
 
         private class LinLogNode
         {
@@ -38,9 +39,9 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         }
 
         // Parameters
-        private double mGravitationMultiplier;
-        private double mFinalRepuExponent;
-        private double mFinalAttrExponent;
+        private float mFinalAttrExponent = 1;
+        private float mFinalRepuExponent = 0;
+        private float mGravMult = 0.1f;
 
         private LinLogNode[] mNodes;
         private PointF mBarycenter;
@@ -50,23 +51,75 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         private double mRepuExponent;
         private double mAttrExponent;
 
-        protected override void InitializeAlgorithm()
+        public LinLogLayoutAlgorithm(Digraph<Node, Edge> graph,
+            IClusterNode clusterNode)
+            : base(graph, clusterNode)
         {
-            base.InitializeAlgorithm();
-
-            LinLogLayoutParameters param = this.Parameters;
-            this.mRepuExponent = param.RepulsiveExponent;
-            this.mAttrExponent = param.AttractionExponent;
+            this.MaxIterations = 100;
         }
 
-        protected override bool OnBeginIteration(bool paramsDirty, int lastNodeCount, int lastEdgeCount)
+        public LinLogLayoutAlgorithm(Digraph<Node, Edge> graph,
+            RectangleF boundingBox)
+            : base(graph, boundingBox)
         {
-            if (paramsDirty)
+            this.MaxIterations = 100;
+        }
+
+        public float AttractionExponent
+        {
+            get { return this.mFinalAttrExponent; }
+            set
             {
-                LinLogLayoutParameters param = this.Parameters;
-                this.mGravitationMultiplier = param.GravitationMultiplier;
-                this.mFinalRepuExponent = param.RepulsiveExponent;
-                this.mFinalAttrExponent = param.AttractionExponent;
+                if (this.mFinalAttrExponent != value)
+                {
+                    this.mFinalAttrExponent = value;
+                }
+            }
+        }
+
+        public float RepulsiveExponent
+        {
+            get { return this.mFinalRepuExponent; }
+            set
+            {
+                if (this.mFinalRepuExponent != value)
+                {
+                    this.mFinalRepuExponent = value;
+                }
+            }
+        }
+
+        public float GravitationMultiplier
+        {
+            get { return this.mGravMult; }
+            set
+            {
+                if (this.mGravMult != value)
+                {
+                    this.mGravMult = value;
+                    this.MarkDirty();
+                }
+            }
+        }
+
+        protected override void InitializeAlgorithm()
+        {
+            //base.InitializeAlgorithm();
+
+            //LinLogLayoutParameters param = this.Parameters;
+            this.mRepuExponent = this.mFinalRepuExponent;//param.RepulsiveExponent;
+            this.mAttrExponent = this.mFinalAttrExponent;//param.AttractionExponent;
+        }
+
+        protected override void OnBeginIteration(uint iteration, bool dirty, 
+            int lastNodeCount, int lastEdgeCount)
+        {
+            if (dirty)
+            {
+                //LinLogLayoutParameters param = this.Parameters;
+                //this.mGravitationMultiplier = param.GravitationMultiplier;
+                //this.mFinalRepuExponent = param.RepulsiveExponent;
+                //this.mFinalAttrExponent = param.AttractionExponent;
             }
             bool nodesDirty = false;
             if (this.mGraph.NodeCount != lastNodeCount ||
@@ -75,51 +128,51 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                 this.InitAlgorithm();
                 nodesDirty = true;
             }
-            if (paramsDirty || nodesDirty)
+            if (dirty || nodesDirty)
             {
                 LinLogNode n;
-                float gravMult = (float)this.mGravitationMultiplier;
                 for (int i = 0; i < this.mNodes.Length; i++)
                 {
                     n = this.mNodes[i];
-                    n.RepulsionWeight = Math.Max(n.RepulsionWeight, gravMult);
+                    n.RepulsionWeight = Math.Max(n.RepulsionWeight, this.mGravMult);
                 }
                 this.mRepulsionMultiplier = this.ComputeRepulsionMultiplier();
             }
-            return base.OnBeginIteration(paramsDirty, lastNodeCount, lastEdgeCount);
+            base.OnBeginIteration(iteration, dirty, lastNodeCount, lastEdgeCount);
         }
 
-        protected override void PerformIteration(int iteration, int maxIterations)
+        protected override void PerformIteration(uint iteration)//, int maxIterations)
         {
             LinLogNode n;
             int i;
             for (i = 0; i < this.mNodes.Length; i++)
             {
                 n = this.mNodes[i];
-                n.Position = n.OriginalNode.Position;
+                //n.Position = n.OriginalNode.Position;
+                n.Position = new PointF(n.OriginalNode.X, n.OriginalNode.Y);
             }
 
             this.ComputeBarycenter();
             QuadTree quadTree = this.BuildQuadTree();
 
             // cooling function definition
-            if (maxIterations >= 50 && this.mFinalRepuExponent < 1.0)
+            if (this.MaxIterations >= 50 && this.mFinalRepuExponent < 1.0)
             {
                 this.mAttrExponent = this.mFinalAttrExponent;
                 this.mRepuExponent = this.mFinalRepuExponent;
-                if (iteration <= 0.6 * maxIterations)
+                if (iteration <= 0.6 * this.MaxIterations)
                 {
                     // use energy model with few local minima
                     this.mAttrExponent += 1.1 * (1.0 - this.mFinalAttrExponent);
                     this.mRepuExponent += 0.9 * (1.0 - this.mFinalRepuExponent);
                 }
-                else if (iteration <= 0.9 * maxIterations)
+                else if (iteration <= 0.9 * this.MaxIterations)
                 {
                     // gradually move to final energy model
                     this.mAttrExponent += 1.1 * (1.0 - this.mFinalAttrExponent)
-                        * (0.9 - iteration / (double)maxIterations) / 0.3;
+                        * (0.9 - iteration / (double)this.MaxIterations) / 0.3;
                     this.mRepuExponent += 0.9 * (1.0 - this.mFinalRepuExponent)
-                        * (0.9 - iteration / (double)maxIterations) / 0.3;
+                        * (0.9 - iteration / (double)this.MaxIterations) / 0.3;
                 }
             }
 
@@ -183,15 +236,16 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             }
 
             // copy positions
-            float[] newXs = this.NewXPositions;
-            float[] newYs = this.NewYPositions;
+            //float[] newXs = this.NewXPositions;
+            //float[] newYs = this.NewYPositions;
             for (i = 0; i < this.mNodes.Length; i++)
             {
                 n = this.mNodes[i];
                 //n.OriginalNode.NewX = n.Position.X;
                 //n.OriginalNode.NewY = n.Position.Y;
-                newXs[i] = n.Position.X;
-                newYs[i] = n.Position.Y;
+                n.OriginalNode.SetNewPosition(n.Position.X, n.Position.Y);
+                //newXs[i] = n.Position.X;
+                //newYs[i] = n.Position.Y;
                 if (float.IsNaN(n.Position.X))
                     throw new Exception();
             }
@@ -228,7 +282,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             double gravX = this.mBarycenter.X - n.Position.X;
             double gravY = this.mBarycenter.Y - n.Position.Y;
             double dist = Math.Max(Math.Sqrt(gravX * gravX + gravY * gravY), 0.000001);
-            double tmp = this.mGravitationMultiplier * this.mRepulsionMultiplier *
+            double tmp = this.mGravMult * this.mRepulsionMultiplier *
                 Math.Max(n.RepulsionWeight, 1) * Math.Pow(dist, this.mAttrExponent - 2);
             dir[0] = dir[0] + gravX * tmp;
             dir[1] = dir[1] + gravY * tmp;
@@ -323,7 +377,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             double dx = n.Position.X - this.mBarycenter.X;
             double dy = n.Position.Y - this.mBarycenter.Y;
             double dist = Math.Sqrt(dx * dx + dy * dy);
-            return this.mGravitationMultiplier * this.mRepulsionMultiplier *
+            return this.mGravMult * this.mRepulsionMultiplier *
                 Math.Max(n.RepulsionWeight, 1) * Math.Pow(dist, this.mAttrExponent) / 
                 this.mAttrExponent;
         }

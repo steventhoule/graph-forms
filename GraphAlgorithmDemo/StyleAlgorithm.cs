@@ -35,7 +35,11 @@ namespace GraphAlgorithmDemo
         public bool Directed
         {
             get { return this.bDirected; }
-            set { this.bDirected = value; }
+            set 
+            { 
+                if (this.EnableDirected)
+                    this.bDirected = value; 
+            }
         }
 
         public virtual bool EnableReversed
@@ -46,7 +50,11 @@ namespace GraphAlgorithmDemo
         public bool Reversed
         {
             get { return this.bReversed; }
-            set { this.bReversed = value; }
+            set 
+            { 
+                if (this.EnableReversed)
+                    this.bReversed = value; 
+            }
         }
 
         public abstract void Compute(CircleNodeScene scene);
@@ -105,10 +113,64 @@ namespace GraphAlgorithmDemo
         }
     }
 
-    public class SCCStyleAlgorithm : StyleAlgorithm
+    public abstract class CCBaseStyleAlgorithm : StyleAlgorithm
     {
-        private SCCAlgorithm<CircleNode, ArrowEdge> mAlg;
+        private ICCAlgorithm<CircleNode> mAlg;
 
+        public CCBaseStyleAlgorithm(bool directed, bool reversed)
+            : base(directed, reversed)
+        {
+        }
+
+        protected abstract ICCAlgorithm<CircleNode> Create(
+            CircleNodeScene scene);
+
+        public override void Compute(CircleNodeScene scene)
+        {
+            this.mAlg = this.Create(scene);
+            this.mAlg.Compute();
+            CircleNode[] comp;
+            CircleNode[][] comps = this.mAlg.Components;
+            int i, j, sC = sLineColors.Length;
+            for (i = 0; i < comps.Length; i++)
+            {
+                comp = comps[i];
+                for (j = 0; j < comp.Length; j++)
+                {
+                    comp[j].BorderColor = sLineColors[i % sC];
+                }
+            }
+            comp = this.mAlg.Roots;
+            for (i = 0; i < comp.Length; i++)
+            {
+                comp[i].MarkerColor = sLineColors[i % sC];
+            }
+        }
+    }
+
+    public class CCStyleAlgorithm : CCBaseStyleAlgorithm
+    {
+        public CCStyleAlgorithm()
+            : base(false, false)
+        {
+        }
+
+        protected override ICCAlgorithm<CircleNode> Create(
+            CircleNodeScene scene)
+        {
+            return new CCAlgorithm<CircleNode, ArrowEdge>(
+                scene.Graph, this.Directed, this.Reversed);
+        }
+
+        public override string ToString()
+        {
+            return "Connected Components";
+        }
+    }
+
+
+    public class SCCStyleAlgorithm : CCBaseStyleAlgorithm
+    {
         public SCCStyleAlgorithm()
             : base(true, false)
         {
@@ -119,27 +181,11 @@ namespace GraphAlgorithmDemo
             get { return false; }
         }
 
-        public override void Compute(CircleNodeScene scene)
+        protected override ICCAlgorithm<CircleNode> Create(
+            CircleNodeScene scene)
         {
-            this.mAlg = new SCCAlgorithm<CircleNode, ArrowEdge>(
+            return new SCCAlgorithm<CircleNode, ArrowEdge>(
                 scene.Graph, this.Reversed);
-            this.mAlg.Compute();
-            CircleNode[] nodes;
-            CircleNode[][] comps = this.mAlg.Components;
-            int i, j, sC = sLineColors.Length;
-            for (i = 0; i < comps.Length; i++)
-            {
-                nodes = comps[i];
-                for (j = 0; j < nodes.Length; j++)
-                {
-                    nodes[j].BorderColor = sLineColors[i % sC];
-                }
-            }
-            nodes = this.mAlg.Roots;
-            for (i = 0; i < nodes.Length; i++)
-            {
-                nodes[i].MarkerColor = sLineColors[0];
-            }
         }
 
         public override string ToString()
@@ -148,10 +194,8 @@ namespace GraphAlgorithmDemo
         }
     }
 
-    public class WCCStyleAlgorithm : StyleAlgorithm
+    public class WCCStyleAlgorithm : CCBaseStyleAlgorithm
     {
-        private WCCAlgorithm<CircleNode, ArrowEdge> mAlg;
-
         public WCCStyleAlgorithm()
             : base(true, false)
         {
@@ -162,27 +206,11 @@ namespace GraphAlgorithmDemo
             get { return false; }
         }
 
-        public override void Compute(CircleNodeScene scene)
+        protected override ICCAlgorithm<CircleNode> Create(
+            CircleNodeScene scene)
         {
-            this.mAlg = new WCCAlgorithm<CircleNode, ArrowEdge>(
+            return new WCCAlgorithm<CircleNode, ArrowEdge>(
                 scene.Graph, this.Reversed);
-            this.mAlg.Compute();
-            CircleNode[] nodes;
-            CircleNode[][] comps = this.mAlg.Components;
-            int i, j, sC = sLineColors.Length;
-            for (i = 0; i < comps.Length; i++)
-            {
-                nodes = comps[i];
-                for (j = 0; j < nodes.Length; j++)
-                {
-                    nodes[j].BorderColor = sLineColors[i % sC];
-                }
-            }
-            /*nodes = this.mAlg.Roots;
-            for (i = 0; i < nodes.Length; i++)
-            {
-                nodes[i].MarkerColor = sLineColors[0];
-            }/* */
         }
 
         public override string ToString()

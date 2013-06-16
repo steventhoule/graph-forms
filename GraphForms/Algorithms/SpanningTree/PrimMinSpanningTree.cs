@@ -7,8 +7,7 @@ namespace GraphForms.Algorithms.SpanningTree
 {
     public class PrimMinSpanningTree<Node, Edge>
         : AAlgorithm, ISpanningTreeAlgorithm<Node, Edge>
-        where Node : class
-        where Edge : class, IGraphEdge<Node>
+        where Edge : IGraphEdge<Node>
     {
         private readonly Digraph<Node, Edge> mGraph;
 

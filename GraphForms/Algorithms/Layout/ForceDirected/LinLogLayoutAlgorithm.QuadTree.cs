@@ -4,8 +4,8 @@ using System.Drawing;
 namespace GraphForms.Algorithms.Layout.ForceDirected
 {
 	public partial class LinLogLayoutAlgorithm<Node, Edge>
-        where Node : GraphElement, ILayoutNode
-        where Edge : class, IGraphEdge<Node>, IUpdateable
+        where Node : ILayoutNode
+        where Edge : IGraphEdge<Node>, IUpdateable
 	{
         class QuadTree
         {

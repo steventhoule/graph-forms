@@ -153,16 +153,16 @@ namespace GraphAlgorithmDemo
             set { this.mAName = value; }
         }
 
-        public Edge Copy<Edge>(CircleNode srcNode, CircleNode dstNode) 
-            where Edge : class, IGraphEdge<CircleNode>
+        public void SetSrcNode(CircleNode srcNode)
         {
-            if (typeof(ArrowEdge).Equals(typeof(Edge)))
-            {
-                ArrowEdge aEdge = new ArrowEdge(srcNode, dstNode, this.mScene, 
-                    this.mWeight, this.mAngle * 180.0 / Math.PI, this.mAName);
-                return aEdge as Edge;
-            }
-            return null;
+            this.mSrcNode = srcNode;
+            this.Update();
+        }
+
+        public void SetDstNode(CircleNode dstNode)
+        {
+            this.mDstNode = dstNode;
+            this.Update();
         }
 
         public void Update()
@@ -209,7 +209,13 @@ namespace GraphAlgorithmDemo
 
             sLinePen.Color = this.mLineColor;
             sLinePen.DashStyle = this.mLineDashStyle;
-            e.Graphics.DrawLine(sLinePen, this.mSrcPoint, this.mDstPoint);
+            try
+            {
+                e.Graphics.DrawLine(sLinePen, this.mSrcPoint, this.mDstPoint);
+            }
+            catch (OverflowException)
+            {
+            }
         }
     }
 }

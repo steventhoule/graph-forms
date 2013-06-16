@@ -6,15 +6,16 @@ using GraphForms.Algorithms.Search;
 namespace GraphForms.Algorithms.ConnectedComponents
 {
     public class WCCAlgorithm<Node, Edge>
-        : DepthFirstSearch<Node, Edge>
-        where Node : class
-        where Edge : class, IGraphEdge<Node>
+        : DepthFirstSearch<Node, Edge>, ICCAlgorithm<Node>
+        where Edge : IGraphEdge<Node>
     {
         private int[] mComponents;
+        private int[] mRoots;
         private List<int> mComponentEquivalences = new List<int>();
         private int mComponentCount = 0;
         private int mCurrentComponent = 0;
 
+        private Node[] mWeakRoots;
         private Node[][] mWeakComponents;
 
         public WCCAlgorithm(Digraph<Node, Edge> graph)
@@ -33,17 +34,49 @@ namespace GraphForms.Algorithms.ConnectedComponents
             get { return this.mWeakComponents; }
         }
 
+        public Node[] Roots
+        {
+            get { return this.mWeakRoots; }
+        }
+
         public override void Initialize()
         {
             this.mComponentCount = 0;
             this.mCurrentComponent = 0;
             this.mComponentEquivalences.Clear();
+            this.mRoots = new int[1];
             this.mComponents = new int[this.mGraph.NodeCount];
             for (int i = 0; i < this.mComponents.Length; i++)
             {
                 this.mComponents[i] = -1;
             }
             base.Initialize();
+        }
+
+        private int GetComponentEquivalence(int comp)
+        {
+            int equivalent = comp;
+            int temp = this.mComponentEquivalences[equivalent];
+            bool compress = false;
+            while (temp != equivalent)
+            {
+                equivalent = temp;
+                temp = this.mComponentEquivalences[equivalent];
+                compress = true;
+            }
+
+            // path compression
+            if (compress)
+            {
+                temp = this.mComponentEquivalences[comp];
+                while (temp != equivalent)
+                {
+                    temp = this.mComponentEquivalences[comp];
+                    this.mComponentEquivalences[comp] = equivalent;
+                }
+            }
+
+            return equivalent;
         }
 
         private void CompileComponents()
@@ -74,6 +107,12 @@ namespace GraphForms.Algorithms.ConnectedComponents
             {
                 this.mWeakComponents[i] = comps[i].ToArray();
             }
+
+            this.mWeakRoots = new Node[this.mRoots.Length];
+            for (i = 0; i < this.mRoots.Length; i++)
+            {
+                this.mWeakRoots[i] = this.mGraph.NodeAt(this.mRoots[i]);
+            }
         }
 
         protected override void OnFinished()
@@ -87,7 +126,13 @@ namespace GraphForms.Algorithms.ConnectedComponents
             // we are looking on a new tree
             this.mCurrentComponent = this.mComponentEquivalences.Count;
             this.mComponentEquivalences.Add(this.mCurrentComponent);
-            this.mComponentCount++;
+            if (this.mComponentCount == this.mRoots.Length)
+            {
+                int[] roots = new int[this.mComponentCount + 1];
+                Array.Copy(this.mRoots, 0, roots, 0, this.mComponentCount);
+                this.mRoots = roots;
+            }
+            this.mRoots[this.mComponentCount++] = index;
             this.mComponents[index] = this.mCurrentComponent;
             base.OnStartNode(n, index);
         }
@@ -99,33 +144,6 @@ namespace GraphForms.Algorithms.ConnectedComponents
             this.mComponents[reversed ? srcIndex : dstIndex] 
                 = this.mCurrentComponent;
             base.OnTreeEdge(e, srcIndex, dstIndex, reversed);
-        }
-
-        private int GetComponentEquivalence(int component)
-        {
-            int equivalent = component;
-            int temp = this.mComponentEquivalences[equivalent];
-            bool compress = false;
-            while (temp != equivalent)
-            {
-                equivalent = temp;
-                temp = this.mComponentEquivalences[equivalent];
-                compress = true;
-            }
-
-            // path compression
-            if (compress)
-            {
-                int c = component;
-                temp = this.mComponentEquivalences[c];
-                while (temp != equivalent)
-                {
-                    temp = this.mComponentEquivalences[c];
-                    this.mComponentEquivalences[c] = equivalent;
-                }
-            }
-
-            return equivalent;
         }
 
         protected override void OnBlackEdge(Edge e, 

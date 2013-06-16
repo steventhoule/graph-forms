@@ -6,8 +6,7 @@ namespace GraphForms.Algorithms.Path
 {
     public class BellmanFordShortestPath<Node, Edge>
         : AShortestPath<Node, Edge>
-        where Node : class
-        where Edge : class, IGraphEdge<Node>
+        where Edge : IGraphEdge<Node>
     {
         private bool bHasNegativeCycle;
 

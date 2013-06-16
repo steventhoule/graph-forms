@@ -5,9 +5,10 @@ using System.Text;
 namespace GraphForms.Algorithms.Layout.Tree
 {
     public class BalloonTreeLayoutAlgorithm<Node, Edge>
-        : LayoutAlgorithm<Node, Edge, BalloonTreeLayoutParameters>
-        where Node : GraphElement, ILayoutNode
-        where Edge : class, IGraphEdge<Node>, IUpdateable
+        //: LayoutAlgorithm<Node, Edge, BalloonTreeLayoutParameters>
+        : LayoutAlgorithm<Node, Edge>
+        where Node : ILayoutNode
+        where Edge : IGraphEdge<Node>, IUpdateable
     {
         private class BalloonData
         {
@@ -42,13 +43,13 @@ namespace GraphForms.Algorithms.Layout.Tree
         // lowerAngle: the lower angle of the subtree wedge rooted at the node.
         // upperAngle: the upper angle of the subtree wedge rooted at the node.
 
-        private int mMinRadius;
-        private float mBorder;
+        private int mMinRadius = 2;
+        private float mBorder = 20.0f;
 
         private Digraph<Node, Edge>.GNode mRoot;
         private BalloonData[] mDatas;
 
-        public BalloonTreeLayoutAlgorithm(Digraph<Node, Edge> graph)
+        /*public BalloonTreeLayoutAlgorithm(Digraph<Node, Edge> graph)
             : base(graph, null)
         {
         }
@@ -57,11 +58,62 @@ namespace GraphForms.Algorithms.Layout.Tree
             BalloonTreeLayoutParameters oldParameters)
             : base(graph, oldParameters)
         {
+        }/* */
+
+        public BalloonTreeLayoutAlgorithm(Digraph<Node, Edge> graph,
+            IClusterNode clusterNode)
+            : base(graph, clusterNode)
+        {
+            //this.Spring = new LayoutLinearSpring();
         }
 
-        protected override void InternalCompute()
+        public BalloonTreeLayoutAlgorithm(Digraph<Node, Edge> graph,
+            System.Drawing.RectangleF boundingBox)
+            : base(graph, boundingBox)
         {
-            this.mMinRadius = this.Parameters.MinRadius;
+            //this.Spring = new LayoutLinearSpring();
+        }
+
+        public int MinRadius
+        {
+            get { return this.mMinRadius; }
+            set
+            {
+                if (value != this.mMinRadius)
+                {
+                    this.mMinRadius = value;
+                    this.MarkDirty();
+                }
+            }
+        }
+
+        public float Border
+        {
+            get { return this.mBorder; }
+            set
+            {
+                if (value != this.mBorder)
+                {
+                    this.mBorder = value;
+                }
+            }
+        }
+
+        protected override void OnBeginIteration(uint iteration, 
+            bool dirty, int lastNodeCount, int lastEdgeCount)
+        {
+            if (lastNodeCount != this.mGraph.NodeCount ||
+                lastEdgeCount != this.mGraph.EdgeCount || dirty)
+            {
+                this.ComputePositions();
+            }
+            base.OnBeginIteration(iteration, dirty, 
+                lastNodeCount, lastEdgeCount);
+        }
+
+        private void ComputePositions()
+        {
+            //this.mMinRadius = this.Parameters.MinRadius;
 
             Digraph<Node, Edge>.GNode node;
             Digraph<Node, Edge>.GNode[] nodes 
@@ -76,6 +128,8 @@ namespace GraphForms.Algorithms.Layout.Tree
                 node.Index = i;
                 node.Color = GraphColor.White;
             }
+
+            this.mRoot = this.TryGetGraphRoot();
 
             this.FirstWalk(this.mRoot);
 
@@ -97,10 +151,14 @@ namespace GraphForms.Algorithms.Layout.Tree
 
             Digraph<Node, Edge>.GNode otherNode;
             Digraph<Node, Edge>.GEdge[] outEdges
-                = v.InternalDstEdges;
+                = v.AllInternalEdges(false);
             for (int i = 0; i < outEdges.Length; i++)
             {
                 otherNode = outEdges[i].DstNode;
+                if (otherNode.Index == v.Index)
+                    otherNode = outEdges[i].SrcNode;
+                if (otherNode.Index == v.Index)
+                    continue;
                 otherData = this.mDatas[otherNode.Index];
 
                 if (otherNode.Color == GraphColor.White)
@@ -122,16 +180,17 @@ namespace GraphForms.Algorithms.Layout.Tree
         {
             //v.Data.NewX = x;
             //v.Data.NewY = y;
-            this.NewXPositions[v.Index] = x;
-            this.NewYPositions[v.Index] = y;
+            v.Data.SetNewPosition(x, y);
+            //this.NewXPositions[v.Index] = x;
+            //this.NewYPositions[v.Index] = y;
             v.Color = GraphColor.Gray;
 
-            if (v.DstEdgeCount > 0)
+            if (v.AllEdgeCount > 0)
             {
                 BalloonData otherData, data = this.mDatas[v.Index];
                 Digraph<Node, Edge>.GNode otherNode;
                 Digraph<Node, Edge>.GEdge[] outEdges
-                    = v.InternalDstEdges;
+                    = v.AllInternalEdges(false);
                 float dd = l * data.d;
                 float p = (float)(t + Math.PI);
                 float pr = 0;
@@ -151,6 +210,8 @@ namespace GraphForms.Algorithms.Layout.Tree
                 for (i = 0; i < outEdges.Length; i++)
                 {
                     otherNode = outEdges[i].DstNode;
+                    if (otherNode.Index == v.Index)
+                        otherNode = outEdges[i].SrcNode;
                     if (otherNode.Color == GraphColor.Gray)
                         continue;
 

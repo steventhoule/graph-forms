@@ -7,11 +7,10 @@ namespace GraphForms.Algorithms.SpanningTree
 {
     public class KruskalMinSpanningTree<Node, Edge>
         : AAlgorithm, ISpanningTreeAlgorithm<Node, Edge>
-        where Node : class
-        where Edge : class, IGraphEdge<Node>
+        where Edge : IGraphEdge<Node>
     {
         private readonly Digraph<Node, Edge> mGraph;
-        private Tree<Node>[] mTrees;
+        private Tree<int>[] mTrees;
         private Digraph<Node, Edge> mSpanningTree;
 
         public KruskalMinSpanningTree(Digraph<Node, Edge> graph)
@@ -26,14 +25,14 @@ namespace GraphForms.Algorithms.SpanningTree
 
         private bool AreInSameSet(int i1, int i2)
         {
-            Tree<Node> t1 = this.mTrees[i1].FindSet();
-            Tree<Node> t2 = this.mTrees[i2].FindSet();
+            Tree<int> t1 = this.mTrees[i1].FindSet();
+            Tree<int> t2 = this.mTrees[i2].FindSet();
             return t1.Value == t2.Value;
         }
 
         private bool Union(int i1, int i2)
         {
-            return Tree<Node>.Union(this.mTrees[i1], this.mTrees[i2]);
+            return Tree<int>.Union(this.mTrees[i1], this.mTrees[i2]);
         }
 
         protected virtual void OnExamineEdge(Edge e,
@@ -55,14 +54,14 @@ namespace GraphForms.Algorithms.SpanningTree
             Array.Sort<Digraph<Node, Edge>.GEdge>(edges,
                 new EdgeWeightComparer<Node, Edge>(true));
 
-            this.mTrees = new Tree<Node>[nodes.Length];
+            this.mTrees = new Tree<int>[nodes.Length];
             this.mSpanningTree = new Digraph<Node, Edge>(
                 this.mGraph.NodeCount, this.mGraph.EdgeCount / 2);
             int i, srcIndex, dstIndex;
             for (i = 0; i < nodes.Length; i++)
             {
                 nodes[i].Index = i;
-                this.mTrees[i] = new Tree<Node>(nodes[i].mData);
+                this.mTrees[i] = new Tree<int>(i);
                 this.mSpanningTree.AddNode(nodes[i].mData);
             }
             Digraph<Node, Edge>.GEdge edge;

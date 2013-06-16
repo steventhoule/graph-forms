@@ -61,7 +61,7 @@ namespace GraphAlgorithmDemo
         public void CreateGraph(CircleNodeScene scene, float rad, float ang)
         {
             this.GenerateRandomGraph(scene, rad, ang, 5, 15, 2, 2, true);
-            scene.Layout.ShuffleNodePositions();
+            scene.Layout.ShuffleNodes(true);
         }
 
         public override string ToString()
@@ -75,6 +75,9 @@ namespace GraphAlgorithmDemo
     // Article: http://en.wikipedia.org/wiki/Biconnected_component
     public class BCCTestGraphCreator : IGraphCreator
     {
+        public float Xoffset = 0;
+        public float Yoffset = 0;
+
         public float DefaultNodeRad
         {
             get { return 15; }
@@ -160,8 +163,8 @@ namespace GraphAlgorithmDemo
             }
 
             float unit = 40;
-            float left = 200 - 4 * unit;
-            float top = 200 - 2 * unit;
+            float left = this.Xoffset + 200 - 4 * unit;
+            float top  = this.Yoffset + 200 - 2 * unit;
 
             n01.SetPosition(left + 1 * unit, top + 1 * unit);
             n02.SetPosition(left + 0 * unit, top + 2 * unit);
@@ -196,6 +199,9 @@ namespace GraphAlgorithmDemo
     // Article: http://en.wikipedia.org/wiki/Tarjan's_strongly_connected_components_algorithm
     public class SCCTestGraphCreator : IGraphCreator
     {
+        public float Xoffset = 0;
+        public float Yoffset = 0;
+
         public float DefaultNodeRad
         {
             get { return 15; }
@@ -235,8 +241,8 @@ namespace GraphAlgorithmDemo
             ArrowEdge e14 = new ArrowEdge(n08, n08, scene, 1, ang);
 
             float unit = 50;
-            float left = 200 - 3 * unit;
-            float top = 200 - unit;
+            float left = this.Xoffset + 200 - 3 * unit;
+            float top  = this.Yoffset + 200 - unit;
 
             n01.SetPosition(left + 0 * unit, top + 0 * unit);
             n02.SetPosition(left + 0 * unit, top + 2 * unit);
@@ -260,6 +266,9 @@ namespace GraphAlgorithmDemo
     // Article: http://en.wikipedia.org/wiki/Bor%C5%AFvka%27s_algorithm
     public class MinSpanTreeTestGraphCreator : IGraphCreator
     {
+        public float Xoffset = 0;
+        public float Yoffset = 0;
+
         public float DefaultNodeRad
         {
             get { return 20; }
@@ -296,8 +305,8 @@ namespace GraphAlgorithmDemo
             //ArrowEdge eDB = new ArrowEdge(nD, nB, scene,  9, ang, "eDB");
 
             float unit = 50;
-            float left = 200 - 2 * unit;
-            float top = 200 - 2 * unit;
+            float left = this.Xoffset + 200 - 2 * unit;
+            float top  = this.Yoffset + 200 - 2 * unit;
 
             nA.SetPosition(left + 0 * unit, top + 0 * unit);
             nB.SetPosition(left + 2 * unit, top + 1 * unit);
@@ -321,6 +330,9 @@ namespace GraphAlgorithmDemo
     // Article: http://en.wikipedia.org/wiki/SPQR_tree
     public class SPQRTestGraphCreator : IGraphCreator
     {
+        public float Xoffset = 0;
+        public float Yoffset = 0;
+
         public float DefaultNodeRad
         {
             get { return 10; }
@@ -384,8 +396,8 @@ namespace GraphAlgorithmDemo
             ArrowEdge eC1A7 = new ArrowEdge(nC1, nA7, scene, 1, ang);
 
             float unit = 40;
-            float left = 200 - 1.5f * unit;
-            float top = 200 - 4.5f * unit;
+            float left = this.Xoffset + 200 - 1.5f * unit;
+            float top  = this.Yoffset + 200 - 4.5f * unit;
 
             nA1.SetPosition(left + 0 * unit, top + 0 * unit);
             nA2.SetPosition(left + 3 * unit, top + 0 * unit);
@@ -404,9 +416,10 @@ namespace GraphAlgorithmDemo
 
             double sqrt3 = Math.Sqrt(3);
 
+            float temp = left + 1.5f * unit;
             nC1.SetPosition(left, top + 6 * unit);
-            nC2.SetPosition(200f, (float)(top + (6 + 0.75 * sqrt3) * unit));
-            nC3.SetPosition(200f, (float)(top + (6 + 1.50 * sqrt3) * unit));
+            nC2.SetPosition(temp, (float)(top + (6 + 0.75 * sqrt3) * unit));
+            nC3.SetPosition(temp, (float)(top + (6 + 1.50 * sqrt3) * unit));
 
             scene.UpdateEdges();
         }
@@ -419,6 +432,9 @@ namespace GraphAlgorithmDemo
 
     public class WagonWheelGraphCreator : IGraphCreator
     {
+        public float CenterX = 200;
+        public float CenterY = 200;
+
         public float DefaultNodeRad
         {
             get { return 10; }
@@ -466,7 +482,7 @@ namespace GraphAlgorithmDemo
             if (rimReversed || rimUndirected)
                 edge = new ArrowEdge(nodes[1], prev, scene, 1, ang);
 
-            center.SetPosition(200, 200);
+            center.SetPosition(this.CenterX, this.CenterY);
             double radius = Math.Max(minRadius, 
                 spokeCount * (rad + freeArc / 2.0) / Math.PI);
             double a = 2 * Math.PI / spokeCount;
@@ -474,8 +490,8 @@ namespace GraphAlgorithmDemo
             for (i = 1; i <= spokeCount; i++)
             {
                 nodes[i].SetPosition(
-                    (float)(200.0 + radius * Math.Cos(angle)),
-                    (float)(200.0 + radius * Math.Sin(angle)));
+                    (float)(this.CenterX + radius * Math.Cos(angle)),
+                    (float)(this.CenterY + radius * Math.Sin(angle)));
                 angle += clockwise ? -a : a;
             }
             scene.UpdateEdges();

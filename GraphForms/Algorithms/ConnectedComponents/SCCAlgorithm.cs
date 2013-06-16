@@ -8,9 +8,8 @@ namespace GraphForms.Algorithms.ConnectedComponents
     // Based on Tarjan's Algorithm for Strongly Connected Components
     // http://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm
     public class SCCAlgorithm<Node, Edge>
-        : DepthFirstSearch<Node, Edge>
-        where Node : class
-        where Edge : class, IGraphEdge<Node>
+        : DepthFirstSearch<Node, Edge>, ICCAlgorithm<Node>
+        where Edge : IGraphEdge<Node>
     {
         private class NodeData : IEquatable<NodeData>
         {
@@ -31,7 +30,7 @@ namespace GraphForms.Algorithms.ConnectedComponents
             }
         }
 
-        private Stack<NodeData> mNodeStack;
+        private Stack<int> mNodeStack;
         private NodeData[] mDatas;
         private int mDepth;
 
@@ -47,7 +46,7 @@ namespace GraphForms.Algorithms.ConnectedComponents
             bool reversed)
             : base(graph, true, reversed)
         {
-            this.mNodeStack = new Stack<NodeData>(graph.NodeCount + 1);
+            this.mNodeStack = new Stack<int>(graph.NodeCount + 1);
             this.mRoots = new List<Node>();
             this.mComponents = new List<Node[]>();
         }
@@ -83,7 +82,7 @@ namespace GraphForms.Algorithms.ConnectedComponents
                 data.Depth = this.mDepth;
                 data.LowLink = this.mDepth;
                 this.mDepth++;
-                this.mNodeStack.Push(this.mDatas[index]);
+                this.mNodeStack.Push(index);
             }
             base.OnDiscoverNode(n, index);
         }
@@ -91,38 +90,39 @@ namespace GraphForms.Algorithms.ConnectedComponents
         protected override void OnFinishEdge(Edge e, int srcIndex, 
             int dstIndex, bool reversed)
         {
-            NodeData uData, vData;
+            NodeData uDat, vDat;
             if (reversed)
             {
-                uData = this.mDatas[dstIndex];
-                vData = this.mDatas[srcIndex];
+                uDat = this.mDatas[dstIndex];
+                vDat = this.mDatas[srcIndex];
             }
             else
             {
-                uData = this.mDatas[srcIndex];
-                vData = this.mDatas[dstIndex];
+                uDat = this.mDatas[srcIndex];
+                vDat = this.mDatas[dstIndex];
             }
-            uData.LowLink = Math.Min(uData.LowLink, vData.LowLink);
+            uDat.LowLink = Math.Min(uDat.LowLink, vDat.LowLink);
             base.OnFinishEdge(e, srcIndex, dstIndex, reversed);
         }
 
         protected override void OnBlackEdge(Edge e, int srcIndex, 
             int dstIndex, bool reversed)
         {
-            NodeData uData, vData;
+            NodeData uDat;
+            int v;
             if (reversed)
             {
-                uData = this.mDatas[dstIndex];
-                vData = this.mDatas[srcIndex];
+                uDat = this.mDatas[dstIndex];
+                v = srcIndex;
             }
             else
             {
-                uData = this.mDatas[srcIndex];
-                vData = this.mDatas[dstIndex];
+                uDat = this.mDatas[srcIndex];
+                v = dstIndex;
             }
-            if (this.mNodeStack.Contains(vData))
+            if (this.mNodeStack.Contains(v))
             {
-                uData.LowLink = Math.Min(uData.LowLink, vData.Depth);
+                uDat.LowLink = Math.Min(uDat.LowLink, this.mDatas[v].Depth);
             }
             base.OnBlackEdge(e, srcIndex, dstIndex, reversed);
         }
@@ -130,20 +130,21 @@ namespace GraphForms.Algorithms.ConnectedComponents
         protected override void OnGrayEdge(Edge e, int srcIndex, 
             int dstIndex, bool reversed)
         {
-            NodeData uData, vData;
+            NodeData uDat;
+            int v;
             if (reversed)
             {
-                uData = this.mDatas[dstIndex];
-                vData = this.mDatas[srcIndex];
+                uDat = this.mDatas[dstIndex];
+                v = srcIndex;
             }
             else
             {
-                uData = this.mDatas[srcIndex];
-                vData = this.mDatas[dstIndex];
+                uDat = this.mDatas[srcIndex];
+                v = dstIndex;
             }
-            if (this.mNodeStack.Contains(vData))
+            if (this.mNodeStack.Contains(v))
             {
-                uData.LowLink = Math.Min(uData.LowLink, vData.Depth);
+                uDat.LowLink = Math.Min(uDat.LowLink, this.mDatas[v].Depth);
             }
             base.OnGrayEdge(e, srcIndex, dstIndex, reversed);
         }
@@ -154,11 +155,11 @@ namespace GraphForms.Algorithms.ConnectedComponents
             {
                 this.mRoots.Add(n);
                 List<Node> comp = new List<Node>();
-                Node node = null;
-                while (node != n)
+                int i = -1;
+                while (i != index)
                 {
-                    node = this.mNodeStack.Pop().Data;
-                    comp.Add(node);
+                    i = this.mNodeStack.Pop();
+                    comp.Add(this.mDatas[i].Data);
                 }
                 this.mComponents.Add(comp.ToArray());
             }

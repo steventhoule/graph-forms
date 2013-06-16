@@ -6,8 +6,7 @@ namespace GraphForms.Algorithms.Search
 {
     public class DepthFirstSearch<Node, Edge>
         : AGraphTraversalAlgorithm<Node, Edge>
-        where Node : class
-        where Edge : class, IGraphEdge<Node>
+        where Edge : IGraphEdge<Node>
     {
         private bool bImplicit = false;
         private int mMaxDepth = int.MaxValue;
@@ -143,6 +142,8 @@ namespace GraphForms.Algorithms.Search
                     reversed = v.Index == u.Index;//v.Equals(u);
                     if (reversed)
                         v = e.mSrcNode;
+                    if (this.bExSpecial && v.mData is ISpecialNode)
+                        continue;
                     this.OnExamineEdge(e.mData, e.mSrcNode.Index,
                         e.mDstNode.Index, reversed);
                     
@@ -212,6 +213,8 @@ namespace GraphForms.Algorithms.Search
                 reversed = v.Index == u.Index;//v.Equals(u);
                 if (reversed)
                     v = e.mSrcNode;
+                if (this.bExSpecial && v.mData is ISpecialNode)
+                    continue;
                 this.OnExamineEdge(e.mData, e.mSrcNode.Index, 
                     e.mDstNode.Index, reversed);
 

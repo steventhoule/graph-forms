@@ -1,99 +1,192 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Text;
 using GraphForms.Algorithms.ConnectedComponents;
 
 namespace GraphForms.Algorithms.Layout.Circular
 {
     public class CircularLayoutAlgorithm<Node, Edge>
-        : LayoutAlgorithm<Node, Edge, CircularLayoutParameters>
+        : LayoutAlgorithm<Node, Edge>
         where Node : GraphElement, ILayoutNode
         where Edge : class, IGraphEdge<Node>, IUpdateable
     {
-        public CircularLayoutAlgorithm(Digraph<Node, Edge> graph)
-            : base(graph, null)
+        private CircularLayoutAlgorithm(Digraph<Node, Edge> graph,
+            IClusterNode clusterNode)
+            : base(graph, clusterNode)
         {
         }
 
-        public CircularLayoutAlgorithm(Digraph<Node, Edge> graph,
-            CircularLayoutParameters oldParameters)
-            : base(graph, oldParameters)
+        private CircularLayoutAlgorithm(Digraph<Node, Edge> graph,
+            RectangleF boundingBox)
+            : base(graph, boundingBox)
         {
         }
 
-        protected override void InternalCompute()
+        private class PortNode : IPortNode
         {
-            System.Drawing.RectangleF bbox;
-            Node[] nodes = this.mGraph.Nodes;
-            int i;
-            double perimeter, radius, angle, a;
-            double[] halfSize = new double[nodes.Length];
+            private readonly Node mNode;
+            private readonly int mClusterId;
+            private double mMinAngle;
+            private double mMaxAngle;
 
-            // calculate the size of the circle
-            perimeter = 0;
-            for (i = 0; i < nodes.Length; i++)
+            public PortNode(Node node, int clusterId)
             {
-                bbox = nodes[i].BoundingBox;
-                halfSize[i] = Math.Sqrt(bbox.Width * bbox.Width + bbox.Height * bbox.Height) * 0.5;
-                perimeter += halfSize[i] * 2;
+                this.mNode = node;
+                this.mClusterId = clusterId;
             }
 
-            radius = perimeter / (2 * Math.PI);
-
-            float[] newXs = this.NewXPositions;
-            float[] newYs = this.NewYPositions;
-
-            // precalculation
-            angle = 0;
-            for (i = 0; i < nodes.Length; i++)
+            public Node Data
             {
-                a = Math.Sin(halfSize[i] * 0.5 / radius) * 2;
-                angle += a;
-
-                //nodes[i].NewX = (float)(Math.Cos(angle) * radius + radius);
-                //nodes[i].NewY = (float)(Math.Sin(angle) * radius + radius);
-                newXs[i] = (float)(Math.Cos(angle) * radius + radius);
-                newYs[i] = (float)(Math.Sin(angle) * radius + radius);
-
-                angle += a;
+                get { return this.mNode; }
             }
 
-            base.EndIteration(0, 0.5, "Precalculation done.");
-
-            // recalculate radius
-            radius = angle / (2 * Math.PI) * radius;
-
-            // calculation
-            angle = 0;
-            for (i = 0; i < nodes.Length; i++)
+            public int ClusterId
             {
-                a = Math.Sin(halfSize[i] * 0.5 / radius) * 2;
-                angle += a;
-
-                //nodes[i].NewX = (float)(Math.Cos(angle) * radius + radius);
-                //nodes[i].NewY = (float)(Math.Sin(angle) * radius + radius);
-                newXs[i] = (float)(Math.Cos(angle) * radius + radius);
-                newYs[i] = (float)(Math.Sin(angle) * radius + radius);
-
-                angle += a;
+                get { return this.mClusterId; }
             }
 
-            base.EndIteration(1, 1, "Calculation done.");
+            public double MinAngle
+            {
+                get { return this.mMinAngle; }
+                set { this.mMinAngle = value; }
+            }
+
+            public double MaxAngle
+            {
+                get { return this.mMaxAngle; }
+                set { this.mMaxAngle = value; }
+            }
+
+            public RectangleF BoundingBox
+            {
+                get { return this.mNode.BoundingBox; }
+            }
+
+            private float mX;
+            private float mY;
+
+            public float X
+            {
+                get { return this.mX; }
+            }
+
+            public float Y
+            {
+                get { return this.mY; }
+            }
+
+            public void SetPosition(float x, float y)
+            {
+                this.mX = x;
+                this.mY = y;
+            }
+
+            public bool PositionFixed
+            {
+                get { return true; }
+            }
+
+            private float mNewX;
+            private float mNewY;
+
+            public float NewX
+            {
+                get { return this.mNewX; }
+            }
+
+            public float NewY
+            {
+                get { return this.mNewY; }
+            }
+
+            public void SetNewPosition(float newX, float newY)
+            {
+                this.mNewX = newX;
+                this.mNewY = newY;
+            }
         }
 
-        public class BCCNode : GraphElement
+        private class SubEdge : IGraphEdge<ILayoutNode>
         {
-            private Digraph<Node, Edge> mGraph;
+            private ILayoutNode mSrcNode;
+            private ILayoutNode mDstNode;
+            private Edge mEdge;
 
-            public BCCNode(int nodeCapacity)
+            public SubEdge(ILayoutNode srcNode, ILayoutNode dstNode, Edge edge)
             {
-                this.mGraph = new Digraph<Node, Edge>(
+                this.mSrcNode = srcNode;
+                this.mDstNode = dstNode;
+                this.mEdge = edge;
+            }
+
+            public Edge Data
+            {
+                get { return this.mEdge; }
+            }
+
+            public ILayoutNode SrcNode
+            {
+                get { return this.mSrcNode; }
+            }
+
+            public ILayoutNode DstNode
+            {
+                get { return this.mDstNode; }
+            }
+
+            public float Weight
+            {
+                get { return this.mEdge == null ? 1 : this.mEdge.Weight; }
+            }
+
+            public void SetSrcNode(ILayoutNode srcNode)
+            {
+                this.mSrcNode = srcNode;
+            }
+
+            public void SetDstNode(ILayoutNode dstNode)
+            {
+                this.mDstNode = dstNode;
+            }
+        }
+
+
+        private class BCCNode : GraphElement
+        {
+            /// <summary>
+            /// The index of this cluster node in graph superstructure
+            /// </summary>
+            public readonly int Index;
+            /// <summary>
+            /// The sub-graph enclosed by this cluster node.
+            /// </summary>
+            public readonly Digraph<ILayoutNode, SubEdge> Graph;
+            /// <summary>
+            /// Each sub-graph could potentially contain a port node that
+            /// represents any node not in the sub-graph.
+            /// </summary>
+            public readonly IPortNode[] PortNodes;
+
+            public BCCNode(int index, int nodeCapacity, int portCount)
+            {
+                this.Index = index;
+                this.Graph = new Digraph<ILayoutNode, SubEdge>(
                     nodeCapacity, nodeCapacity / 2);
+                this.PortNodes = new PortNode[portCount];
             }
 
-            public Digraph<Node, Edge> Graph
+            public IPortNode[] GetPorts(int clusterId)
             {
-                get { return this.mGraph; }
+                int i, count = this.PortNodes.Length;
+                List<IPortNode> ports = new List<IPortNode>(count);
+                for (i = 0; i < count; i++)
+                {
+                    if (this.PortNodes[i] != null && 
+                        this.PortNodes[i].ClusterId == clusterId)
+                        ports.Add(this.PortNodes[i]);
+                }
+                return ports.ToArray();
             }
 
             protected override void OnDrawBackground(
@@ -103,18 +196,20 @@ namespace GraphForms.Algorithms.Layout.Circular
             }
         }
 
-        public class BCCEdge
+        private class BCCEdge
             : IGraphEdge<BCCNode>, IUpdateable
         {
             private BCCNode mSrcNode;
             private BCCNode mDstNode;
-            private List<Digraph<Node, Edge>.GEdge> mEdges;
+            private List<IPortNode> mSrcPorts;
+            private List<IPortNode> mDstPorts;
 
             public BCCEdge(BCCNode srcNode, BCCNode dstNode)
             {
                 this.mSrcNode = srcNode;
                 this.mDstNode = dstNode;
-                this.mEdges = new List<Digraph<Node, Edge>.GEdge>();
+                this.mSrcPorts = new List<IPortNode>();
+                this.mDstPorts = new List<IPortNode>();
             }
 
             public BCCNode SrcNode
@@ -132,24 +227,52 @@ namespace GraphForms.Algorithms.Layout.Circular
                 get { return 1; }
             }
 
-            public void AddEdge(Edge e, Node srcNode, Node dstNode)
+            public void SetSrcNode(BCCNode srcNode)
             {
-                Digraph<Node, Edge>.GNode src 
-                    = this.mSrcNode.Graph.InternalNodeFor(srcNode);
-                Digraph<Node, Edge>.GNode dst
-                    = this.mDstNode.Graph.InternalNodeFor(dstNode);
-                this.mEdges.Add(new Digraph<Node, Edge>.GEdge(src, dst, e));
+                throw new InvalidOperationException();
             }
 
-            public Edge Copy<Edge>(BCCNode srcNode, BCCNode dstNode) 
-                where Edge : class, IGraphEdge<BCCNode>
+            public void SetDstNode(BCCNode dstNode)
             {
-                if (typeof(BCCEdge).Equals(typeof(Edge)))
+                throw new InvalidOperationException();
+            }
+
+            /// <summary>
+            /// Ports in the source cluster node's sub-graph that point
+            /// to the destination cluster node or nodes
+            /// in the destination cluster node's sub-graph.
+            /// </summary>
+            public IPortNode[] SrcPorts
+            {
+                get 
                 {
-                    BCCEdge edge = new BCCEdge(srcNode, dstNode);
-                    return edge as Edge;
+                    return this.mSrcPorts.ToArray();
+                    //return this.mSrcNode.GetPorts(this.mDstNode.Index); 
                 }
-                return null;
+            }
+
+            /// <summary>
+            /// Ports in the destination cluster node's sub-graph that point
+            /// to the source cluster node or nodes
+            /// in the source cluster node's sub-graph.
+            /// </summary>
+            public IPortNode[] DstPorts
+            {
+                get 
+                {
+                    return this.mDstPorts.ToArray();
+                    //return this.mDstNode.GetPorts(this.mSrcNode.Index); 
+                }
+            }
+
+            public void AddSrcPort(IPortNode port)
+            {
+                this.mSrcPorts.Add(port);
+            }
+
+            public void AddDstPort(IPortNode port)
+            {
+                this.mDstPorts.Add(port);
             }
 
             public void Update()
@@ -179,41 +302,49 @@ namespace GraphForms.Algorithms.Layout.Circular
         // 1. Position of each Node | Size of each BCCNode
         // 2. Position of each Node | Position? of each BCCNode
         // 3.                         Position of each BCCNode
-        public static Digraph<BCCNode, BCCEdge> BCCCompactGraph(
+        private static Digraph<BCCNode, BCCEdge> BCCCompactGraph(
             Digraph<Node, Edge> graph)
         {
+            int i, j;
+            Digraph<Node, Edge>.GNode[] nodes
+                = graph.InternalNodes;
+            Digraph<Node, Edge>.GEdge[] edges
+                = graph.InternalEdges;
+
             BCCAlgorithm<Node, Edge> bccAlg 
                 = new BCCAlgorithm<Node, Edge>(graph);
             bccAlg.Compute();
             bccAlg.ArticulateToLargerCompactGroups();
             Node[][] bccGroups = bccAlg.CompactGroups;
+            int bccGroupCount = bccAlg.CompactGroupCount;
             int[] bccGroupIds = bccAlg.CompactGroupIds;
             Digraph<BCCNode, BCCEdge> bccGraph 
                 = new Digraph<BCCNode, BCCEdge>(
-                    bccGroups.Length, bccGroups.Length / 2);
+                    bccGroupCount, bccGroupCount / 2);
 
-            int i, j;
-            BCCEdge[][] bccEdges = new BCCEdge[bccGroups.Length][];
-            BCCNode[] bccNodes = new BCCNode[bccGroups.Length];
+            PortNode[][] portNodes = new PortNode[bccGroupCount][];
+            BCCEdge[][] bccEdges = new BCCEdge[bccGroupCount][];
+            BCCNode[] bccNodes = new BCCNode[bccGroupCount];
             BCCNode bccNode;
             Node[] bccGroup;
-            for (i = 0; i < bccGroups.Length; i++)
+            for (i = 0; i < bccGroupCount; i++)
             {
                 bccGroup = bccGroups[i];
-                bccNode = new BCCNode(bccGroup.Length);
+                bccNode = new BCCNode(i, bccGroup.Length, nodes.Length);
                 for (j = 0; j < bccGroup.Length; j++)
                 {
                     bccNode.Graph.AddNode(bccGroup[j]);
                 }
                 bccGraph.AddNode(bccNode);
-                bccEdges[i] = new BCCEdge[bccGroups.Length];
                 bccNodes[i] = bccNode;
+                bccEdges[i] = new BCCEdge[bccGroupCount];
+                portNodes[i] = new PortNode[nodes.Length];
             }
             
             int si, di;
-            Digraph<Node, Edge>.GEdge[] edges
-                = graph.InternalEdges;
             Digraph<Node, Edge>.GEdge edge;
+            BCCEdge bccEdge;
+            PortNode spn, dpn;
             for (i = 0; i < edges.Length; i++)
             {
                 edge = edges[i];
@@ -221,26 +352,44 @@ namespace GraphForms.Algorithms.Layout.Circular
                 di = bccGroupIds[edge.mDstNode.Index];
                 if (si == di)
                 {
-                    bccNodes[si].Graph.AddEdge(edge.mData);
+                    bccNodes[si].Graph.AddEdge(new SubEdge(
+                        edge.mSrcNode.mData, edge.mDstNode.mData, 
+                        edge.mData));
                 }
                 else
                 {
-                    if (bccEdges[si][di] == null)
+                    bccEdge = bccEdges[si][di];
+                    if (bccEdge == null)
                     {
-                        bccEdges[si][di] 
-                            = new BCCEdge(bccNodes[si], bccNodes[di]);
+                        bccEdge = new BCCEdge(bccNodes[si], bccNodes[di]);
+                        bccGraph.AddEdge(bccEdge);
+                        bccEdges[si][di] = bccEdge;
                     }
-                    bccEdges[si][di].AddEdge(edge.mData, 
-                        edge.mSrcNode.mData, edge.mDstNode.mData);
-                }
-            }
+                    //spn = bccNodes[di].PortNodes[dEdge.mSrcNode.Index];
+                    spn = portNodes[di][edge.mSrcNode.Index];
+                    if (spn == null)
+                    {
+                        spn = new PortNode(edge.mSrcNode.mData, si);
+                        bccNodes[di].Graph.AddNode(spn);
+                        //bccNodes[di].PortNodes[dEdge.mSrcNode.Index] = spn;
+                        portNodes[di][edge.mSrcNode.Index] = spn;
+                        bccEdge.AddDstPort(spn);
+                    }
+                    bccNodes[di].Graph.AddEdge(new SubEdge(
+                        spn, edge.mDstNode.mData, edge.mData));
 
-            for (i = 0; i < bccGroups.Length; i++)
-            {
-                for (j = 0; j < bccGroups.Length; j++)
-                {
-                    if (bccEdges[i][j] != null)
-                        bccGraph.AddEdge(bccEdges[i][j]);
+                    //dpn = bccNodes[si].PortNodes[edge.mDstNode.Index];
+                    dpn = portNodes[si][edge.mDstNode.Index];
+                    if (dpn == null)
+                    {
+                        dpn = new PortNode(edge.mDstNode.mData, di);
+                        bccNodes[si].Graph.AddNode(dpn);
+                        //bccNodes[si].PortNodes[dEdge.mDstNode.Index] = dpn;
+                        portNodes[si][edge.mDstNode.Index] = dpn;
+                        bccEdge.AddSrcPort(dpn);
+                    }
+                    bccNodes[si].Graph.AddEdge(new SubEdge(
+                        edge.mSrcNode.mData, dpn, edge.mData));
                 }
             }
             return bccGraph;

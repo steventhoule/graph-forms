@@ -4,28 +4,36 @@ using System.Drawing;
 
 namespace GraphForms.Algorithms.Layout.ForceDirected
 {
+    // Inverted Self-Organizing Maps
+    // http://www.csse.monash.edu.au/~berndm/ISOM/
     public class ISOMLayoutAlgorithm<Node, Edge>
-        : ForceDirectedLayoutAlgorithm<Node, Edge, ISOMLayoutParameters<Node>>
-        where Node : GraphElement, ILayoutNode
-        where Edge : class, IGraphEdge<Node>, IUpdateable
+        //: ForceDirectedLayoutAlgorithm<Node, Edge, ISOMLayoutParameters<Node>>
+        : LayoutAlgorithm<Node, Edge>
+        where Node : class, ILayoutNode
+        where Edge : IGraphEdge<Node>, IUpdateable
     {
-        private Queue<Digraph<Node, Edge>.GNode> mQueue;
         private readonly Random mRnd = new Random(DateTime.Now.Millisecond);
+        private Queue<int> mQueue;
 
-        private PointF mTempPos;
+        private Digraph<Node, Edge>.GNode[] mNodes;
+        private int[] mDistances;
         private int mRadius;
-        private double mAdaptation;
+        private double mAdapt;
+        private double mGlobalX;
+        private double mGlobalY;
 
-        private int mRadiusConstantTime;
-        private int mMinRadius;
-        private double mInitialAdaptation;
-        private double mMinAdaptation;
-        private double mCoolingFactor;
+        private int mRadiusConstantTime = 100;
+        private int mInitialRadius = 5;
+        private int mMinRadius = 1;
+        private float mInitAdapt = 0.9f;
+        private float mMinAdapt = 0;
+        private float mCoolingFactor = 2;
+        //private Node mBary = null;
 
-        private Node mLastBarycenter = null;
-        private Digraph<Node, Edge>.GNode mBarycenter;
+        //private Node mLastBarycenter = null;
+        //private Digraph<Node, Edge>.GNode mBarycenter;
 
-        public ISOMLayoutAlgorithm(Digraph<Node, Edge> graph)
+        /*public ISOMLayoutAlgorithm(Digraph<Node, Edge> graph)
             : base(graph, null)
         {
             this.mQueue = new Queue<Digraph<Node, Edge>.GNode>();
@@ -36,6 +44,118 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             : base(graph, oldParameters)
         {
             this.mQueue = new Queue<Digraph<Node, Edge>.GNode>();
+        }/* */
+
+        public ISOMLayoutAlgorithm(Digraph<Node, Edge> graph,
+            IClusterNode clusterNode)
+            : base(graph, clusterNode)
+        {
+            this.mQueue = new Queue<int>();
+            this.mDistances = new int[0];
+        }
+
+        public ISOMLayoutAlgorithm(Digraph<Node, Edge> graph,
+            RectangleF boundingBox)
+            : base(graph, boundingBox)
+        {
+            this.mQueue = new Queue<int>();
+            this.mDistances = new int[0];
+        }
+
+        /// <summary>
+        /// Radius constant time. Default value is 100.
+        /// </summary>
+        public int RadiusConstantTime
+        {
+            get { return this.mRadiusConstantTime; }
+            set
+            {
+                if (this.mRadiusConstantTime != value)
+                {
+                    this.mRadiusConstantTime = value;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Initial radius. Default value is 5.
+        /// </summary>
+        public int InitialRadius
+        {
+            get { return this.mInitialRadius; }
+            set
+            {
+                if (this.mInitialRadius != value)
+                {
+                    this.mInitialRadius = value;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Minimum radius. Default value is 1.
+        /// </summary>
+        public int MinRadius
+        {
+            get { return this.mMinRadius; }
+            set
+            {
+                this.mMinRadius = value;
+            }
+        }
+
+        /// <summary>
+        /// Initial adaptation. Default value is 0.9.
+        /// </summary>
+        public float InitialAdaptation
+        {
+            get { return this.mInitAdapt; }
+            set
+            {
+                this.mInitAdapt = value;
+            }
+        }
+
+        /// <summary>
+        /// Minimum Adaptation. Default value is 0.
+        /// </summary>
+        public float MinAdaptation
+        {
+            get { return this.mMinAdapt; }
+            set
+            {
+                this.mMinAdapt = value;
+            }
+        }
+
+        /// <summary>
+        /// Cooling factor. Default value is 2.
+        /// </summary>
+        public float CoolingFactor
+        {
+            get { return this.mCoolingFactor; }
+            set
+            {
+                this.mCoolingFactor = value;
+            }
+        }
+
+        /*/// <summary>
+        /// The <typeparamref name="Node"/> at the center of the ISOM
+        /// Layout Algorithm, which is picked at random on each iteration
+        /// if this is null. Default value is null.
+        /// </summary>
+        public Node Barycenter
+        {
+            get { return this.mBary; }
+            set
+            {
+                if (!this.mBary.Equals(value))
+                {
+                    this.mBary = value;
+                    this.MarkDirty();
+                }
+            }
         }
 
         /// <summary>
@@ -46,7 +166,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         /// </summary>
         private void FindBarycenter()
         {
-            Node node = this.Parameters.Barycenter;
+            Node node = this.mBary;//this.Parameters.Barycenter;
             if (node == null)
             {
                 if (this.mBarycenter == null)
@@ -74,17 +194,17 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                         this.mBarycenter = null;
                 }
             }
-        }
+        }/* */
 
         protected override void InitializeAlgorithm()
         {
             base.InitializeAlgorithm();
-            ISOMLayoutParameters<Node> param = this.Parameters;
-            this.mRadius = param.InitialRadius;
-            this.mAdaptation = param.InitialAdaptation;
+            //ISOMLayoutParameters<Node> param = this.Parameters;
+            this.mRadius = this.mInitialRadius;//param.InitialRadius;
+            this.mAdapt = this.mInitAdapt;//param.InitialAdaptation;
         }
 
-        protected override bool OnBeginIteration(bool paramsDirty,
+        /*protected override bool OnBeginIteration(bool paramsDirty,
             int lastNodeCount, int lastEdgeCount)
         {
             if (paramsDirty)
@@ -103,49 +223,76 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             }
             return base.OnBeginIteration(paramsDirty,
                 lastNodeCount, lastEdgeCount);
-        }
+        }/* */
 
-        protected override void PerformIteration(int iteration, int maxIterations)
+        protected override void PerformIteration(uint iteration)
         {
+            this.mNodes = this.mGraph.InternalNodes;
+
             this.Adjust();
 
             // Update Parameters
-            double factor = Math.Exp(-this.mCoolingFactor * iteration / maxIterations);
-            this.mAdaptation = Math.Max(this.mMinAdaptation, factor * this.mInitialAdaptation);
-            if (this.mRadius > this.mMinRadius && iteration % this.mRadiusConstantTime == 0)
+            double factor = Math.Exp(
+                -this.mCoolingFactor * iteration / this.MaxIterations);
+            this.mAdapt = Math.Max(this.mMinAdapt, factor * this.mInitAdapt);
+            if (this.mRadius > this.mMinRadius && 
+                iteration % this.mRadiusConstantTime == 0)
             {
                 this.mRadius--;
             }
         }
 
+        private Digraph<Node, Edge>.GNode GetClosest(double x, double y)
+        {
+            Digraph<Node, Edge>.GNode n, node = null;
+            double dx, dy, dist, minDist = double.MaxValue;
+
+            // find the closest node
+            //Digraph<Node, Edge>.GNode[] nodes = this.mGraph.InternalNodes;
+            for (int i = 0; i < this.mNodes.Length; i++)
+            {
+                n = this.mNodes[i];
+                //dist = GraphHelpers.Length(n.Data.MapFromScene(position));
+                dx = n.Data.X - x;
+                dy = n.Data.Y - y;
+                dist = dx * dx + dy * dy;
+                if (dist < minDist)
+                {
+                    node = n;
+                    minDist = dist;
+                }
+            }
+            return node;
+        }
+
         private void Adjust()
         {
             Digraph<Node, Edge>.GNode closest = null;
-            if (this.mBarycenter == null)
+            RectangleF bbox = this.mClusterNode == null 
+                ? this.BoundingBox : this.mClusterNode.BoundingBox;
+            while (closest == null || closest.AllEdgeCount == 0)
             {
-                while (closest == null || closest.DstEdgeCount == 0)
-                {
-                    // get a random point in the container
-                    this.mTempPos.X = (float)((0.1 + 0.8 * this.mRnd.NextDouble()) * this.Parameters.Width + this.Parameters.X);
-                    this.mTempPos.Y = (float)((0.1 + 0.8 * this.mRnd.NextDouble()) * this.Parameters.Height + this.Parameters.Y);
+                // get a random point in the container
+                this.mGlobalX = (0.1 + 0.8 * this.mRnd.NextDouble()) 
+                    * bbox.Width + bbox.X;
+                this.mGlobalY = (0.1 + 0.8 * this.mRnd.NextDouble()) 
+                    * bbox.Height + bbox.Y;
 
-                    // find the closest node to this random point
-                    closest = this.GetClosest(this.mTempPos);
-                }
-            }
-            else
-            {
-                closest = this.mBarycenter;
-                this.mTempPos = closest.Data.Position;
+                // find the closest node to this random point
+                closest = this.GetClosest(this.mGlobalX, this.mGlobalY);
             }
 
             // Adjust the nodes to the selected node
-            Digraph<Node, Edge>.GNode[] nodes = this.mGraph.InternalNodes;
-            for (int i = 0; i < nodes.Length; i++)
+            //Digraph<Node, Edge>.GNode[] nodes = this.mGraph.InternalNodes;
+            if (this.mDistances.Length < this.mNodes.Length)
             {
-                nodes[i].Index = i;
-                nodes[i].Distance = 0;
-                nodes[i].Color = GraphColor.White;
+                this.mDistances = new int[this.mNodes.Length];
+            }
+            for (int i = 0; i < this.mNodes.Length; i++)
+            {
+                this.mNodes[i].Index = i;
+                this.mNodes[i].Color = GraphColor.White;
+                this.mDistances[i] = 0;
             }
             this.AdjustNode(closest);
         }
@@ -153,89 +300,71 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         private void AdjustNode(Digraph<Node, Edge>.GNode closest)
         {
             this.mQueue.Clear();
-            closest.Distance = 0;
+            this.mDistances[closest.Index] = 0;
             closest.Color = GraphColor.Gray;
-            this.mQueue.Enqueue(closest);
+            this.mQueue.Enqueue(closest.Index);
 
-            float[] newXs = this.NewXPositions;
-            float[] newYs = this.NewYPositions;
-            Digraph<Node, Edge>.GNode current, n;
-            Node node;
-            double posX, posY, factor;
-            PointF force;
+            //float[] newXs = this.NewXPositions;
+            //float[] newYs = this.NewYPositions;
+            
+            Node curr;
+            int i, ci, dist;
+            //PointF force;
+            double dx, dy, posX, posY, factor;
+            Digraph<Node, Edge>.GNode n;
             Digraph<Node, Edge>.GEdge[] edges;
-            int i;
             while (this.mQueue.Count > 0)
             {
-                current = this.mQueue.Dequeue();
-                node = current.Data;
-                posX = node.X;
-                posY = node.Y;
-                if (!node.PositionFixed)
+                ci = this.mQueue.Dequeue();
+                curr = this.mNodes[ci].Data;
+                dist = this.mDistances[ci];
+                posX = curr.X;
+                posY = curr.Y;
+                if (!curr.PositionFixed)
                 {
-                    force = node.MapFromScene(this.mTempPos);
-                    factor = this.mAdaptation / Math.Pow(2, current.Distance);
+                    //force = node.MapFromScene(this.mTempPos);
+                    dx = this.mGlobalX - posX;
+                    dy = this.mGlobalY - posY;
+                    factor = this.mAdapt / Math.Pow(2, dist);
 
-                    posX += factor * force.X;
-                    posY += factor * force.Y;
+                    posX += factor * dx;//force.X;
+                    posY += factor * dy;//force.Y;
                 }
-                //node.NewX = (float)posX;
-                //node.NewY = (float)posY;
-                newXs[current.Index] = (float)posX;
-                newYs[current.Index] = (float)posY;
+                //curr.NewX = (float)posX;
+                //curr.NewY = (float)posY;
+                curr.SetNewPosition((float)posX, (float)posY);
+                //newXs[ci] = (float)posX;
+                //newYs[ci] = (float)posY;
 
                 // only if the node is within range
-                if (current.Distance < this.mRadius)
+                if (dist < this.mRadius)
                 {
                     // iterate through all its neighbors
-                    edges = current.InternalDstEdges;
+                    edges = this.mNodes[ci].AllInternalEdges(false);
                     for (i = 0; i < edges.Length; i++)
                     {
-                        factor = current.Distance + edges[i].Data.Weight;
                         n = edges[i].DstNode;
+                        if (n.Index == ci)
+                            n = edges[i].SrcNode;
                         if (n.Color == GraphColor.White)
                         {
+                            this.mDistances[n.Index] = dist + 1;
                             n.Color = GraphColor.Gray;
-                            n.Distance = (float)factor;
-                            this.mQueue.Enqueue(n);
+                            this.mQueue.Enqueue(n.Index);
                         }
-                        else if (n.Distance < factor)
+                        /*else if (dist + 1 < this.mDistances[n.Index])
                         {
-                            n.Distance = (float)factor;
-                            if (!this.mQueue.Contains(n))
-                                this.mQueue.Enqueue(n);
-                        }
+                            this.mDistances[n.Index] = dist + 1;
+                            if (n.Color == GraphColor.Black)
+                            {
+                                n.Color = GraphColor.Gray;
+                                this.mQueue.Enqueue(n.Index);
+                            }
+                        }/* */
                     }
                 }
+                this.mNodes[ci].Color = GraphColor.Black;
             }
-        }
-
-        /// <summary>
-        /// Finds the closest node to the given <paramref name="position"/>.
-        /// </summary>
-        /// <param name="position">A point in scene coordinates within the 
-        /// <see cref="LayoutParameters.BoundingBox"/> of the 
-        /// <see cref="P:LayoutAlgorithm`3.Parameters"/>.</param>
-        /// <returns>Returns the closest node to the given 
-        /// <paramref name="position"/>.</returns>
-        public Digraph<Node, Edge>.GNode GetClosest(PointF position)
-        {
-            Digraph<Node, Edge>.GNode n, node = null;
-            double d, distance = double.MaxValue;
-
-            // find the closest node
-            Digraph<Node, Edge>.GNode[] nodes = this.mGraph.InternalNodes;
-            for (int i = 0; i < nodes.Length; i++)
-            {
-                n = nodes[i];
-                d = GraphHelpers.Length(n.Data.MapFromScene(position));
-                if (d < distance)
-                {
-                    node = n;
-                    distance = d;
-                }
-            }
-            return node;
         }
     }
 }
