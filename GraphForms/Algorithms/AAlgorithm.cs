@@ -74,7 +74,7 @@ namespace GraphForms.Algorithms
         }
 
         /// <summary>
-        /// This implementation of this function should contain the core code 
+        /// The implementation of this function should contain the core code 
         /// that this <see cref="AAlgorithm"/> instance executes during its
         /// computation. This code should be designed to stop as soon as 
         /// possible whenever an abortion is pending.

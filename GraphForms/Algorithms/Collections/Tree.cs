@@ -21,6 +21,10 @@ namespace GraphForms.Algorithms.Collections
     {
         private Tree<T> mRoot;
         private int mRank;
+        /// <summary>
+        /// The <typeparamref name="T"/> instance stored in this single
+        /// element of a disjoint forest.
+        /// </summary>
         public T Value;
 
         /// <summary>

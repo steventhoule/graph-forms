@@ -68,6 +68,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Algorithms\ARootedAlgorithm.cs" />
+    <Compile Include="Algorithms\Collections\CircleTree.cs" />
     <Compile Include="Algorithms\Collections\EdgeWeightComparer.cs" />
     <Compile Include="Algorithms\Collections\FibonacciNode.cs" />
     <Compile Include="Algorithms\Collections\HeapDirection.cs" />
@@ -79,6 +80,8 @@
     <Compile Include="Algorithms\GraphColor.cs" />
     <Compile Include="Algorithms\IRootedAlgorithm.cs" />
     <Compile Include="Algorithms\ISpecialNode.cs" />
+    <Compile Include="Algorithms\Layout\Circular\CircleCentering.cs" />
+    <Compile Include="Algorithms\Layout\Circular\CircleSpacing.cs" />
     <Compile Include="Algorithms\Layout\Circular\FDSingleCircleLayoutAlgorithm.cs" />
     <Compile Include="Algorithms\Layout\ForceDirected\FRBoundedLayoutAlgorithm.cs" />
     <Compile Include="Algorithms\Layout\ForceDirected\FRFreeLayoutAlgorithm.cs" />
@@ -113,6 +116,9 @@
     <Compile Include="Algorithms\SpanningTree\KruskalMinSpanningTree.cs" />
     <Compile Include="Algorithms\Collections\Tree.cs" />
     <Compile Include="Algorithms\SpanningTree\PrimMinSpanningTree.cs" />
+    <Compile Include="Algorithms\SpanningTree\SpanningTreeGen.cs" />
+    <Compile Include="Box2F.cs" />
+    <Compile Include="Vec2F.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

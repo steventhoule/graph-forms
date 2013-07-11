@@ -1,12 +1,11 @@
 ﻿using System;
-using System.Drawing;
 
 namespace GraphForms.Algorithms.Layout.ForceDirected
 {
     public abstract class FRLayoutAlgorithm<Node, Edge>
         //: ForceDirectedLayoutAlgorithm<Node, Edge, FRLayoutParameters>
         : LayoutAlgorithm<Node, Edge>
-        where Node : ILayoutNode
+        where Node : class, ILayoutNode
         where Edge : IGraphEdge<Node>, IUpdateable
     {
         public enum Cooling
@@ -59,7 +58,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         }
 
         public FRLayoutAlgorithm(Digraph<Node, Edge> graph,
-            RectangleF boundingBox)
+            Box2F boundingBox)
             : base(graph, boundingBox)
         {
             this.MaxIterations = 200;
@@ -228,8 +227,6 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                     break;
             }
         }
-
-        private static readonly PointF sZero = new PointF(0, 0);
 
         private void IterateOne()
         {

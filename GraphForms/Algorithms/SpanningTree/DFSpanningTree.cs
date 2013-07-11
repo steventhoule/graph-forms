@@ -20,7 +20,7 @@ namespace GraphForms.Algorithms.SpanningTree
         private Digraph<Node, Edge> mSpanningTree;
 
         public DFSpanningTree(Digraph<Node, Edge> graph)
-            : base(graph)
+            : base(graph, true, false)
         {
             this.mSpanningTree = new Digraph<Node, Edge>(
                 graph.NodeCount, graph.EdgeCount / 2);
@@ -28,8 +28,8 @@ namespace GraphForms.Algorithms.SpanningTree
         }
 
         public DFSpanningTree(Digraph<Node, Edge> graph,
-            bool undirected, bool reversed)
-            : base(graph, undirected, reversed)
+            bool directed, bool reversed)
+            : base(graph, directed, reversed)
         {
             this.mSpanningTree = new Digraph<Node, Edge>(
                 graph.NodeCount, graph.EdgeCount / 2);

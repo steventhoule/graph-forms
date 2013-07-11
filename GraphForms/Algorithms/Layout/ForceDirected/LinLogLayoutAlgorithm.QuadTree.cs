@@ -1,13 +1,12 @@
 ﻿using System;
-using System.Drawing;
 
 namespace GraphForms.Algorithms.Layout.ForceDirected
 {
 	public partial class LinLogLayoutAlgorithm<Node, Edge>
-        where Node : ILayoutNode
+        where Node : class, ILayoutNode
         where Edge : IGraphEdge<Node>, IUpdateable
 	{
-        class QuadTree
+        private class QuadTree
         {
             #region Properties
             private readonly QuadTree[] mChildren = new QuadTree[4];
@@ -22,9 +21,9 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                 get { return this.mIndex; }
             }
 
-            private PointF mPosition;
+            private Vec2F mPosition;
 
-            public PointF Position
+            public Vec2F Position
             {
                 get { return this.mPosition; }
             }
@@ -36,8 +35,8 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                 get { return this.mWeight; }
             }
 
-            private PointF mMinPos;
-            private PointF mMaxPos;
+            private Vec2F mMinPos;
+            private Vec2F mMaxPos;
 
             #endregion
 
@@ -52,8 +51,8 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
 
             protected const int kMaxDepth = 20;
 
-            public QuadTree(int index, PointF position, float weight, 
-                PointF minPos, PointF maxPos)
+            public QuadTree(int index, Vec2F position, float weight, 
+                Vec2F minPos, Vec2F maxPos)
             {
                 this.mIndex = index;
                 this.mPosition = position;
@@ -62,7 +61,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                 this.mMaxPos = maxPos;
             }
 
-            public void AddNode(int nodeIndex, PointF nodePos, float nodeWeight, int depth)
+            public void AddNode(int nodeIndex, Vec2F nodePos, float nodeWeight, int depth)
             {
                 if (depth > kMaxDepth)
                     return;
@@ -80,7 +79,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                 AddNode2(nodeIndex, nodePos, nodeWeight, depth);
             }
 
-            protected void AddNode2(int nodeIndex, PointF nodePos, float nodeWeight, int depth)
+            protected void AddNode2(int nodeIndex, Vec2F nodePos, float nodeWeight, int depth)
             {
                 //Debug.WriteLine( string.Format( "AddNode2 {0} {1} {2} {3}", nodeIndex, nodePos, nodeWeight, depth ) );
                 int childIndex = 0;
@@ -98,8 +97,8 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
 
                 if (this.mChildren[childIndex] == null)
                 {
-                    var newMin = new PointF();
-                    var newMax = new PointF();
+                    var newMin = new Vec2F(0, 0);
+                    var newMax = new Vec2F(0, 0);
                     if (nodePos.X <= middleX)
                     {
                         newMin.X = this.mMinPos.X;
@@ -134,7 +133,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             /// <param name="oldPos"></param>
             /// <param name="newPos"></param>
             /// <param name="nodeWeight"></param>
-            public void MoveNode(PointF oldPos, PointF newPos, float nodeWeight)
+            public void MoveNode(Vec2F oldPos, Vec2F newPos, float nodeWeight)
             {
                 this.mPosition.X += ((newPos.X - oldPos.X) * (nodeWeight / this.mWeight));
                 this.mPosition.Y += ((newPos.Y - oldPos.Y) * (nodeWeight / this.mWeight));

@@ -20,7 +20,14 @@ namespace GraphForms.Algorithms.SpanningTree
         {
             this.mGraph = graph;
         }
-
+        /// <summary>
+        /// A sub-graph of the original connected graph that connects all
+        /// its vertices together with a minimal subset of its edges.
+        /// </summary><remarks>
+        /// If the original graph isn't connected, this graph will contain
+        /// multiple spanning trees, one for each weakly connected
+        /// component of the original graph.
+        /// </remarks>
         public Digraph<Node, Edge> SpanningTree
         {
             get { return this.mSpanningTree; }
@@ -52,7 +59,8 @@ namespace GraphForms.Algorithms.SpanningTree
                 u = this.mQueue.Dequeue().Value;
                 if (this.mMinWeights[u].Priority != float.MaxValue)
                     this.mSpanningTree.AddEdge(this.mMinEdges[u]);
-                this.mMinWeights[u].SetPriority(-float.MaxValue);
+                this.mQueue.ChangePriority(
+                    this.mMinWeights[u], -float.MaxValue);
 
                 edges = nodes[u].InternalDstEdges;
                 for (i = 0; i < edges.Length; i++)

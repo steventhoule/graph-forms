@@ -1,12 +1,11 @@
 ﻿using System;
-using System.Drawing;
 
 namespace GraphForms.Algorithms.Layout.ForceDirected
 {
     public class ElasticLayoutAlgorithm<Node, Edge>
         //: ForceDirectedLayoutAlgorithm<Node, Edge, ElasticLayoutParameters>
         : LayoutAlgorithm<Node, Edge>
-        where Node : ILayoutNode
+        where Node : class, ILayoutNode
         where Edge : IGraphEdge<Node>, IUpdateable
     {
         private float mForceMult = 75f;
@@ -30,7 +29,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         }
 
         public ElasticLayoutAlgorithm(Digraph<Node, Edge> graph,
-            RectangleF boundingBox)
+            Box2F boundingBox)
             : base(graph, boundingBox)
         {
         }

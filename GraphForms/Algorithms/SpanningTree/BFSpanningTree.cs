@@ -20,11 +20,10 @@ namespace GraphForms.Algorithms.SpanningTree
         private Digraph<Node, Edge> mSpanningTree;
 
         public BFSpanningTree(Digraph<Node, Edge> graph)
-            : base(graph)
+            : base(graph, true, false)
         {
             this.mSpanningTree = new Digraph<Node, Edge>(
                 graph.NodeCount, graph.EdgeCount / 2);
-            //this.mSpanningTree.AddNodeRange(graph.Nodes);
         }
 
         public BFSpanningTree(Digraph<Node, Edge> graph,
@@ -33,7 +32,6 @@ namespace GraphForms.Algorithms.SpanningTree
         {
             this.mSpanningTree = new Digraph<Node, Edge>(
                 graph.NodeCount, graph.EdgeCount / 2);
-            //this.mSpanningTree.AddNodeRange(graph.Nodes);
         }
 
         /// <summary>

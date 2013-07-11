@@ -10,13 +10,6 @@ namespace GraphForms.Algorithms.Search
     {
         private Queue<Digraph<Node, Edge>.GNode> mNodeQueue;
 
-        public BreadthFirstSearch(Digraph<Node, Edge> graph)
-            : base(graph, true, false)
-        {
-            this.mNodeQueue = new Queue<Digraph<Node, 
-                Edge>.GNode>(graph.NodeCount + 1);
-        }
-
         public BreadthFirstSearch(Digraph<Node, Edge> graph,
             bool directed, bool reversed)
             : base(graph, directed, reversed)

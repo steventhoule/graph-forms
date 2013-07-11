@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Text;
 
 namespace GraphForms.Algorithms.Layout.ForceDirected
@@ -12,7 +11,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
     /// </summary>
     public class FRBoundedLayoutAlgorithm<Node, Edge>
         : FRLayoutAlgorithm<Node, Edge>
-        where Node : ILayoutNode
+        where Node : class, ILayoutNode
         where Edge : IGraphEdge<Node>, IUpdateable
     {
         private float mK;
@@ -25,7 +24,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         }
 
         public FRBoundedLayoutAlgorithm(Digraph<Node, Edge> graph,
-            RectangleF boundingBox)
+            Box2F boundingBox)
             : base(graph, boundingBox)
         {
         }
@@ -53,12 +52,12 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
 
         private void CalcParameters()
         {
-            RectangleF bbox = this.mClusterNode == null
-                ? this.BoundingBox : this.mClusterNode.BoundingBox;
+            Box2F bbox = this.mClusterNode == null
+                ? this.BoundingBox : this.mClusterNode.LayoutBBox;
 
-            this.mK = (float)Math.Sqrt(bbox.Width * bbox.Height
+            this.mK = (float)Math.Sqrt(bbox.W * bbox.H
                 / this.mGraph.NodeCount);
-            this.mInitTemp = Math.Min(bbox.Width, bbox.Height) / 10;
+            this.mInitTemp = Math.Min(bbox.W, bbox.H) / 10;
             this.UpdateParameters();
         }
 

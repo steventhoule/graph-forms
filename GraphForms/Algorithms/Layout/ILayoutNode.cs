@@ -14,7 +14,7 @@ namespace GraphForms.Algorithms.Layout
         /// <summary>
         /// This layout node's bounding box in its local coordinate system.
         /// </summary>
-        RectangleF BoundingBox { get; }
+        Box2F LayoutBBox { get; }
 
         /// <summary>
         /// The x-coordinate of this layout node's position 

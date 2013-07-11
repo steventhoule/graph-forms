@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Text;
 
 namespace GraphForms.Algorithms.Layout
@@ -26,13 +25,31 @@ namespace GraphForms.Algorithms.Layout
         /// node's local coordinate system that forms an angle of 
         /// <paramref name="angle"/> radians with the center point of this
         /// node's bounding box.</returns>
-        PointF GetPortNodePos(double angle);
+        Vec2F GetPortNodePos(double angle);
 
         /// <summary>
-        /// Processes a potential new position of a layout node in this
-        /// node's local coordinate system and returns it, possibly modified
-        /// to fit constraints.
-        /// </summary>
+        /// Processes a potential new position of a layout node in the
+        /// coordinate system of cluster node's sub-graph and possibly 
+        /// reacts to it.</summary>
+        /// <param name="x">The X-coordinate of a potential new position of
+        /// the layout node in the coordinate system of this cluster node's
+        /// sub-graph.</param>
+        /// <param name="y">The Y-coordinate of a potential new position of
+        /// the layout node in the coordinate system of this cluster node's 
+        /// sub-graph.</param>
+        /// <param name="boundingBox">The bounding box of the layout node in
+        /// its own local coordinate system.</param><remarks>
+        /// This is where the cluster node could adjust its own shape or
+        /// bounding box to fit the node's position, or calculate a global
+        /// offset vector for normalizing the potential new position of each
+        /// layout node with its <see cref="AugmentNodePos(float,float)"/>
+        /// implementation.</remarks>
+        void LearnNodePos(float x, float y, Box2F boundingBox);
+
+        /// <summary>
+        /// Processes a potential new position of a layout node in the
+        /// coordinate system of this cluster node's sub-graph and
+        /// returns it, possibly modified to fit constraints.</summary>
         /// <param name="x">The X-coordinate of a potential new position of
         /// a layout node in this cluster node's sub-graph.</param>
         /// <param name="y">The Y-coordinate of a potential new position of
@@ -45,6 +62,6 @@ namespace GraphForms.Algorithms.Layout
         /// position to fit within its shape, but also where it can adjust 
         /// its own shape to fit the node's position and return the position
         /// unmodified.</remarks>
-        PointF AugmentNodePos(float x, float y);
+        Vec2F AugmentNodePos(float x, float y);
     }
 }

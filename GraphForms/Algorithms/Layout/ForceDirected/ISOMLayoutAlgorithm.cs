@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 
 namespace GraphForms.Algorithms.Layout.ForceDirected
 {
     // Inverted Self-Organizing Maps
     // http://www.csse.monash.edu.au/~berndm/ISOM/
     public class ISOMLayoutAlgorithm<Node, Edge>
-        //: ForceDirectedLayoutAlgorithm<Node, Edge, ISOMLayoutParameters<Node>>
         : LayoutAlgorithm<Node, Edge>
         where Node : class, ILayoutNode
         where Edge : IGraphEdge<Node>, IUpdateable
@@ -28,23 +26,6 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         private float mInitAdapt = 0.9f;
         private float mMinAdapt = 0;
         private float mCoolingFactor = 2;
-        //private Node mBary = null;
-
-        //private Node mLastBarycenter = null;
-        //private Digraph<Node, Edge>.GNode mBarycenter;
-
-        /*public ISOMLayoutAlgorithm(Digraph<Node, Edge> graph)
-            : base(graph, null)
-        {
-            this.mQueue = new Queue<Digraph<Node, Edge>.GNode>();
-        }
-
-        public ISOMLayoutAlgorithm(Digraph<Node, Edge> graph,
-            ISOMLayoutParameters<Node> oldParameters)
-            : base(graph, oldParameters)
-        {
-            this.mQueue = new Queue<Digraph<Node, Edge>.GNode>();
-        }/* */
 
         public ISOMLayoutAlgorithm(Digraph<Node, Edge> graph,
             IClusterNode clusterNode)
@@ -55,7 +36,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         }
 
         public ISOMLayoutAlgorithm(Digraph<Node, Edge> graph,
-            RectangleF boundingBox)
+            Box2F boundingBox)
             : base(graph, boundingBox)
         {
             this.mQueue = new Queue<int>();
@@ -140,90 +121,12 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             }
         }
 
-        /*/// <summary>
-        /// The <typeparamref name="Node"/> at the center of the ISOM
-        /// Layout Algorithm, which is picked at random on each iteration
-        /// if this is null. Default value is null.
-        /// </summary>
-        public Node Barycenter
-        {
-            get { return this.mBary; }
-            set
-            {
-                if (!this.mBary.Equals(value))
-                {
-                    this.mBary = value;
-                    this.MarkDirty();
-                }
-            }
-        }
-
-        /// <summary>
-        /// Re-finds the barycenter on the chance that the old barycenter was
-        /// removed from the graph or orphaned by the removal of its only 
-        /// connecting edge from the graph, meaning that it can no longer 
-        /// validly function as the barycenter.
-        /// </summary>
-        private void FindBarycenter()
-        {
-            Node node = this.mBary;//this.Parameters.Barycenter;
-            if (node == null)
-            {
-                if (this.mBarycenter == null)
-                    this.mLastBarycenter = null;
-                else
-                    this.mLastBarycenter = this.mBarycenter.Data;
-                this.mBarycenter = null;
-            }
-            else if (node != this.mLastBarycenter)
-            {
-                if (this.mBarycenter == null)
-                    this.mLastBarycenter = null;
-                else
-                    this.mLastBarycenter = this.mBarycenter.Data;
-                int index = this.mGraph.IndexOfNode(node);
-                if (index < 0)
-                {
-                    this.mBarycenter = null;
-                }
-                else
-                {
-                    this.mBarycenter = this.mGraph.InternalNodes[index];
-                    // Orphaned nodes can't function as a barycenter.
-                    if (this.mBarycenter.DstEdgeCount == 0)
-                        this.mBarycenter = null;
-                }
-            }
-        }/* */
-
         protected override void InitializeAlgorithm()
         {
             base.InitializeAlgorithm();
-            //ISOMLayoutParameters<Node> param = this.Parameters;
-            this.mRadius = this.mInitialRadius;//param.InitialRadius;
-            this.mAdapt = this.mInitAdapt;//param.InitialAdaptation;
+            this.mRadius = this.mInitialRadius;
+            this.mAdapt = this.mInitAdapt;
         }
-
-        /*protected override bool OnBeginIteration(bool paramsDirty,
-            int lastNodeCount, int lastEdgeCount)
-        {
-            if (paramsDirty)
-            {
-                ISOMLayoutParameters<Node> param = this.Parameters;
-                this.mRadiusConstantTime = param.RadiusConstantTime;
-                this.mMinRadius = param.MinRadius;
-                this.mInitialAdaptation = param.InitialAdaptation;
-                this.mMinAdaptation = param.MinAdaptation;
-                this.mCoolingFactor = param.CoolingFactor;
-            }
-            if (this.mGraph.NodeCount != lastNodeCount ||
-                this.mGraph.EdgeCount != lastEdgeCount || paramsDirty)
-            {
-                this.FindBarycenter();
-            }
-            return base.OnBeginIteration(paramsDirty,
-                lastNodeCount, lastEdgeCount);
-        }/* */
 
         protected override void PerformIteration(uint iteration)
         {
@@ -268,15 +171,15 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         private void Adjust()
         {
             Digraph<Node, Edge>.GNode closest = null;
-            RectangleF bbox = this.mClusterNode == null 
-                ? this.BoundingBox : this.mClusterNode.BoundingBox;
+            Box2F bbox = this.mClusterNode == null 
+                ? this.BoundingBox : this.mClusterNode.LayoutBBox;
             while (closest == null || closest.AllEdgeCount == 0)
             {
                 // get a random point in the container
-                this.mGlobalX = (0.1 + 0.8 * this.mRnd.NextDouble()) 
-                    * bbox.Width + bbox.X;
+                this.mGlobalX = (0.1 + 0.8 * this.mRnd.NextDouble())
+                    * bbox.W + bbox.X;
                 this.mGlobalY = (0.1 + 0.8 * this.mRnd.NextDouble()) 
-                    * bbox.Height + bbox.Y;
+                    * bbox.H + bbox.Y;
 
                 // find the closest node to this random point
                 closest = this.GetClosest(this.mGlobalX, this.mGlobalY);

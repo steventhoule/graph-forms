@@ -19,7 +19,7 @@ namespace GraphForms.Algorithms.Layout
     /// rearranges.</typeparam>
     public abstract class LayoutAlgorithm<Node, Edge>
         : ARootedAlgorithm<Node>
-        where Node : ILayoutNode
+        where Node : class, ILayoutNode
         where Edge : IGraphEdge<Node>, IUpdateable
     {
         /// <summary>
@@ -35,7 +35,7 @@ namespace GraphForms.Algorithms.Layout
         /// This bounding box is used as a substitute for 
         /// <see cref="mClusterNode"/> if it is null.
         /// </summary>
-        private RectangleF mBBox;
+        private Box2F mBBox;
 
         /// <summary>
         /// Flags whether the fields of this algorithm have changed 
@@ -101,7 +101,10 @@ namespace GraphForms.Algorithms.Layout
                 throw new ArgumentNullException("clusterNode");
             this.mGraph = graph;
             this.mClusterNode = clusterNode;
-            this.mBBox = RectangleF.Empty;
+            this.mBBox = new Box2F(0, 0, 0, 0);
+
+            this.mLastXs = new float[graph.NodeCount];
+            this.mLastYs = new float[graph.NodeCount];
         }
 
         /// <summary>
@@ -116,13 +119,16 @@ namespace GraphForms.Algorithms.Layout
         /// that constrains the positions of the nodes in the
         /// <paramref name="graph"/> to within its boundaries.</param>
         public LayoutAlgorithm(Digraph<Node, Edge> graph,
-            RectangleF boundingBox)
+            Box2F boundingBox)
         {
             if (graph == null)
                 throw new ArgumentNullException("graph");
             this.mGraph = graph;
             this.mClusterNode = null;
             this.mBBox = boundingBox;
+
+            this.mLastXs = new float[graph.NodeCount];
+            this.mLastYs = new float[graph.NodeCount];
         }
 
         /// <summary>
@@ -163,21 +169,18 @@ namespace GraphForms.Algorithms.Layout
         /// calculating the boundary positions of port nodes based on
         /// their angle around its center.
         /// </para></remarks>
-        public RectangleF BoundingBox
+        public Box2F BoundingBox
         {
             get 
             { 
-                return new RectangleF(
-                    this.mBBox.X, this.mBBox.Y, 
-                    this.mBBox.Width, this.mBBox.Height); 
+                return new Box2F(this.mBBox); 
             }
             set
             {
                 if (this.State != ComputeState.Running &&
                     this.mAsyncState != ComputeState.Running)
                 {
-                    this.mBBox = new RectangleF(
-                        value.X, value.Y, value.Width, value.Height);
+                    this.mBBox = new Box2F(value);
                 }
             }
         }
@@ -305,10 +308,10 @@ namespace GraphForms.Algorithms.Layout
         /// </remarks>
         public void ShuffleNodes(bool immediate)
         {
-            RectangleF bbox = this.mClusterNode == null
-                ? this.mBBox : this.mClusterNode.BoundingBox;
+            Box2F bbox = this.mClusterNode == null
+                ? this.mBBox : this.mClusterNode.LayoutBBox;
             this.ShuffleNodesInternal(bbox.X, bbox.Y,
-                bbox.Width, bbox.Height, immediate);
+                bbox.W, bbox.H, immediate);
         }
 
         /// <summary>
@@ -326,20 +329,19 @@ namespace GraphForms.Algorithms.Layout
         /// within this algorithm's <see cref="BoundingBox"/> if the cluster
         /// node is null.
         /// </remarks>
-        public void ShuffleNodes(RectangleF bbox, bool immediate)
+        public void ShuffleNodes(Box2F bbox, bool immediate)
         {
             if (this.mClusterNode == null)
             {
-                bbox = RectangleF.Intersect(bbox, 
-                    this.mBBox);
+                bbox = Box2F.Intersect(bbox, this.mBBox);
             }
             else
             {
-                bbox = RectangleF.Intersect(bbox, 
-                    this.mClusterNode.BoundingBox);
+                bbox = Box2F.Intersect(bbox, 
+                    this.mClusterNode.LayoutBBox);
             }
             this.ShuffleNodesInternal(bbox.X, bbox.Y, 
-                bbox.Width, bbox.Height, immediate);
+                bbox.W, bbox.H, immediate);
         }
 
         private void ShuffleNodesInternal(float bbx, float bby, 
@@ -349,18 +351,26 @@ namespace GraphForms.Algorithms.Layout
             bool intersection;
             Node node;
             float x, y, bbxi, bbyi;
-            PointF pos;
-            RectangleF bboxI, bboxJ;
+            Vec2F pos;
+            Box2F bboxI, bboxJ;
             Random rnd = new Random(DateTime.Now.Millisecond);
             Digraph<Node, Edge>.GNode[] nodes = this.mGraph.InternalNodes;
             for (i = 0; i < nodes.Length; i++)
             {
-                if (!(nodes[i].mData is IPortNode))
+                node = nodes[i].mData;
+                if (!node.PositionFixed)
                 {
                     x = y = 0;
-                    bboxI = nodes[i].mData.BoundingBox;
-                    bbxi = bboxI.X;
+                    bboxI = new Box2F(node.LayoutBBox);
+                    bbxi = bboxI.X; 
                     bbyi = bboxI.Y;
+                    // Set the padding of the bounding box to bboxI
+                    bbx -= bbxi;
+                    bby -= bbyi;
+                    bbw -= bboxI.W;
+                    bbh -= bboxI.H;
+                    // Iterate until a random position is found that doesn't
+                    // intersect with any of the other already placed nodes.
                     intersection = true;
                     for (iter = 0; iter < 50 && intersection; iter++)
                     {
@@ -381,10 +391,11 @@ namespace GraphForms.Algorithms.Layout
                         for (j = 0; j < i && !intersection; j++)
                         {
                             node = nodes[j].mData;
-                            if (!(node is IPortNode))
+                            //if (!(node is IPortNode))
                             {
-                                bboxJ = node.BoundingBox;
-                                bboxJ.Offset(node.NewX, node.NewY);
+                                bboxJ = new Box2F(node.LayoutBBox);
+                                bboxJ.X += node.NewX;
+                                bboxJ.Y += node.NewY;
                                 intersection = bboxI.IntersectsWith(bboxJ);
                                 //intersection =
                                 //    bboxJ.X < (bboxI.X + bboxI.Width) &&
@@ -394,6 +405,12 @@ namespace GraphForms.Algorithms.Layout
                             }
                         }
                     }
+                    // Clear the padding of the bounding box
+                    bbx += bbxi;
+                    bby += bbyi;
+                    bbw += bboxI.W;
+                    bbh += bboxI.H;
+                    // Set the node's new randomized position
                     nodes[i].mData.SetNewPosition(x, y);
                 }
             }
@@ -402,7 +419,7 @@ namespace GraphForms.Algorithms.Layout
                 for (i = 0; i < nodes.Length; i++)
                 {
                     node = nodes[i].mData;
-                    if (!(node is IPortNode))
+                    if (!node.PositionFixed)
                         node.SetPosition(node.NewX, node.NewY);
                 }
                 Digraph<Node, Edge>.GEdge[] edges
@@ -412,6 +429,28 @@ namespace GraphForms.Algorithms.Layout
                     edges[i].mData.Update();
                 }
             }
+        }
+
+        /// <summary>
+        /// Gets the position on the border of the given bounding box based
+        /// on its intersection with a ray starting at its center point with
+        /// the given rotational <paramref name="angle"/>.
+        /// </summary>
+        /// <param name="bbox">The bounding box to intersect with 
+        /// a positioning ray.</param>
+        /// <param name="angle">The angle of a positioning ray starting at
+        /// the center of <paramref name="bbox"/>.</param>
+        /// <returns>The intersection point of the given bounding box and
+        /// a ray with the given <paramref name="angle"/> starting at the
+        /// bounding box's center point.</returns>
+        public static Vec2F GetBoundaryPosition(Box2F bbox, double angle)
+        {
+            double cx = bbox.X + bbox.W / 2.0;
+            double cy = bbox.Y + bbox.H / 2.0;
+            double dx = Math.Cos(angle);
+            double dy = Math.Sin(angle);
+            double t = Math.Min(Math.Abs(cx / dx), Math.Abs(cy / dy));
+            return new Vec2F((float)(dx * t + cx), (float)(dy * t + cy));
         }
 
         /// <summary>
@@ -432,8 +471,8 @@ namespace GraphForms.Algorithms.Layout
             IPortNode pNode;
             if (this.mClusterNode == null)
             {
-                double cx = (this.mBBox.X + this.mBBox.Width) / 2.0;
-                double cy = (this.mBBox.Y + this.mBBox.Height) / 2.0;
+                double cx = this.mBBox.X + this.mBBox.W / 2.0;
+                double cy = this.mBBox.Y + this.mBBox.H / 2.0;
                 // x = dx * t + cx = 2 * cx; y = dy * t + cy = 2 * cy;
                 // t = cx / dx; t = cy / dy;
                 double t, dx, dy;
@@ -449,13 +488,12 @@ namespace GraphForms.Algorithms.Layout
                         dx = dx * t + cx;
                         dy = dy * t + cy;
                         pNode.SetNewPosition((float)dx, (float)dy);
-                        pNode.SetPosition((float)dx, (float)dy);
                     }
                 }
             }
             else
             {
-                PointF pos;
+                Vec2F pos;
                 for (i = 0; i < nodes.Length; i++)
                 {
                     if (nodes[i].mData is IPortNode)
@@ -464,7 +502,6 @@ namespace GraphForms.Algorithms.Layout
                         pos = this.mClusterNode.GetPortNodePos(
                             (pNode.MinAngle + pNode.MaxAngle) / 2);
                         pNode.SetNewPosition(pos.X, pos.Y);
-                        pNode.SetPosition(pos.X, pos.Y);
                     }
                 }
             }
@@ -507,7 +544,7 @@ namespace GraphForms.Algorithms.Layout
             Digraph<Node, Edge>.GNode[] nodes
                 = this.mGraph.InternalNodes;
             // Expand the last position logs if necessary
-            if (nodes.Length > this.mLastNodeCount)
+            if (nodes.Length > this.mLastXs.Length)
             {
                 this.mLastXs = new float[nodes.Length];
                 this.mLastYs = new float[nodes.Length];
@@ -538,10 +575,11 @@ namespace GraphForms.Algorithms.Layout
         /// with <see cref="MarkDirty()"/> before this iteration began.
         /// </param>
         /// <param name="lastNodeCount">The number of nodes in this
-        /// algorithm's <see cref="Graph"/> at the end of last iteration.
+        /// algorithm's <see cref="Graph"/> at the end of the last iteration.
         /// </param>
         /// <param name="lastEdgeCount">The number of edges in this
-        /// algorithm's <see cref="Graph"/> at the </param>
+        /// algorithm's <see cref="Graph"/> at the end of the last iteration.
+        /// </param>
         protected virtual void OnBeginIteration(uint iteration, 
             bool dirty, int lastNodeCount, int lastEdgeCount)
         {
@@ -572,10 +610,32 @@ namespace GraphForms.Algorithms.Layout
             // expanding its bounds/shape to fit their new positions.
             if (this.mClusterNode == null)
             {
-                float minX = this.mBBox.X;
-                float minY = this.mBBox.Y;
-                float maxX = minX + this.mBBox.Width;
-                float maxY = minY + this.mBBox.Height;
+                float minX = float.MaxValue;
+                float minY = float.MaxValue;
+                float maxX = -float.MaxValue;
+                float maxY = -float.MaxValue;
+                /*for (i = 0; i < nodes.Length; i++)
+                {
+                    node = nodes[i].mData;
+                    dx = node.NewX;
+                    dy = node.NewY;
+                    if (dx < minX)
+                        minX = dx;
+                    if (dy < minY)
+                        minY = dy;
+                    if (dx > maxX)
+                        maxX = dx;
+                    if (dy > maxY)
+                        maxY = dy;
+                }
+                if (minX < this.mBBox.X ||
+                    maxX > this.mBBox.Right)
+                {
+                }/* */
+                minX = this.mBBox.X;
+                minY = this.mBBox.Y;
+                maxX = this.mBBox.Right;//minX + this.mBBox.W;
+                maxY = this.mBBox.Bottom;//minY + this.mBBox.H;
                 //PointF np;
                 for (i = 0; i < nodes.Length; i++)
                 {
@@ -592,7 +652,13 @@ namespace GraphForms.Algorithms.Layout
             }
             else
             {
-                PointF pos;
+                for (i = 0; i < nodes.Length; i++)
+                {
+                    node = nodes[i].mData;
+                    this.mClusterNode.LearnNodePos(
+                        node.NewX, node.NewY, node.LayoutBBox);
+                }
+                Vec2F pos;
                 for (i = 0; i < nodes.Length; i++)
                 {
                     node = nodes[i].mData;
@@ -607,7 +673,7 @@ namespace GraphForms.Algorithms.Layout
             if (this.mSpring != null)
             {
                 float x, y;
-                PointF force;
+                Vec2F force;
                 for (i = 0; i < nodes.Length; i++)
                 {
                     node = nodes[i].mData;

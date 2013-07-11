@@ -11,11 +11,6 @@ namespace GraphForms.Algorithms.Search
         private bool bImplicit = false;
         private int mMaxDepth = int.MaxValue;
 
-        public DepthFirstSearch(Digraph<Node, Edge> graph)
-            : base(graph, true, false)
-        {
-        }
-
         public DepthFirstSearch(Digraph<Node, Edge> graph,
             bool directed, bool reversed)
             : base(graph, directed, reversed)

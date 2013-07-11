@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Text;
 using GraphForms.Algorithms.Search;
 using GraphForms.Algorithms.SpanningTree;
@@ -10,8 +9,8 @@ namespace GraphForms.Algorithms.Layout.Tree
     public class SimpleTreeLayoutAlgorithm<Node, Edge>
         //: LayoutAlgorithm<Node, Edge, SimpleTreeLayoutParameters>
         : LayoutAlgorithm<Node, Edge>
-        where Node : GraphElement, ILayoutNode
-        where Edge : class, IGraphEdge<Node>, IUpdateable
+        where Node : class, ILayoutNode
+        where Edge : IGraphEdge<Node>, IUpdateable
     {
         private class Layer
         {
@@ -37,10 +36,10 @@ namespace GraphForms.Algorithms.Layout.Tree
         private double mVertexGap = 10;
         private double mLayerGap = 10;
         private LayoutDirection mDirection = LayoutDirection.TopToBottom;
-        private SearchMethod mSpanTreeGen = SearchMethod.DFS;
+        private SpanningTreeGen mSpanTreeGen = SpanningTreeGen.DFS;
 
         private Digraph<Node, Edge> mSpanningTree;
-        private SizeF[] mSizes;
+        private Vec2F[] mSizes;
         private NodeData[] mDatas;
         private int mDir;
         private List<Layer> mLayers = new List<Layer>();
@@ -61,14 +60,14 @@ namespace GraphForms.Algorithms.Layout.Tree
             IClusterNode clusterNode)
             : base(graph, clusterNode)
         {
-            //this.Spring = new LayoutLinearSpring();
+            this.Spring = new LayoutLinearSpring();
         }
 
         public SimpleTreeLayoutAlgorithm(Digraph<Node, Edge> graph,
-            RectangleF boundingBox)
+            Box2F boundingBox)
             : base(graph, boundingBox)
         {
-            //this.Spring = new LayoutLinearSpring();
+            this.Spring = new LayoutLinearSpring();
         }
 
         /// <summary>
@@ -120,10 +119,10 @@ namespace GraphForms.Algorithms.Layout.Tree
         }
 
         /// <summary>
-        /// Gets or sets the search pattern the algorithm uses to build its
-        /// internal sparsely connected spanning tree for traversing its graph.
+        /// Gets or sets the method this algorithm uses to build its internal
+        /// sparsely connected spanning tree for traversing its graph.
         /// </summary>
-        public SearchMethod SpanningTreeGeneration
+        public SpanningTreeGen SpanningTreeGeneration
         {
             get { return this.mSpanTreeGen; }
             set
@@ -160,24 +159,24 @@ namespace GraphForms.Algorithms.Layout.Tree
             Digraph<Node, Edge>.GNode[] nodes
                 = this.mGraph.InternalNodes;
 
-            this.mSizes = new SizeF[nodes.Length];
+            this.mSizes = new Vec2F[nodes.Length];
             this.mDatas = new NodeData[nodes.Length];
-            RectangleF bbox;
+            Box2F bbox;
             if (this.mDirection == LayoutDirection.LeftToRight ||
                 this.mDirection == LayoutDirection.RightToLeft)
             {
                 for (i = 0; i < nodes.Length; i++)
                 {
-                    bbox = nodes[i].Data.BoundingBox;
-                    this.mSizes[i] = new SizeF(bbox.Height, bbox.Width);
+                    bbox = nodes[i].Data.LayoutBBox;
+                    this.mSizes[i] = new Vec2F(bbox.H, bbox.W);
                 }
             }
             else
             {
                 for (i = 0; i < nodes.Length; i++)
                 {
-                    bbox = nodes[i].Data.BoundingBox;
-                    this.mSizes[i] = new SizeF(bbox.Width, bbox.Height);
+                    bbox = nodes[i].Data.LayoutBBox;
+                    this.mSizes[i] = new Vec2F(bbox.W, bbox.H);
                 }
             }
 
@@ -212,18 +211,35 @@ namespace GraphForms.Algorithms.Layout.Tree
 
         private void GenerateSpanningTree()
         {
-            IRootedSpanningTreeAlgorithm<Node, Edge> alg = null;
+            ISpanningTreeAlgorithm<Node, Edge> alg = null;
             switch (this.mSpanTreeGen)
             {
-                case SearchMethod.BFS:
-                    alg = new BFSpanningTree<Node, Edge>(this.mGraph);
+                case SpanningTreeGen.BFS:
+                    BFSpanningTree<Node, Edge> bfst 
+                        = new BFSpanningTree<Node, Edge>(
+                            this.mGraph, false, false);
+                    Digraph<Node, Edge>.GNode r1 = this.TryGetGraphRoot();
+                    bfst.SetRoot(r1.mData);
+                    alg = bfst;
                     break;
-                case SearchMethod.DFS:
-                    alg = new DFSpanningTree<Node, Edge>(this.mGraph);
+                case SpanningTreeGen.DFS:
+                    DFSpanningTree<Node, Edge> dfst 
+                        = new DFSpanningTree<Node, Edge>(
+                            this.mGraph, false, false);
+                    Digraph<Node, Edge>.GNode r2 = this.TryGetGraphRoot();
+                    dfst.SetRoot(r2.mData);
+                    alg = dfst;
+                    break;
+                case SpanningTreeGen.Boruvka:
+                    alg = new BoruvkaMinSpanningTree<Node, Edge>(mGraph);
+                    break;
+                case SpanningTreeGen.Kruskal:
+                    alg = new KruskalMinSpanningTree<Node, Edge>(mGraph);
+                    break;
+                case SpanningTreeGen.Prim:
+                    alg = new PrimMinSpanningTree<Node, Edge>(mGraph);
                     break;
             }
-            Digraph<Node, Edge>.GNode root = this.TryGetGraphRoot();
-            alg.SetRoot(root.mData);
             alg.Compute();
             this.mSpanningTree = alg.SpanningTree;
         }
@@ -238,19 +254,19 @@ namespace GraphForms.Algorithms.Layout.Tree
                 this.mLayers.Add(new Layer());
 
             Layer layer = this.mLayers[l];
-            SizeF size = this.mSizes[n.Index];
+            Vec2F size = this.mSizes[n.Index];
             NodeData d = new NodeData();
             d.parent = parent;
             this.mDatas[n.Index] = d;
             n.Color = GraphColor.Gray;
 
-            layer.NextPosition += size.Width / 2.0;
+            layer.NextPosition += size.X / 2.0;
             if (l > 0)
             {
                 layer.NextPosition += this.mLayers[l - 1].LastTranslate;
                 this.mLayers[l - 1].LastTranslate = 0;
             }
-            layer.Size = Math.Max(layer.Size, size.Height + this.mLayerGap);
+            layer.Size = Math.Max(layer.Size, size.Y + this.mLayerGap);
             layer.Nodes.Add(n);
             if (n.DstEdgeCount == 0)
             {
@@ -285,7 +301,7 @@ namespace GraphForms.Algorithms.Layout.Tree
                 d.position += d.translate;
                 layer.NextPosition = d.position;
             }
-            layer.NextPosition += size.Width / 2.0 + this.mVertexGap;
+            layer.NextPosition += size.X / 2.0 + this.mVertexGap;
 
             return d.position;
         }
@@ -301,7 +317,7 @@ namespace GraphForms.Algorithms.Layout.Tree
             //float[] newYs = this.NewYPositions;
             List<Digraph<Node, Edge>.GNode> nodes;
             Digraph<Node, Edge>.GNode node;
-            SizeF size;
+            Vec2F size;
             NodeData d;
             double x, y;
             int i, j;
@@ -320,13 +336,13 @@ namespace GraphForms.Algorithms.Layout.Tree
                     }
                     if (horizontal)
                     {
-                        x = this.mDir * (layerSize + size.Height / 2.0);
+                        x = this.mDir * (layerSize + size.Y / 2.0);
                         y = d.position;
                     }
                     else
                     {
                         x = d.position;
-                        y = this.mDir * (layerSize + size.Height / 2.0);
+                        y = this.mDir * (layerSize + size.Y / 2.0);
                     }
                     //node.Data.NewX = (float)x;
                     //node.Data.NewY = (float)y;

@@ -50,15 +50,15 @@ namespace GraphAlgorithmDemo
             };/* */
             this.mLayouts = new LayoutAlgorithm<CircleNode, ArrowEdge>[]
             {
-                new ElasticLayoutForCircles(mScene, mScene.BoundingBox),
-                new FRFreeLayoutForCircles(mScene, mScene.BoundingBox),
-                new FRBoundedLayoutForCircles(mScene, mScene.BoundingBox),
-                new ISOMLayoutForCircles(mScene, mScene.BoundingBox),
-                new KKLayoutForCircles(mScene, mScene.BoundingBox),
-                new LinLogLayoutForCircles(mScene, mScene.BoundingBox),
-                new FDSCircleLayoutForCircles(mScene, mScene.BoundingBox),
-                //new BalloonTreeLayoutForCircles(mScene, mScene.BoundingBox),
-                new SimpleTreeLayoutForCircles(mScene, mScene.BoundingBox)
+                new ElasticLayoutForCircles(mScene, mScene.LayoutBBox),
+                new FRFreeLayoutForCircles(mScene, mScene.LayoutBBox),
+                new FRBoundedLayoutForCircles(mScene, mScene.LayoutBBox),
+                new ISOMLayoutForCircles(mScene, mScene.LayoutBBox),
+                new KKLayoutForCircles(mScene, mScene.LayoutBBox),
+                new LinLogLayoutForCircles(mScene, mScene.LayoutBBox),
+                new FDSCircleLayoutForCircles(mScene, mScene.LayoutBBox),
+                new BalloonTreeLayoutForCircles(mScene, mScene.LayoutBBox),
+                new SimpleTreeLayoutForCircles(mScene, mScene.LayoutBBox)
             };/* */
             /*this.mLayouts = new NewLayoutAlgorithm<CircleNode, ArrowEdge>[]
             {
@@ -69,7 +69,7 @@ namespace GraphAlgorithmDemo
                 new KKLayoutForCircles(this.mScene, this.mScene),
                 new LinLogLayoutForCircles(this.mScene, this.mScene),
                 new FDSCircleLayoutForCircles(this.mScene, this.mScene),
-                //new BalloonTreeLayoutForCircles(this.mScene, this.mScene),
+                new BalloonTreeLayoutForCircles(this.mScene, this.mScene),
                 new SimpleTreeLayoutForCircles(this.mScene, this.mScene)
             };/* */
             this.layoutAlgCMB.Items.AddRange(this.mLayouts);
@@ -91,6 +91,9 @@ namespace GraphAlgorithmDemo
                 new PrimSpanTreeStyleAlgorithm(),
                 new DFLongestPathStyleAlgorithm(),
                 new AddColorToDashedStyleAlgorithm(),
+#if DEBUG
+                new DrawConvexHullStyleAlgorithm(),
+#endif
                 new ClearAllStyleAlgorithm()
             };
             this.styleAlgCMB.Items.AddRange(this.mStyleAlgs);
@@ -182,14 +185,20 @@ namespace GraphAlgorithmDemo
 
         private void layoutStartStopClick(object sender, EventArgs e)
         {
-            bool flag = !this.mScene.IsLayoutRunning;
-            this.mScene.IsLayoutRunning = flag;
-            this.layoutStartStopBTN.Text = flag ? "Stop" : "Start";
+            if (this.mScene.Layout != null)
+            {
+                bool flag = !this.mScene.IsLayoutRunning;
+                this.mScene.IsLayoutRunning = flag;
+                this.layoutStartStopBTN.Text = flag ? "Stop" : "Start";
+            }
         }
 
         private void layoutShuffleClick(object sender, EventArgs e)
         {
-            this.mScene.Layout.ShuffleNodes(true);
+            if (this.mScene.Layout != null)
+            {
+                this.mScene.Layout.ShuffleNodes(true);
+            }
         }
 
         private void sceneNodeMouseUp(CircleNode obj)

@@ -11,20 +11,45 @@ namespace GraphAlgorithmDemo
         float DefaultNodeRad { get; }
 
         float DefaultEdgeAng { get; }
+
+        float CenterX { get; set; }
+
+        float CenterY { get; set; }
     }
 
-    public class RandomGraphCreator : IGraphCreator
+    public abstract class AGraphCreator : IGraphCreator
     {
-        public float DefaultNodeRad
+        public virtual float DefaultNodeRad
         {
             get { return 15; }
         }
 
-        public float DefaultEdgeAng
+        public virtual float DefaultEdgeAng
         {
             get { return 30; }//degrees
         }
 
+        protected float mCenterX = 200;
+        protected float mCenterY = 200;
+
+        public float CenterX
+        {
+            get { return this.mCenterX; }
+            set { this.mCenterX = value; }
+        }
+
+        public float CenterY
+        {
+            get { return this.mCenterY; }
+            set { this.mCenterY = value; }
+        }
+
+        public abstract void CreateGraph(CircleNodeScene scene, 
+            float rad, float ang);
+    }
+
+    public class RandomGraphCreator : AGraphCreator
+    {
         private void GenerateRandomGraph(CircleNodeScene scene, 
             float rad, float ang, int minNodes, int maxNodes, 
             int minEdgesPerNode, int maxEdgeDiff, bool preventSelfLoops)
@@ -56,12 +81,32 @@ namespace GraphAlgorithmDemo
                     edge = new ArrowEdge(node, nodes[k], scene, w, ang);
                 }
             }
+
+            GraphForms.Box2F bbox = scene.LayoutBBox;
+            int cols = (int)Math.Ceiling(Math.Sqrt(nodes.Length * bbox.W / bbox.H));
+            int rows = (int)Math.Ceiling(Math.Sqrt(nodes.Length * bbox.H / bbox.W));
+
+            float unit = 50; 
+            float x, y = this.mCenterY - (unit * (cols - 1) / 2f);
+            k = 0;
+            for (i = 0; i < rows && k < nodes.Length; i++)
+            {
+                x = this.mCenterX - (unit * (rows - 1) / 2f);
+                for (j = 0; j < cols && k < nodes.Length; j++)
+                {
+                    nodes[k].SetPosition(x, y);
+                    k++;
+                    x += unit;
+                }
+                y += unit;
+            }
+            scene.UpdateEdges();
         }
 
-        public void CreateGraph(CircleNodeScene scene, float rad, float ang)
+        public override void CreateGraph(CircleNodeScene scene, 
+            float rad, float ang)
         {
             this.GenerateRandomGraph(scene, rad, ang, 5, 15, 2, 2, true);
-            scene.Layout.ShuffleNodes(true);
         }
 
         public override string ToString()
@@ -73,21 +118,8 @@ namespace GraphAlgorithmDemo
 
     // Copied from Wikipedia article image in order to test BCC algorithm
     // Article: http://en.wikipedia.org/wiki/Biconnected_component
-    public class BCCTestGraphCreator : IGraphCreator
+    public class BCCTestGraphCreator : AGraphCreator
     {
-        public float Xoffset = 0;
-        public float Yoffset = 0;
-
-        public float DefaultNodeRad
-        {
-            get { return 15; }
-        }
-
-        public float DefaultEdgeAng
-        {
-            get { return 30; }//degrees
-        }
-
         private void CreateGraph(CircleNodeScene scene, float rad, float ang,
             bool undirected, bool reversed)
         {
@@ -163,8 +195,8 @@ namespace GraphAlgorithmDemo
             }
 
             float unit = 40;
-            float left = this.Xoffset + 200 - 4 * unit;
-            float top  = this.Yoffset + 200 - 2 * unit;
+            float left = this.mCenterX - 4 * unit;
+            float top  = this.mCenterY - 2 * unit;
 
             n01.SetPosition(left + 1 * unit, top + 1 * unit);
             n02.SetPosition(left + 0 * unit, top + 2 * unit);
@@ -184,7 +216,8 @@ namespace GraphAlgorithmDemo
             scene.UpdateEdges();
         }
 
-        public void CreateGraph(CircleNodeScene scene, float rad, float ang)
+        public override void CreateGraph(CircleNodeScene scene, 
+            float rad, float ang)
         {
             this.CreateGraph(scene, rad, ang, false, false);
         }
@@ -197,22 +230,10 @@ namespace GraphAlgorithmDemo
 
     // Copied from Wikipedia article image in order to test SCC algorithm
     // Article: http://en.wikipedia.org/wiki/Tarjan's_strongly_connected_components_algorithm
-    public class SCCTestGraphCreator : IGraphCreator
+    public class SCCTestGraphCreator : AGraphCreator
     {
-        public float Xoffset = 0;
-        public float Yoffset = 0;
-
-        public float DefaultNodeRad
-        {
-            get { return 15; }
-        }
-
-        public float DefaultEdgeAng
-        {
-            get { return 30; }//degrees
-        }
-
-        public void CreateGraph(CircleNodeScene scene, float rad, float ang)
+        public override void CreateGraph(CircleNodeScene scene, 
+            float rad, float ang)
         {
             CircleNode n01 = new CircleNode(scene, rad, "n01");
             CircleNode n02 = new CircleNode(scene, rad, "n02");
@@ -241,8 +262,8 @@ namespace GraphAlgorithmDemo
             ArrowEdge e14 = new ArrowEdge(n08, n08, scene, 1, ang);
 
             float unit = 50;
-            float left = this.Xoffset + 200 - 3 * unit;
-            float top  = this.Yoffset + 200 - unit;
+            float left = this.mCenterX - 3 * unit;
+            float top  = this.mCenterY - unit;
 
             n01.SetPosition(left + 0 * unit, top + 0 * unit);
             n02.SetPosition(left + 0 * unit, top + 2 * unit);
@@ -264,22 +285,15 @@ namespace GraphAlgorithmDemo
 
     // Copied from Wikipedia article image in order to test Boruvka algorithm
     // Article: http://en.wikipedia.org/wiki/Bor%C5%AFvka%27s_algorithm
-    public class MinSpanTreeTestGraphCreator : IGraphCreator
+    public class MinSpanTreeTestGraphCreator : AGraphCreator
     {
-        public float Xoffset = 0;
-        public float Yoffset = 0;
-
-        public float DefaultNodeRad
+        public override float DefaultNodeRad
         {
             get { return 20; }
         }
 
-        public float DefaultEdgeAng
-        {
-            get { return 30; }//degrees
-        }
-
-        public void CreateGraph(CircleNodeScene scene, float rad, float ang)
+        public override void CreateGraph(CircleNodeScene scene, 
+            float rad, float ang)
         {
             CircleNode nA = new CircleNode(scene, rad, "nA");
             CircleNode nB = new CircleNode(scene, rad, "nB");
@@ -305,8 +319,8 @@ namespace GraphAlgorithmDemo
             //ArrowEdge eDB = new ArrowEdge(nD, nB, scene,  9, ang, "eDB");
 
             float unit = 50;
-            float left = this.Xoffset + 200 - 2 * unit;
-            float top  = this.Yoffset + 200 - 2 * unit;
+            float left = this.mCenterX - 2 * unit;
+            float top  = this.mCenterY - 2 * unit;
 
             nA.SetPosition(left + 0 * unit, top + 0 * unit);
             nB.SetPosition(left + 2 * unit, top + 1 * unit);
@@ -328,22 +342,20 @@ namespace GraphAlgorithmDemo
     // Copied from Wikipedia article image in order to test 
     // SPQR Tree (Triconnected Components) algorithm
     // Article: http://en.wikipedia.org/wiki/SPQR_tree
-    public class SPQRTestGraphCreator : IGraphCreator
+    public class SPQRTestGraphCreator : AGraphCreator
     {
-        public float Xoffset = 0;
-        public float Yoffset = 0;
-
-        public float DefaultNodeRad
+        public override float DefaultNodeRad
         {
             get { return 10; }
         }
 
-        public float DefaultEdgeAng
+        public override float DefaultEdgeAng
         {
             get { return 10; }//degrees
         }
 
-        public void CreateGraph(CircleNodeScene scene, float rad, float ang)
+        public override void CreateGraph(CircleNodeScene scene, 
+            float rad, float ang)
         {
             CircleNode nA1 = new CircleNode(scene, rad, "A1");
             CircleNode nA2 = new CircleNode(scene, rad, "A2");
@@ -396,8 +408,8 @@ namespace GraphAlgorithmDemo
             ArrowEdge eC1A7 = new ArrowEdge(nC1, nA7, scene, 1, ang);
 
             float unit = 40;
-            float left = this.Xoffset + 200 - 1.5f * unit;
-            float top  = this.Yoffset + 200 - 4.5f * unit;
+            float left = this.mCenterX - 1.5f * unit;
+            float top  = this.mCenterY - 4.5f * unit;
 
             nA1.SetPosition(left + 0 * unit, top + 0 * unit);
             nA2.SetPosition(left + 3 * unit, top + 0 * unit);
@@ -430,17 +442,14 @@ namespace GraphAlgorithmDemo
         }
     }
 
-    public class WagonWheelGraphCreator : IGraphCreator
+    public class WagonWheelGraphCreator : AGraphCreator
     {
-        public float CenterX = 200;
-        public float CenterY = 200;
-
-        public float DefaultNodeRad
+        public override float DefaultNodeRad
         {
             get { return 10; }
         }
 
-        public float DefaultEdgeAng
+        public override float DefaultEdgeAng
         {
             get { return 10; }//degrees
         }
@@ -482,7 +491,7 @@ namespace GraphAlgorithmDemo
             if (rimReversed || rimUndirected)
                 edge = new ArrowEdge(nodes[1], prev, scene, 1, ang);
 
-            center.SetPosition(this.CenterX, this.CenterY);
+            center.SetPosition(this.mCenterX, this.mCenterY);
             double radius = Math.Max(minRadius, 
                 spokeCount * (rad + freeArc / 2.0) / Math.PI);
             double a = 2 * Math.PI / spokeCount;
@@ -490,14 +499,15 @@ namespace GraphAlgorithmDemo
             for (i = 1; i <= spokeCount; i++)
             {
                 nodes[i].SetPosition(
-                    (float)(this.CenterX + radius * Math.Cos(angle)),
-                    (float)(this.CenterY + radius * Math.Sin(angle)));
+                    (float)(this.mCenterX + radius * Math.Cos(angle)),
+                    (float)(this.mCenterY + radius * Math.Sin(angle)));
                 angle += clockwise ? -a : a;
             }
             scene.UpdateEdges();
         }
 
-        public void CreateGraph(CircleNodeScene scene, float rad, float ang)
+        public override void CreateGraph(CircleNodeScene scene, 
+            float rad, float ang)
         {
             this.GenerateWagonWheelGraph(scene, rad, ang, 15, 
                 10f, 50f, false,

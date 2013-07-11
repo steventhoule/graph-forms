@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Text;
 using GraphForms.Algorithms.ConnectedComponents;
 
@@ -8,8 +7,8 @@ namespace GraphForms.Algorithms.Layout.Circular
 {
     public class CircularLayoutAlgorithm<Node, Edge>
         : LayoutAlgorithm<Node, Edge>
-        where Node : GraphElement, ILayoutNode
-        where Edge : class, IGraphEdge<Node>, IUpdateable
+        where Node : class, ILayoutNode
+        where Edge : IGraphEdge<Node>, IUpdateable
     {
         private CircularLayoutAlgorithm(Digraph<Node, Edge> graph,
             IClusterNode clusterNode)
@@ -18,7 +17,7 @@ namespace GraphForms.Algorithms.Layout.Circular
         }
 
         private CircularLayoutAlgorithm(Digraph<Node, Edge> graph,
-            RectangleF boundingBox)
+            Box2F boundingBox)
             : base(graph, boundingBox)
         {
         }
@@ -58,9 +57,9 @@ namespace GraphForms.Algorithms.Layout.Circular
                 set { this.mMaxAngle = value; }
             }
 
-            public RectangleF BoundingBox
+            public Box2F LayoutBBox
             {
-                get { return this.mNode.BoundingBox; }
+                get { return this.mNode.LayoutBBox; }
             }
 
             private float mX;
@@ -151,8 +150,7 @@ namespace GraphForms.Algorithms.Layout.Circular
             }
         }
 
-
-        private class BCCNode : GraphElement
+        private class BCCNode : IClusterNode
         {
             /// <summary>
             /// The index of this cluster node in graph superstructure
@@ -161,17 +159,19 @@ namespace GraphForms.Algorithms.Layout.Circular
             /// <summary>
             /// The sub-graph enclosed by this cluster node.
             /// </summary>
-            public readonly Digraph<ILayoutNode, SubEdge> Graph;
+            public readonly Digraph<ILayoutNode, SubEdge> Subgraph;
             /// <summary>
             /// Each sub-graph could potentially contain a port node that
             /// represents any node not in the sub-graph.
             /// </summary>
             public readonly IPortNode[] PortNodes;
 
+            private double mRadius;
+
             public BCCNode(int index, int nodeCapacity, int portCount)
             {
                 this.Index = index;
-                this.Graph = new Digraph<ILayoutNode, SubEdge>(
+                this.Subgraph = new Digraph<ILayoutNode, SubEdge>(
                     nodeCapacity, nodeCapacity / 2);
                 this.PortNodes = new PortNode[portCount];
             }
@@ -189,11 +189,97 @@ namespace GraphForms.Algorithms.Layout.Circular
                 return ports.ToArray();
             }
 
-            protected override void OnDrawBackground(
-                System.Windows.Forms.PaintEventArgs e)
+            #region IClusterNode Members
+
+            public Vec2F GetPortNodePos(double angle)
             {
-                throw new NotImplementedException();
+                return new Vec2F(
+                    (float)(this.mRadius * Math.Cos(angle)),
+                    (float)(this.mRadius * Math.Sin(angle)));
             }
+
+            public void LearnNodePos(float x, float y, Box2F boundingBox)
+            {
+                double rad = Math.Sqrt(x * x + y * y);
+                if (rad > this.mRadius)
+                {
+                    this.mRadius = rad;
+                }
+            }
+
+            public Vec2F AugmentNodePos(float x, float y)
+            {
+                return new Vec2F(x, y);
+            }
+
+            #endregion
+
+            #region ILayoutNode Members
+
+            private static readonly double sqrt2 = Math.Sqrt(2.0);
+
+            public Box2F LayoutBBox
+            {
+                get
+                {
+                    float r = (float)(sqrt2 * this.mRadius);
+                    return new Box2F(r / -2, r / -2, r, r);
+                }
+            }
+
+            private float mX;
+            private float mY;
+
+            public float X
+            {
+                get { return this.mX; }
+            }
+
+            public float Y
+            {
+                get { return this.mY; }
+            }
+
+            public void SetPosition(float x, float y)
+            {
+                this.mX = x;
+                this.mY = y;
+            }
+
+            public bool PositionFixed
+            {
+                get { return false; }
+            }
+
+            private float mNewX;
+            private float mNewY;
+
+            public float NewX
+            {
+                get { return this.mNewX; }
+            }
+
+            public float NewY
+            {
+                get { return this.mNewY; }
+            }
+
+            public void SetNewPosition(float newX, float newY)
+            {
+                this.mNewX = newX;
+                this.mNewY = newY;
+
+                ILayoutNode node;
+                Digraph<ILayoutNode, SubEdge>.GNode[] nodes
+                    = this.Subgraph.InternalNodes;
+                for (int i = 0; i < nodes.Length; i++)
+                {
+                    node = nodes[i].mData;
+                    node.SetNewPosition(node.NewX + newX, node.NewY + newY);
+                }
+            }
+
+            #endregion
         }
 
         private class BCCEdge
@@ -333,7 +419,7 @@ namespace GraphForms.Algorithms.Layout.Circular
                 bccNode = new BCCNode(i, bccGroup.Length, nodes.Length);
                 for (j = 0; j < bccGroup.Length; j++)
                 {
-                    bccNode.Graph.AddNode(bccGroup[j]);
+                    bccNode.Subgraph.AddNode(bccGroup[j]);
                 }
                 bccGraph.AddNode(bccNode);
                 bccNodes[i] = bccNode;
@@ -352,7 +438,7 @@ namespace GraphForms.Algorithms.Layout.Circular
                 di = bccGroupIds[edge.mDstNode.Index];
                 if (si == di)
                 {
-                    bccNodes[si].Graph.AddEdge(new SubEdge(
+                    bccNodes[si].Subgraph.AddEdge(new SubEdge(
                         edge.mSrcNode.mData, edge.mDstNode.mData, 
                         edge.mData));
                 }
@@ -370,12 +456,12 @@ namespace GraphForms.Algorithms.Layout.Circular
                     if (spn == null)
                     {
                         spn = new PortNode(edge.mSrcNode.mData, si);
-                        bccNodes[di].Graph.AddNode(spn);
+                        bccNodes[di].Subgraph.AddNode(spn);
                         //bccNodes[di].PortNodes[dEdge.mSrcNode.Index] = spn;
                         portNodes[di][edge.mSrcNode.Index] = spn;
                         bccEdge.AddDstPort(spn);
                     }
-                    bccNodes[di].Graph.AddEdge(new SubEdge(
+                    bccNodes[di].Subgraph.AddEdge(new SubEdge(
                         spn, edge.mDstNode.mData, edge.mData));
 
                     //dpn = bccNodes[si].PortNodes[edge.mDstNode.Index];
@@ -383,12 +469,12 @@ namespace GraphForms.Algorithms.Layout.Circular
                     if (dpn == null)
                     {
                         dpn = new PortNode(edge.mDstNode.mData, di);
-                        bccNodes[si].Graph.AddNode(dpn);
+                        bccNodes[si].Subgraph.AddNode(dpn);
                         //bccNodes[si].PortNodes[dEdge.mDstNode.Index] = dpn;
                         portNodes[si][edge.mDstNode.Index] = dpn;
                         bccEdge.AddSrcPort(dpn);
                     }
-                    bccNodes[si].Graph.AddEdge(new SubEdge(
+                    bccNodes[si].Subgraph.AddEdge(new SubEdge(
                         edge.mSrcNode.mData, dpn, edge.mData));
                 }
             }

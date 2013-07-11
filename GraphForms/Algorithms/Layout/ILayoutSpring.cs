@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Text;
 
 namespace GraphForms.Algorithms.Layout
@@ -26,6 +25,6 @@ namespace GraphForms.Algorithms.Layout
         /// the layout node's new position and current position.</param>
         /// <returns>A "force" vector that will be added to the 
         /// current position of the layout node being moved.</returns>
-        PointF GetSpringForce(float dx, float dy);
+        Vec2F GetSpringForce(float dx, float dy);
     }
 }

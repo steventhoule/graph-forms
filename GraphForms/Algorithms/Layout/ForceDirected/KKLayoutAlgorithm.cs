@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Drawing;
 using GraphForms.Algorithms.Path;
 
 namespace GraphForms.Algorithms.Layout.ForceDirected
@@ -7,7 +6,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
     public class KKLayoutAlgorithm<Node, Edge>
         //: ForceDirectedLayoutAlgorithm<Node, Edge, KKLayoutParameters>
         : LayoutAlgorithm<Node, Edge>
-        where Node : ILayoutNode
+        where Node : class, ILayoutNode
         where Edge : IGraphEdge<Node>, IUpdateable
     {
         private AAllShortestPaths<Node, Edge> mShortestPathsAlg;
@@ -63,7 +62,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         }
 
         public KKLayoutAlgorithm(Digraph<Node, Edge> graph,
-            RectangleF boundingBox)
+            Box2F boundingBox)
             : base(graph, boundingBox)
         {
             this.mShortestPathsAlg
@@ -91,7 +90,8 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         /// <summary>
         /// If true, then after the layout process, the nodes will be moved, 
         /// so the barycenter will be in the center point of the 
-        /// <see cref="LayoutParameters.BoundingBox"/>. </summary>
+        /// this algorithm's cluster node's bounding box or its own
+        /// bounding box if its cluster node is null. </summary>
         public bool AdjustForGravity
         {
             get { return this.bAdjustForGravity; }
@@ -181,12 +181,12 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                 //this.mK = param.K;
                 //this.bAdjustForGravity = param.AdjustForGravity;
                 //this.bExchangeVertices = param.ExchangeVertices;
-                RectangleF bbox = this.mClusterNode == null
-                    ? this.BoundingBox : this.mClusterNode.BoundingBox;
+                Box2F bbox = this.mClusterNode == null
+                    ? this.BoundingBox : this.mClusterNode.LayoutBBox;
 
                 // L0 is the length of a side of the display area
                 //float L0 = Math.Min(param.Width, param.Height);
-                float L0 = Math.Min(bbox.Width, bbox.Height);
+                float L0 = Math.Min(bbox.W, bbox.H);
 
                 // ideal length = L0 / max distance
                 //this.mIdealEdgeLength = L0 * param.LengthFactor / this.mDiameter;

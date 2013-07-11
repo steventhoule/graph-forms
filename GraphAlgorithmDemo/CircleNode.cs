@@ -79,6 +79,11 @@ namespace GraphAlgorithmDemo
             set { this.mAName = value; }
         }
 
+        public override string ToString()
+        {
+            return this.mAName;
+        }
+
         private SolidBrush mMarkerBrush = new SolidBrush(Color.Transparent);
 
         public Color MarkerColor
@@ -227,6 +232,15 @@ namespace GraphAlgorithmDemo
         }
 
         #region ILayoutNode Members
+
+        public Box2F LayoutBBox
+        {
+            get 
+            { 
+                return new Box2F(-this.mRadius, -this.mRadius, 
+                    2 * this.mRadius, 2 * this.mRadius); 
+            }
+        }
 
         public bool PositionFixed
         {

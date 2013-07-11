@@ -21,6 +21,7 @@ namespace GraphForms.Algorithms.ConnectedComponents
             bool directed, bool reversed)
             : base(graph, directed, reversed)
         {
+            this.mRoots = new List<Node>();
             this.mComponents = new List<List<Node>>();
         }
 

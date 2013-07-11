@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Text;
 
 namespace GraphForms.Algorithms.Layout.ForceDirected
@@ -12,7 +11,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
     /// </summary>
     public class FRFreeLayoutAlgorithm<Node, Edge>
         : FRLayoutAlgorithm<Node, Edge>
-        where Node : ILayoutNode
+        where Node : class, ILayoutNode
         where Edge : IGraphEdge<Node>, IUpdateable
     {
         private float mK = 10;
@@ -24,7 +23,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         }
 
         public FRFreeLayoutAlgorithm(Digraph<Node, Edge> graph,
-            RectangleF boundingBox)
+            Box2F boundingBox)
             : base(graph, boundingBox)
         {
         }

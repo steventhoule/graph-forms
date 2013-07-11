@@ -11,7 +11,7 @@ namespace GraphForms.Algorithms.Layout
 
         public LayoutLinearSpring()
         {
-            this.mMult = 0.5f;
+            this.mMult = 0.1f;
         }
 
         public LayoutLinearSpring(float multiplier)
@@ -45,9 +45,9 @@ namespace GraphForms.Algorithms.Layout
             }
         }
 
-        public PointF GetSpringForce(float dx, float dy)
+        public Vec2F GetSpringForce(float dx, float dy)
         {
-            return new PointF(this.mMult * dx, this.mMult * dy);
+            return new Vec2F(this.mMult * dx, this.mMult * dy);
         }
     }
 }

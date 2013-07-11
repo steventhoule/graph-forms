@@ -5,6 +5,7 @@ using System.Text;
 using System.Windows.Forms;
 using GraphForms;
 using GraphForms.Algorithms;
+using GraphForms.Algorithms.Collections;
 using GraphForms.Algorithms.Layout;
 using GraphForms.Algorithms.Layout.ForceDirected;
 
@@ -26,7 +27,7 @@ namespace GraphAlgorithmDemo
             this.mLayoutTimer.Interval = 1000 / 25;
             this.mLayoutTimer.Tick += new EventHandler(OnLayoutTimerTick);
 
-            this.mLayout = new ElasticLayoutForCircles(this, this.BoundingBox);
+            this.mLayout = null;
 
             this.mMouseUpHistory = new int[3];
             for (int i = 0; i < this.mMouseUpHistory.Length; i++)
@@ -57,6 +58,9 @@ namespace GraphAlgorithmDemo
             {
                 this.mMouseUpHistory[i] = -1;
             }
+
+            this.mConvexHullPen.Color = Color.Transparent;
+            this.Invalidate();
         }
 
         public void UpdateEdges()
@@ -89,9 +93,10 @@ namespace GraphAlgorithmDemo
             get { return this.mLayout; }
             set
             {
-                if (this.mLayout != value && value != null)
+                if (this.mLayout != value)// && value != null)
                 {
-                    this.mLayout.Abort();
+                    if (this.mLayout != null)
+                        this.mLayout.Abort();
                     this.mLayout = value;
                     this.UpdateBounds();
                 }
@@ -104,7 +109,7 @@ namespace GraphAlgorithmDemo
         /// </summary>
         public void StartLayout()
         {
-            if (!this.mLayoutTimer.Enabled)
+            if (!this.mLayoutTimer.Enabled && this.mLayout != null)
                 this.mLayoutTimer.Start();
         }
 
@@ -122,7 +127,7 @@ namespace GraphAlgorithmDemo
                 {
                     this.StartLayout();
                 }
-                else
+                else if (this.mLayout != null)
                 {
                     this.mLayout.Abort();
                 }
@@ -156,6 +161,12 @@ namespace GraphAlgorithmDemo
             this.mMouseUpHistory[0] = this.mGraph.IndexOfNode(node);
             if (this.NodeMouseUp != null)
                 this.NodeMouseUp(node);
+            
+            if (this.bDrawSelectedConvexHullOnly &&
+                this.mConvexHullPen.Color != Color.Transparent)
+            {
+                this.Invalidate();
+            }
         }
 
         public event Action<CircleNode> NodeMouseUp;
@@ -165,7 +176,7 @@ namespace GraphAlgorithmDemo
             if (this.LayoutOnNodeMoved)
             {
                 this.StartLayout();
-                if (!this.LayoutPaused)
+                if (!this.LayoutPaused && this.mLayout != null)
                     this.mLayout.ResetAlgorithm();
             }
             if (this.NodeMoved != null)
@@ -196,15 +207,16 @@ namespace GraphAlgorithmDemo
             this.mMinY = bbox.Y + padding;
             this.mMaxX = this.mMinX + bbox.Width - 2 * padding;
             this.mMaxY = this.mMinY + bbox.Height - 2 * padding;
-            this.mCenX = this.mMaxX / 2;
-            this.mCenY = this.mMaxY / 2;
+            this.mCenX = bbox.X + bbox.Width / 2;
+            this.mCenY = bbox.Y + bbox.Height / 2;
         }/* */
 
         //private bool bTimerTicked = false;
 
         private void OnLayoutTimerTick(object sender, EventArgs e)
         {
-            if (!this.LayoutPaused && !this.mLayout.AsyncIterate(true))
+            if (!this.LayoutPaused && this.mLayout != null && 
+                !this.mLayout.AsyncIterate(true))
             {
                 this.mLayoutTimer.Stop();
 
@@ -337,7 +349,7 @@ namespace GraphAlgorithmDemo
 
         #region IClusterNode Members
 
-        public PointF GetPortNodePos(double angle)
+        public Vec2F GetPortNodePos(double angle)
         {
             double dx = Math.Cos(angle);
             double dy = Math.Sin(angle);
@@ -345,14 +357,18 @@ namespace GraphAlgorithmDemo
                 Math.Abs(this.mCenX / dx), Math.Abs(this.mCenY / dy));
             dx = dx * t + this.mCenX;
             dy = dy * t + this.mCenY;
-            return new PointF((float)dx, (float)dy);
+            return new Vec2F((float)dx, (float)dy);
         }
 
-        public PointF AugmentNodePos(float x, float y)
+        public void LearnNodePos(float x, float y, Box2F boundingBox)
+        {
+        }
+
+        public Vec2F AugmentNodePos(float x, float y)
         {
             float dx = Math.Min(Math.Max(x, this.mMinX), this.mMaxX);
             float dy = Math.Min(Math.Max(y, this.mMinY), this.mMaxY);
-            return new PointF(dx, dy);
+            return new Vec2F(dx, dy);
         }
 
         #endregion
@@ -361,6 +377,17 @@ namespace GraphAlgorithmDemo
 
         private float mNewX;
         private float mNewY;
+
+        public Box2F LayoutBBox
+        {
+            get
+            {
+                //RectangleF bbox = this.BoundingBox;
+                //return new Box2F(bbox.X, bbox.Y, bbox.Width, bbox.Height);
+                return new Box2F(this.mMinX, this.mMinY,
+                    this.mMaxX - this.mMinX, this.mMaxY - this.mMinY);
+            }
+        }
 
         public bool PositionFixed
         {
@@ -384,5 +411,184 @@ namespace GraphAlgorithmDemo
         }
 
         #endregion
+
+        private bool bDrawSelectedConvexHullOnly = true;
+        private Pen mConvexHullPen = new Pen(Color.Transparent, 1f);
+        private bool bDrawConvexHullAngleLines = true;
+
+        public Color ConvexHullColor
+        {
+            get { return this.mConvexHullPen.Color; }
+            set
+            {
+                if (this.mConvexHullPen.Color != value)
+                {
+                    this.mConvexHullPen.Color = value;
+                    this.Invalidate();
+                }
+            }
+        }
+
+        protected override void OnDrawForeground(PaintEventArgs e)
+        {
+            if (this.mConvexHullPen.Color != Color.Transparent)
+            {
+                BalloonTreeLayoutForCircles btlfc 
+                    = this.mLayout as BalloonTreeLayoutForCircles;
+                if (btlfc != null)
+                {
+                    Graphics g = e.Graphics;
+                    CircleTree<CircleNode> ct = btlfc.CircleTree;
+                    if (ct != null)
+                    {
+                        float dx = ct.Data.X;
+                        float dy = ct.Data.Y;
+                        float ang = (float)btlfc.DegRootAngle;
+                        g.TranslateTransform(dx, dy);
+                        g.RotateTransform(ang);
+                        this.DrawCircleTreeConvexHull(g, ct);
+                        g.TranslateTransform(-dx, -dy);
+                        g.RotateTransform(-ang);
+                    }
+                }
+            }
+        }
+
+        private void DrawCircleTreeConvexHull(Graphics g,
+            CircleTree<CircleNode> root)
+        {
+            bool drawHull = true;
+            if (this.bDrawSelectedConvexHullOnly)
+            {
+                if (this.mMouseUpHistory[0] == -1 ||
+                    root.Data != this.mGraph.NodeAt(this.mMouseUpHistory[0]))
+                {
+                    drawHull = false;
+                }
+            }
+            int i;
+            float dx, dy, px, py, len;
+            double a1, a2, hyp;
+            // Draw the convex hull of the root itself
+            CircleTree<CircleNode>.CHArc[] convexHull = root.ConvexHull;
+            if (drawHull && convexHull.Length == 1)
+            {
+                CircleTree<CircleNode>.CHArc ch1 = convexHull[0];
+                dx = (float)(ch1.Dst * Math.Cos(ch1.Ang) - ch1.Rad);
+                dy = (float)(ch1.Dst * Math.Sin(ch1.Ang) - ch1.Rad);
+                len = (float)(2.0 * ch1.Rad);
+                g.DrawEllipse(this.mConvexHullPen, dx, dy, len, len);
+            }
+            if (drawHull && convexHull.Length > 1)
+            {
+                CircleTree<CircleNode>.CHArc arc 
+                    = convexHull[convexHull.Length - 1];
+                if (arc.Dst == 0)
+                {
+                    a1 = arc.Ang + arc.UpperWedge;
+                    px = (float)(arc.Rad * Math.Cos(a1));
+                    py = (float)(arc.Rad * Math.Sin(a1));
+                }
+                else
+                {
+                    a1 = Math.PI - arc.UpperWedge;
+                    hyp = Math.Sqrt(arc.Rad * arc.Rad + arc.Dst * arc.Dst
+                        - 2 * arc.Rad * arc.Dst * Math.Cos(a1));
+                    a2 = Math.Asin(arc.Rad * Math.Sin(a1) / hyp);
+                    a1 = arc.Ang + a2;
+                    px = (float)(hyp * Math.Cos(a1));
+                    py = (float)(hyp * Math.Sin(a1));
+                }
+                for (i = 0; i < convexHull.Length; i++)
+                {
+                    arc = convexHull[i];
+                    if (this.bDrawConvexHullAngleLines)
+                    {
+                        dx = (float)(arc.Dst * Math.Cos(arc.Ang));
+                        dy = (float)(arc.Dst * Math.Sin(arc.Ang));
+                        a1 = arc.Rad * Math.Cos(arc.Ang);
+                        a2 = arc.Rad * Math.Sin(arc.Ang);
+                        g.DrawLine(this.mConvexHullPen, 0f, 0f, 
+                                dx + (float)a1, dy + (float)a2);
+                        a1 = arc.Rad * Math.Cos(arc.Ang - arc.LowerWedge);
+                        a2 = arc.Rad * Math.Sin(arc.Ang - arc.LowerWedge);
+                        g.DrawLine(this.mConvexHullPen, dx, dy,
+                            dx + (float)a1, dy + (float)a2);
+                        a1 = arc.Rad * Math.Cos(arc.Ang + arc.UpperWedge);
+                        a2 = arc.Rad * Math.Sin(arc.Ang + arc.UpperWedge);
+                        g.DrawLine(this.mConvexHullPen, dx, dy,
+                            dx + (float)a1, dy + (float)a2);
+                    }
+                    dx = (float)(arc.Dst * Math.Cos(arc.Ang) - arc.Rad);
+                    dy = (float)(arc.Dst * Math.Sin(arc.Ang) - arc.Rad);
+                    len = (float)(2.0 * arc.Rad);
+                    a1 = arc.Ang - arc.LowerWedge;
+                    a2 = arc.Ang + arc.UpperWedge - a1;
+                    if (a1 < -Math.PI)
+                        a1 += 2 * Math.PI;
+                    //if (a2 < -Math.PI)
+                    //    a2 += 2 * Math.PI;
+                    a1 = 180.0 * a1 / Math.PI;
+                    a2 = 180.0 * a2 / Math.PI;
+                    g.DrawArc(this.mConvexHullPen, dx, dy, len, len, 
+                        (float)a1, (float)a2);
+                    if (arc.Dst == 0)
+                    {
+                        a1 = arc.Ang - arc.LowerWedge;
+                        dx = (float)(arc.Rad * Math.Cos(a1));
+                        dy = (float)(arc.Rad * Math.Sin(a1));
+
+                        g.DrawLine(this.mConvexHullPen, px, py, dx, dy);
+
+                        a1 = arc.Ang + arc.UpperWedge;
+                        px = (float)(arc.Rad * Math.Cos(a1));
+                        py = (float)(arc.Rad * Math.Sin(a1));
+                    }
+                    else
+                    {
+                        a1 = Math.PI - arc.LowerWedge;
+                        hyp = Math.Sqrt(arc.Rad * arc.Rad + arc.Dst * arc.Dst
+                            - 2 * arc.Rad * arc.Dst * Math.Cos(a1));
+                        a2 = Math.Asin(arc.Rad * Math.Sin(a1) / hyp);
+                        a1 = arc.Ang - a2;
+                        dx = (float)(hyp * Math.Cos(a1));
+                        dy = (float)(hyp * Math.Sin(a1));
+
+                        g.DrawLine(this.mConvexHullPen, px, py, dx, dy);
+
+                        a1 = Math.PI - arc.UpperWedge;
+                        hyp = Math.Sqrt(arc.Rad * arc.Rad + arc.Dst * arc.Dst
+                            - 2 * arc.Rad * arc.Dst * Math.Cos(a1));
+                        a2 = Math.Asin(arc.Rad * Math.Sin(a1) / hyp);
+                        a1 = arc.Ang + a2;
+                        px = (float)(hyp * Math.Cos(a1));
+                        py = (float)(hyp * Math.Sin(a1));
+                    }
+                }
+            }
+
+            // Draw the convex hull of the root's branches
+            if (root.BranchCount > 0)
+            {
+                float ang;
+                px = root.Data.X;
+                py = root.Data.Y;
+                CircleTree<CircleNode> ct;
+                CircleTree<CircleNode>[] branches
+                    = root.Branches;
+                for (i = 0; i < branches.Length; i++)
+                {
+                    ct = branches[i];
+                    dx = (float)(ct.Distance * Math.Cos(ct.Angle));
+                    dy = (float)(ct.Distance * Math.Sin(ct.Angle));
+                    ang = (float)ct.DegAngle;
+                    g.TranslateTransform(dx, dy);
+                    g.RotateTransform(ang);
+                    this.DrawCircleTreeConvexHull(g, ct);
+                    g.RotateTransform(-ang);
+                    g.TranslateTransform(-dx, -dy);
+                }
+            }
+        }
     }
 }

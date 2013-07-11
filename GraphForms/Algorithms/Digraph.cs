@@ -961,6 +961,129 @@ namespace GraphForms.Algorithms
         }
         #endregion
 
+        /// <summary>
+        /// Finds the "center" node of this graph based on a breadth first
+        /// "pruning" of edges, starting from its "leaf" nodes (nodes with
+        /// only one edge connecting them to the rest of the graph) and 
+        /// working its way inward until a single "center" node is left.
+        /// </summary>
+        /// <param name="undirected">Whether the "pruning" is done for both
+        /// the source and destination edges of each node rather than just
+        /// one or the other.</param>
+        /// <param name="reversed">Whether the source edges of each node are
+        /// "pruned" instead of the destination edges. If 
+        /// <paramref name="undirected"/> is true, whether source edges are 
+        /// "pruned" before destination edges.</param>
+        /// <returns>Null is returned if this graph could not be "pruned"
+        /// because it has no nodes or no edges or no "leaf" nodes;
+        /// otherwise the "center" found via the breadth first "pruning" is
+        /// returned.</returns>
+        public GNode FindCenter(bool undirected, bool reversed)
+        {
+            if (this.mNodes.Count == 0)
+                return null;
+            if (this.mEdges.Count == 0)
+                return null;
+
+            int i, degree;
+            int[] degrees = new int[this.mNodes.Count];
+            Queue<Digraph<Node, Edge>.GNode> leaves
+                = new Queue<Digraph<Node, Edge>.GNode>(this.mNodes.Count);
+
+            if (undirected)
+            {
+                for (i = 0; i < this.mNodes.Count; i++)
+                {
+                    this.mNodes[i].Index = i;
+                    degrees[i] = this.mNodes[i].AllEdgeCount;
+                    if (degrees[i] == 1)
+                        leaves.Enqueue(this.mNodes[i]);
+                }
+            }
+            else
+            {
+                if (reversed)
+                {
+                    for (i = 0; i < this.mNodes.Count; i++)
+                    {
+                        this.mNodes[i].Index = i;
+                        degrees[i] = this.mNodes[i].mSrcEdges.Count;
+                        if (degrees[i] == 1)
+                            leaves.Enqueue(this.mNodes[i]);
+                    }
+                }
+                else
+                {
+                    for (i = 0; i < this.mNodes.Count; i++)
+                    {
+                        this.mNodes[i].Index = i;
+                        degrees[i] = this.mNodes[i].mDstEdges.Count;
+                        if (degrees[i] == 1)
+                            leaves.Enqueue(this.mNodes[i]);
+                    }
+                }
+            }
+            Digraph<Node, Edge>.GNode u, v = null;
+            Digraph<Node, Edge>.GEdge[] edges;
+            if (reversed)
+            {
+                while (leaves.Count > 0)
+                {
+                    v = leaves.Dequeue();
+                    edges = v.InternalSrcEdges;
+                    for (i = 0; i < edges.Length; i++)
+                    {
+                        u = edges[i].mSrcNode;
+                        degree = degrees[u.Index] - 1;
+                        degrees[u.Index] = degree;
+                        if (degree == 1)
+                            leaves.Enqueue(u);
+                    }
+                    if (undirected)
+                    {
+                        edges = v.InternalDstEdges;
+                        for (i = 0; i < edges.Length; i++)
+                        {
+                            u = edges[i].mDstNode;
+                            degree = degrees[u.Index] - 1;
+                            degrees[u.Index] = degree;
+                            if (degree == 1)
+                                leaves.Enqueue(u);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                while (leaves.Count > 0)
+                {
+                    v = leaves.Dequeue();
+                    edges = v.InternalDstEdges;
+                    for (i = 0; i < edges.Length; i++)
+                    {
+                        u = edges[i].mDstNode;
+                        degree = degrees[u.Index] - 1;
+                        degrees[u.Index] = degree;
+                        if (degree == 1)
+                            leaves.Enqueue(u);
+                    }
+                    if (undirected)
+                    {
+                        edges = v.InternalSrcEdges;
+                        for (i = 0; i < edges.Length; i++)
+                        {
+                            u = edges[i].mSrcNode;
+                            degree = degrees[u.Index] - 1;
+                            degrees[u.Index] = degree;
+                            if (degree == 1)
+                                leaves.Enqueue(u);
+                        }
+                    }
+                }
+            }
+            return v;
+        }
+
         #region Node List Manipulation
 
         #region Node List Properties

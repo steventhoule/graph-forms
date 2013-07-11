@@ -2,6 +2,7 @@
 using System.Drawing;
 using GraphForms;
 using GraphForms.Algorithms;
+using GraphForms.Algorithms.Collections;
 using GraphForms.Algorithms.Layout;
 using GraphForms.Algorithms.Layout.Circular;
 using GraphForms.Algorithms.Layout.ForceDirected;
@@ -15,7 +16,7 @@ namespace GraphAlgorithmDemo
         private CircleNodeScene mScene;
 
         public ElasticLayoutForCircles(CircleNodeScene scene,
-            RectangleF boundingBox)
+            Box2F boundingBox)
             : base(scene.Graph, boundingBox)
         {
             this.mScene = scene;
@@ -48,7 +49,7 @@ namespace GraphAlgorithmDemo
         private CircleNodeScene mScene;
 
         public FRFreeLayoutForCircles(CircleNodeScene scene,
-            RectangleF boundingBox)
+            Box2F boundingBox)
             : base(scene.Graph, boundingBox)
         {
             this.mScene = scene;
@@ -81,7 +82,7 @@ namespace GraphAlgorithmDemo
         private CircleNodeScene mScene;
 
         public FRBoundedLayoutForCircles(CircleNodeScene scene,
-            RectangleF boundingBox)
+            Box2F boundingBox)
             : base(scene.Graph, boundingBox)
         {
             this.mScene = scene;
@@ -114,7 +115,7 @@ namespace GraphAlgorithmDemo
         private CircleNodeScene mScene;
 
         public ISOMLayoutForCircles(CircleNodeScene scene,
-            RectangleF boundingBox)
+            Box2F boundingBox)
             : base(scene.Graph, boundingBox)
         {
             this.mScene = scene;
@@ -147,7 +148,7 @@ namespace GraphAlgorithmDemo
         private CircleNodeScene mScene;
 
         public KKLayoutForCircles(CircleNodeScene scene,
-            RectangleF boundingBox)
+            Box2F boundingBox)
             : base(scene.Graph, boundingBox)
         {
             this.mScene = scene;
@@ -180,7 +181,7 @@ namespace GraphAlgorithmDemo
         private CircleNodeScene mScene;
 
         public LinLogLayoutForCircles(CircleNodeScene scene,
-            RectangleF boundingBox)
+            Box2F boundingBox)
             : base(scene.Graph, boundingBox)
         {
             this.mScene = scene;
@@ -213,10 +214,12 @@ namespace GraphAlgorithmDemo
         private CircleNodeScene mScene;
 
         public FDSCircleLayoutForCircles(CircleNodeScene scene,
-            RectangleF boundingBox)
+            Box2F boundingBox)
             : base(scene.Graph, boundingBox)
         {
             this.mScene = scene;
+            this.CenterX = boundingBox.X + boundingBox.W / 2;
+            this.CenterY = boundingBox.Y + boundingBox.H / 2;
         }
 
         public FDSCircleLayoutForCircles(CircleNodeScene scene,
@@ -224,6 +227,9 @@ namespace GraphAlgorithmDemo
             : base(scene.Graph, clusterNode)
         {
             this.mScene = scene;
+            Box2F bbox = clusterNode.LayoutBBox;
+            this.CenterX = bbox.X + bbox.W / 2;
+            this.CenterY = bbox.Y + bbox.H / 2;
         }
 
         protected override void OnEndIteration(uint iteration,
@@ -246,7 +252,7 @@ namespace GraphAlgorithmDemo
         private CircleNodeScene mScene;
 
         public BalloonTreeLayoutForCircles(CircleNodeScene scene,
-            RectangleF boundingBox)
+            Box2F boundingBox)
             : base(scene.Graph, boundingBox)
         {
             this.mScene = scene;
@@ -257,6 +263,11 @@ namespace GraphAlgorithmDemo
             : base(scene.Graph, clusterNode)
         {
             this.mScene = scene;
+        }
+
+        public CircleTree<CircleNode> CircleTree
+        {
+            get { return this.BalloonTree; }
         }
 
         protected override void OnEndIteration(uint iteration,
@@ -279,7 +290,7 @@ namespace GraphAlgorithmDemo
         private CircleNodeScene mScene;
 
         public SimpleTreeLayoutForCircles(CircleNodeScene scene,
-            RectangleF boundingBox)
+            Box2F boundingBox)
             : base(scene.Graph, boundingBox)
         {
             this.mScene = scene;

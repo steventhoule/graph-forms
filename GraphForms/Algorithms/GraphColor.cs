@@ -9,19 +9,19 @@ namespace GraphForms.Algorithms
     /// in a graph being traversed by an algorithm for searching or other 
     /// data processing.
     /// </summary>
-    public enum GraphColor
+    public enum GraphColor : byte
     {
         /// <summary>
         /// The node/edge has not yet been visited by the algorithm.
         /// </summary>
-        White,
+        White = 0,
         /// <summary>
         /// The node/edge is currently being visited by the algorithm.
         /// </summary>
-        Gray,
+        Gray = 1,
         /// <summary>
         /// The node/edge has already been visited by the algorithm.
         /// </summary>
-        Black
+        Black = 2
     }
 }

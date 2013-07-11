@@ -29,7 +29,14 @@ namespace GraphForms.Algorithms.SpanningTree
         {
             this.mGraph = graph;
         }
-
+        /// <summary>
+        /// A sub-graph of the original connected graph that connects all
+        /// its vertices together with a minimal subset of its edges.
+        /// </summary><remarks>
+        /// If the original graph isn't connected, this graph will contain
+        /// multiple spanning trees, one for each weakly connected
+        /// component of the original graph.
+        /// </remarks>
         public Digraph<Node, Edge> SpanningTree
         {
             get { return this.mSpanningTree; }
@@ -56,7 +63,7 @@ namespace GraphForms.Algorithms.SpanningTree
 
             this.mDatas = new NodeData[nodes.Length];
             this.mSpanningTree = new Digraph<Node,Edge>(
-                this.mGraph.NodeCount, this.mGraph.EdgeCount / 2);
+                nodes.Length, edges.Length / 2);
             int i, compCount = nodes.Length;
             for (i = 0; i < compCount; i++)
             {
@@ -67,13 +74,14 @@ namespace GraphForms.Algorithms.SpanningTree
 
             Digraph<Node, Edge>.GEdge edge;
             int j, si, di, newCompCount;
-            bool[] removeEdge = new bool[edges.Length];
+            int edgeCount = edges.Length;
+            bool[] removeEdge = new bool[edgeCount];
             // TODO: Does checking edges.Length fully compensate for
-            // a graph with multiple connected components?
-            while (compCount > 1 && edges.Length > 0)
+            // a graph with multiple weakly connected components?
+            while (compCount > 1 && edgeCount > 0)
             {
                 newCompCount = 0;
-                for (i = 0; i < edges.Length; i++)
+                for (i = 0; i < edgeCount; i++)
                 {
                     removeEdge[i] = false;
                 }
@@ -82,7 +90,7 @@ namespace GraphForms.Algorithms.SpanningTree
                     edge = null;
                     si = -1;
                     di = -1;
-                    for (j = 0; j < edges.Length; j++)
+                    for (j = 0; j < edgeCount; j++)
                     {
                         edge = edges[j];
                         si = edge.mSrcNode.Index;
@@ -101,7 +109,7 @@ namespace GraphForms.Algorithms.SpanningTree
                                 break;
                         }
                     }
-                    if (j < edges.Length)
+                    if (j < edgeCount)
                     {
                         if (this.mDatas[si].NewId == -1 &&
                             this.mDatas[di].NewId == -1)
@@ -122,19 +130,14 @@ namespace GraphForms.Algorithms.SpanningTree
                         this.OnTreeEdge(edge.mData, si, di);
                     }
                 }
-                si = edges.Length;
-                for (j = edges.Length - 1; j >= 0; j--)
+                for (j = edgeCount - 1; j >= 0; j--)
                 {
                     if (removeEdge[j])
                     {
-                        si--;
-                        Array.Copy(edges, j + 1, edges, j, si - j);
+                        edgeCount--;
+                        Array.Copy(edges, j + 1, edges, j, edgeCount - j);
                     }
                 }
-                Digraph<Node, Edge>.GEdge[] newEdges
-                    = new Digraph<Node, Edge>.GEdge[si];
-                Array.Copy(edges, 0, newEdges, 0, si);
-                edges = newEdges;
                 for (i = 0; i < this.mDatas.Length; i++)
                 {
                     this.mDatas[i].CompId = this.mDatas[i].NewId;

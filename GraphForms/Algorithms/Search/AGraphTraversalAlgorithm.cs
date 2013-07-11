@@ -4,6 +4,15 @@ using System.Text;
 
 namespace GraphForms.Algorithms.Search
 {
+    /// <summary>
+    /// This is the base class for algorithms designed to traverse a graph
+    /// and systematically explore its nodes and edges.  It has predefined
+    /// events that derived classes should call as they explore its graph.
+    /// </summary>
+    /// <typeparam name="Node">The type of vertices in the graph traversed
+    /// and explored by this algorithm.</typeparam>
+    /// <typeparam name="Edge">The type of edges in the graph traversed
+    /// and explored by this algorithm.</typeparam>
     public abstract class AGraphTraversalAlgorithm<Node, Edge>
         : ARootedAlgorithm<Node>
         where Edge : IGraphEdge<Node>
@@ -42,6 +51,17 @@ namespace GraphForms.Algorithms.Search
             this.bReversed = false;
         }/* */
 
+        /// <summary>
+        /// Initializes a new instance of an algorithm for traversing and
+        /// exploring the given graph with the given directional constraints.
+        /// </summary>
+        /// <param name="graph">The graph to be explored by this algorithm.
+        /// </param>
+        /// <param name="directed">Whether the <paramref name="graph"/> is
+        /// traversed as a directed graph or as an undirected one.</param>
+        /// <param name="reversed">Whether the <paramref name="graph"/> is
+        /// traversed in reverse, from edge destination to source, rather
+        /// than from edge source to destination.</param>
         public AGraphTraversalAlgorithm(Digraph<Node, Edge> graph,
             bool directed, bool reversed)
         {
@@ -269,6 +289,13 @@ namespace GraphForms.Algorithms.Search
             }
         }
 
+        /// <summary>
+        /// This function performs the core functions of a graph traversal
+        /// algorithm, first calling <see cref="Initialize()"/> to initialize
+        /// any needed data, and then attempting to run main traversal
+        /// computation at the root node (if it's valid), and then restarting
+        /// it at any nodes that haven't been explored.
+        /// </summary>
         protected override void InternalCompute()
         {
             if (this.mGraph.NodeCount == 0 || this.mGraph.EdgeCount == 0)
@@ -336,6 +363,18 @@ namespace GraphForms.Algorithms.Search
             }
         }
 
+        /// <summary>
+        /// The implementation of this function should contain the core code  
+        /// for traversing this algorithm's graph starting at the given 
+        /// <paramref name="root"/> node and systematically traveling along
+        /// edges to explore nodes, turning nodes gray as they are being
+        /// explored and then black after finishing exploring them, and
+        /// calling the exploration event functions along the way.
+        /// </summary>
+        /// <param name="root">The root node at which the traversal of the
+        /// graph starts by following its edges to its unexplored neighboring
+        /// nodes and so on until a dead end is reached.
+        /// </param>
         protected abstract void ComputeFromRoot(
             Digraph<Node, Edge>.GNode root);
     }

@@ -455,6 +455,37 @@ namespace GraphAlgorithmDemo
         }
     }
 
+    public class DrawConvexHullStyleAlgorithm : StyleAlgorithm
+    {
+        private int mColor = 0;
+
+        public DrawConvexHullStyleAlgorithm()
+            : base(false, false)
+        {
+        }
+
+        public override bool EnableDirected
+        {
+            get { return false; }
+        }
+
+        public override bool EnableReversed
+        {
+            get { return false; }
+        }
+
+        public override void Compute(CircleNodeScene scene)
+        {
+            scene.ConvexHullColor = sLineColors[this.mColor];
+            this.mColor = (this.mColor + 1) % sLineColors.Length;
+        }
+
+        public override string ToString()
+        {
+            return "Draw Convex Hull";
+        }
+    }
+
     public class ClearAllStyleAlgorithm : StyleAlgorithm
     {
         public ClearAllStyleAlgorithm()
@@ -474,6 +505,7 @@ namespace GraphAlgorithmDemo
 
         public override void Compute(CircleNodeScene scene)
         {
+            scene.ConvexHullColor = Color.Transparent;
             Digraph<CircleNode, ArrowEdge>.GEdge[] edges
                 = scene.Graph.InternalEdges;
             for (int i = 0; i < edges.Length; i++)

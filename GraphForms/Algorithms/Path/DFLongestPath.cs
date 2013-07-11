@@ -53,7 +53,7 @@ namespace GraphForms.Algorithms.Path
         private Edge[] mPathEdges;
 
         public DFLongestPath(Digraph<Node, Edge> graph)
-            : base(graph)
+            : base(graph, true, false)
         {
         }
 

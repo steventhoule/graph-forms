@@ -1,35 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 
 namespace GraphForms.Algorithms.Layout.ForceDirected
 {
     // Copied from Graph#, which was copied from this:
     // https://code.google.com/p/linloglayout/source/browse/trunk/src/MinimizerBarnesHut.java
     public partial class LinLogLayoutAlgorithm<Node, Edge>
-        //: ForceDirectedLayoutAlgorithm<Node, Edge, LinLogLayoutParameters>
         : LayoutAlgorithm<Node, Edge>
-        where Node : ILayoutNode
+        where Node : class, ILayoutNode
         where Edge : IGraphEdge<Node>, IUpdateable
     {
-        /*public LinLogLayoutAlgorithm(Digraph<Node, Edge> graph)
-            : base(graph, null)
-        {
-        }
-
-        public LinLogLayoutAlgorithm(Digraph<Node, Edge> graph,
-            LinLogLayoutParameters oldParameters)
-            : base(graph, oldParameters)
-        {
-        }/* */
-
         private class LinLogNode
         {
             public int Index;
             public Node OriginalNode;
             public LinLogEdge[] Attractions;
             public float RepulsionWeight;
-            public PointF Position;
+            public Vec2F Position;
         }
 
         private class LinLogEdge
@@ -44,7 +31,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         private float mGravMult = 0.1f;
 
         private LinLogNode[] mNodes;
-        private PointF mBarycenter;
+        private Vec2F mBarycenter;
         private double mRepulsionMultiplier;
 
         // These change every iteration as graph cools down
@@ -59,7 +46,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         }
 
         public LinLogLayoutAlgorithm(Digraph<Node, Edge> graph,
-            RectangleF boundingBox)
+            Box2F boundingBox)
             : base(graph, boundingBox)
         {
             this.MaxIterations = 100;
@@ -105,22 +92,13 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         protected override void InitializeAlgorithm()
         {
             //base.InitializeAlgorithm();
-
-            //LinLogLayoutParameters param = this.Parameters;
-            this.mRepuExponent = this.mFinalRepuExponent;//param.RepulsiveExponent;
-            this.mAttrExponent = this.mFinalAttrExponent;//param.AttractionExponent;
+            this.mRepuExponent = this.mFinalRepuExponent;
+            this.mAttrExponent = this.mFinalAttrExponent;
         }
 
         protected override void OnBeginIteration(uint iteration, bool dirty, 
             int lastNodeCount, int lastEdgeCount)
         {
-            if (dirty)
-            {
-                //LinLogLayoutParameters param = this.Parameters;
-                //this.mGravitationMultiplier = param.GravitationMultiplier;
-                //this.mFinalRepuExponent = param.RepulsiveExponent;
-                //this.mFinalAttrExponent = param.AttractionExponent;
-            }
             bool nodesDirty = false;
             if (this.mGraph.NodeCount != lastNodeCount ||
                 this.mGraph.EdgeCount != lastEdgeCount)
@@ -149,7 +127,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             {
                 n = this.mNodes[i];
                 //n.Position = n.OriginalNode.Position;
-                n.Position = new PointF(n.OriginalNode.X, n.OriginalNode.Y);
+                n.Position = new Vec2F(n.OriginalNode.X, n.OriginalNode.Y);
             }
 
             this.ComputeBarycenter();
@@ -177,7 +155,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             }
 
             // Move each node
-            PointF bestDir, oldPos;
+            Vec2F bestDir, oldPos;
             double oldEnergy, bestEnergy, curEnergy;
             int multiple, bestMultiple;
             for (i = 0; i < this.mNodes.Length; i++)
@@ -251,7 +229,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             }
         }
 
-        private PointF GetDirection(int index, QuadTree quadTree)
+        private Vec2F GetDirection(int index, QuadTree quadTree)
         {
             double[] dir = new double[] { 0, 0 };
 
@@ -271,9 +249,9 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                     dir[0] = dir[0] / length;
                     dir[1] = dir[1] / length;
                 }
-                return new PointF((float)dir[0], (float)dir[1]);
+                return new Vec2F((float)dir[0], (float)dir[1]);
             }
-            return new PointF(0, 0);
+            return new Vec2F(0, 0);
         }
 
         private double AddGravitationDirection(int index, double[] dir)
@@ -490,7 +468,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
 
         private void ComputeBarycenter()
         {
-            this.mBarycenter = new PointF(0, 0);
+            this.mBarycenter = new Vec2F(0, 0);
             double baryX = 0.0, baryY = 0.0;
             double repWeightSum = 0.0;
             LinLogNode n;
@@ -542,8 +520,8 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         private QuadTree BuildQuadTree()
         {
             // Calculation of the minimum and maximum positions
-            PointF minPos = new PointF(float.MaxValue, float.MaxValue);
-            PointF maxPos = new PointF(-float.MaxValue, -float.MaxValue);
+            Vec2F minPos = new Vec2F(float.MaxValue, float.MaxValue);
+            Vec2F maxPos = new Vec2F(-float.MaxValue, -float.MaxValue);
 
             LinLogNode n;
             int i, count = this.mNodes.Length;
