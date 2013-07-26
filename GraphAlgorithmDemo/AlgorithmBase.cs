@@ -246,6 +246,39 @@ namespace GraphAlgorithmDemo
         }
     }
 
+    public class BalloonCirclesLayoutForCircles
+        : BalloonCirclesLayoutAlgorithm<CircleNode, ArrowEdge>
+    {
+        private CircleNodeScene mScene;
+
+        public BalloonCirclesLayoutForCircles(CircleNodeScene scene,
+            Box2F boundingBox)
+            : base(scene.Graph, boundingBox)
+        {
+            this.mScene = scene;
+        }
+
+        public BalloonCirclesLayoutForCircles(CircleNodeScene scene,
+            IClusterNode clusterNode)
+            : base(scene.Graph, clusterNode)
+        {
+            this.mScene = scene;
+        }
+
+        protected override void OnEndIteration(uint iteration,
+            double totalDistanceChange)
+        {
+            this.mScene.OnLayoutIterEnded(iteration,
+                totalDistanceChange);
+            base.OnEndIteration(iteration, totalDistanceChange);
+        }
+
+        public override string ToString()
+        {
+            return "Balloon Circles";
+        }
+    }
+
     public class BalloonTreeLayoutForCircles
         : BalloonTreeLayoutAlgorithm<CircleNode, ArrowEdge>
     {
@@ -265,7 +298,7 @@ namespace GraphAlgorithmDemo
             this.mScene = scene;
         }
 
-        public CircleTree<CircleNode> CircleTree
+        public CircleTree<CircleNode, ArrowEdge> CircleTree
         {
             get { return this.BalloonTree; }
         }

@@ -12,30 +12,13 @@ namespace GraphForms.Algorithms.Layout.Tree
         where Node : class, ILayoutNode
         where Edge : IGraphEdge<Node>, IUpdateable
     {
-        /// <summary>
-        /// Used to specify which method this algorithm uses to choose the
-        /// root node from which all subtrees branch off and orbit around.
-        /// </summary>
-        public enum RootFinder
-        {
-            /// <summary>
-            /// Chooses a root based on the last value set with
-            /// <see cref="M:ARootedAlgorithm`1{Node}.SetRoot(Node)"/>.
-            /// </summary>
-            UserDefined,
-            /// <summary>
-            /// Chooses a root such that the depth of the tree is minimized.
-            /// </summary>
-            Center,
-        }
-
         // Balloon Tree Generating Parameters
         private SpanningTreeGen mSpanTreeGen = SpanningTreeGen.DFS;
-        private RootFinder mRootFindingMethod = RootFinder.Center;
+        private TreeRootFinding mRootFindingMethod = TreeRootFinding.Center;
 
         // Sorting Parameters
         private bool bInSketchMode = false;
-        private IComparer<CircleTree<Node>> mBranchSorter = null;
+        private IComparer<CircleTree<Node, Edge>> mBranchSorter = null;
 
         // Position Calculation Paramaters
         private CircleSpacing mBranchSpacing = CircleSpacing.SNS;
@@ -53,8 +36,9 @@ namespace GraphForms.Algorithms.Layout.Tree
         private double mMagnetExp = 1;
         private double mRootAngle = 0;
 
+        // Flags and Calculated Values
         private Digraph<Node, Edge> mSpanTree;
-        private CircleTree<Node> mCircleTree;
+        private CircleTree<Node, Edge> mCircleTree;
         private bool bSpanTreeDirty = true;
         private bool bCircleTreeDirty = true;
         private bool bCenterDirty = true;
@@ -78,7 +62,7 @@ namespace GraphForms.Algorithms.Layout.Tree
         /// algorithm based on <see cref="SpanningTreeGeneration"/> and 
         /// <see cref="RootFindingMethod"/> (or null if it hasn't been
         /// generated yet).</summary>
-        protected CircleTree<Node> BalloonTree
+        protected CircleTree<Node, Edge> BalloonTree
         {
             get { return this.mCircleTree; }
         }
@@ -108,7 +92,7 @@ namespace GraphForms.Algorithms.Layout.Tree
         /// Gets or sets the method this algorithm uses to choose the root
         /// node from which all subtrees branch off and orbit around.
         /// </summary>
-        public RootFinder RootFindingMethod
+        public TreeRootFinding RootFindingMethod
         {
             get { return this.mRootFindingMethod; }
             set
@@ -153,7 +137,7 @@ namespace GraphForms.Algorithms.Layout.Tree
         /// </summary><remarks>
         /// Be aware that this is superseded by <see cref="InSketchMode"/>
         /// and won't be used if "sketch mode" is enabled.</remarks>
-        public IComparer<CircleTree<Node>> BranchSorter
+        public IComparer<CircleTree<Node, Edge>> BranchSorter
         {
             get { return this.mBranchSorter; }
             set
@@ -174,9 +158,9 @@ namespace GraphForms.Algorithms.Layout.Tree
         /// </summary><remarks>
         /// If set to <see cref="CircleSpacing.SNS"/>, the angle computation 
         /// will use the subtree's/leaf's bounding wedge defined by its 
-        /// <see cref="P:CircleTree`1.UpperWedge"/> and 
-        /// <see cref="P:CircleTree`1.LowerWedge"/> properties
-        /// calculated by <see cref="M:CircleTree`1.CalculateAngles()"/>.
+        /// <see cref="P:CircleTree`2.UpperWedge"/> and 
+        /// <see cref="P:CircleTree`2.LowerWedge"/> properties
+        /// calculated by <see cref="M:CircleTree`2.CalculateAngles()"/>.
         /// </remarks>
         public CircleSpacing BranchSpacing
         {
@@ -250,9 +234,9 @@ namespace GraphForms.Algorithms.Layout.Tree
         /// Be aware that this angle will be normalized to the range [0,2π] 
         /// ( [0°,360°] ) when used.</para></summary><remarks>
         /// If the sum the bounding wedges of the set of subtree/leaf nodes
-        /// exceeds this wedge, their <see cref="P:CircleTree`1.Distance"/>s
+        /// exceeds this wedge, their <see cref="P:CircleTree`2.Distance"/>s
         /// are increased until all their bounding wedges can fit within it.
-        /// Then their <see cref="P:CircleTree`1.Angle"/>s are set in the
+        /// Then their <see cref="P:CircleTree`2.Angle"/>s are set in the
         /// range <c>(-wedge / 2, wedge / 2)</c>, measured counterclockwise
         /// from the +X-axis of their shared root's local coordinate system.
         /// </remarks><seealso cref="MaximumTreeWedge"/>
@@ -275,9 +259,9 @@ namespace GraphForms.Algorithms.Layout.Tree
         /// Be aware that this angle will be normalized to the range [0,2π] 
         /// ( [0°,360°] ) when used.</para></summary><remarks>
         /// If the sum the bounding wedges of the set of subtree/leaf nodes
-        /// exceeds this wedge, their <see cref="P:CircleTree`1.Distance"/>s
+        /// exceeds this wedge, their <see cref="P:CircleTree`2.Distance"/>s
         /// are increased until all their bounding wedges can fit within it.
-        /// Then their <see cref="P:CircleTree`1.Angle"/>s are set in the
+        /// Then their <see cref="P:CircleTree`2.Angle"/>s are set in the
         /// range <c>(-wedge / 2, wedge / 2)</c>, measured counterclockwise
         /// from the +X-axis of their shared root's local coordinate system.
         /// </remarks><seealso cref="MaximumRootWedge"/>
@@ -301,7 +285,7 @@ namespace GraphForms.Algorithms.Layout.Tree
         /// fixed positions are first repositioned to attempt to set the
         /// local polar coordinate positions of their fixed branches equal
         /// to those calculated for the balloon tree.</summary>
-        public bool AdjustRoots
+        public bool AdjustRootCenters
         {
             get { return this.bAdjustRoots; }
             set
@@ -494,7 +478,7 @@ namespace GraphForms.Algorithms.Layout.Tree
                 lastNodeCount, lastEdgeCount);
         }
 
-        private void PullOnRoots(CircleTree<Node> tree)
+        private void PullOnRoots(CircleTree<Node, Edge> tree)
         {
             // If fixed, adjust angle/distance of ancestors,
             // Else iterate through its branches and recursively check
@@ -504,27 +488,27 @@ namespace GraphForms.Algorithms.Layout.Tree
             // because the fixation of their branches is irrelevant, 
             // since their fixed branches can't adjust their fixed root.
 
-            Node node = tree.Data;
+            Node node = tree.NodeData;
             if (node.PositionFixed)
             {
                 double ang, cx, cy, dx, dy, r, force, fx, fy;
-                CircleTree<Node> ct = tree;
-                CircleTree<Node> root = ct.Root;
+                CircleTree<Node, Edge> ct = tree;
+                CircleTree<Node, Edge> root = ct.Root;
                 while (root != null)
                 {
                     // Calculate force on root
-                    cx = root.Data.NewX;
-                    cy = root.Data.NewY;
+                    cx = root.NodeData.NewX;
+                    cy = root.NodeData.NewY;
                     if (root.Root == null)
                     {
                         ang = this.mRootAngle;
                     }
                     else
                     {
-                        node = root.Root.Data;
+                        node = root.Root.NodeData;
                         ang = Math.Atan2(cy - node.NewY, cx - node.NewX);
                     }
-                    node = ct.Data;
+                    node = ct.NodeData;
                     // TODO: make sure all the signs (+/-) are right
                     dx = cx - node.NewX;
                     dy = cy - node.NewY;
@@ -534,7 +518,7 @@ namespace GraphForms.Algorithms.Layout.Tree
                     }
                     else
                     {
-                        r = dx * dx + dy * dy;
+                        
                         if (this.bAdjustAngle && root.Root == null)
                         {
                             this.mRootAngle = Math.Atan2(-dy, -dx) 
@@ -544,9 +528,11 @@ namespace GraphForms.Algorithms.Layout.Tree
                             while (this.mRootAngle > Math.PI)
                                 this.mRootAngle -= 2 * Math.PI;
                             fx = fy = 0;
+                            r = Math.Sqrt(dx * dy + dy * dy);
                         }
                         else
                         {
+                            r = dx * dx + dy * dy;
                             // Magnetic Torque
                             force = ct.Angle + ang;
                             // dx and dy have to be negated here in
@@ -561,16 +547,16 @@ namespace GraphForms.Algorithms.Layout.Tree
                                 Math.Pow(force, this.mMagnetExp) / r;
                             fx = force * -dy;
                             fy = force * dx;
+                            r = Math.Sqrt(r);
                         }
                         // Spring Force
-                        r = Math.Sqrt(r);
                         force = this.mSpringMult *
                             Math.Log(r / ct.Distance);
                         fx += force * dx / r;
                         fy += force * dy / r;
                     }
                     // Apply force to root position
-                    node = root.Data;
+                    node = root.NodeData;
                     node.SetNewPosition(node.NewX - (float)fx, 
                                         node.NewY - (float)fy);
                     // Progress up the ancestry chain
@@ -580,7 +566,7 @@ namespace GraphForms.Algorithms.Layout.Tree
             }
             else
             {
-                CircleTree<Node>[] branches = tree.Branches;
+                CircleTree<Node, Edge>[] branches = tree.Branches;
                 for (int i = 0; i < branches.Length; i++)
                 {
                     this.PullOnRoots(branches[i]);
@@ -588,15 +574,15 @@ namespace GraphForms.Algorithms.Layout.Tree
             }
         }
 
-        private Stack<CircleTree<Node>> mStack;
-        private Queue<CircleTree<Node>> mQueue;
+        private Stack<CircleTree<Node, Edge>> mStack;
+        private Queue<CircleTree<Node, Edge>> mQueue;
 
         protected override void PerformIteration(uint iteration)
         {
             int i;
             Node node;
-            CircleTree<Node> ct, root;
-            CircleTree<Node>[] branches;
+            CircleTree<Node, Edge> ct, root;
+            CircleTree<Node, Edge>[] branches;
             double ang, cx, cy, dx, dy, r, force, fx, fy;
             Digraph<Node, Edge>.GNode[] nodes = this.mGraph.InternalNodes;
 
@@ -608,28 +594,81 @@ namespace GraphForms.Algorithms.Layout.Tree
                 node.SetNewPosition(node.X, node.Y);
             }
 
-            node = this.mCircleTree.Data;
+            node = this.mCircleTree.NodeData;
             if (!node.PositionFixed)
             {
                 // Pull the root of the entire balloon tree
                 // towards its calculated center.
+                Box2F bbox = null;
                 switch (this.mRootCentering)
                 {
                     case CircleCentering.BBoxCenter:
+                        bbox = this.mClusterNode == null
+                            ? this.BoundingBox
+                            : this.mClusterNode.LayoutBBox;
+                        break;
                     case CircleCentering.Centroid:
-                        dx = this.mCX - node.X;
-                        dy = this.mCY - node.Y;
-                        r = Math.Sqrt(dx * dx + dy * dy);
-                        if (r > 0.0)
-                        {
-                            dx = this.mSpringMult * dx / r;
-                            dy = this.mSpringMult * dy / r;
-                            node.SetNewPosition(node.X + (float)dx,
-                                                node.Y + (float)dy);
-                        }
+                        bbox = this.mClusterNode == null
+                            ? this.BoundingBox
+                            : this.mClusterNode.LayoutBBox;
+                        // TODO: What if the centroid is outside the bbox?
+                        dx = this.mCX - bbox.X;
+                        dy = this.mCY - bbox.Y;
+                        if (bbox.Right - this.mCX < dx)
+                            dx = bbox.Right - this.mCX;
+                        if (bbox.Bottom - this.mCY < dy)
+                            dy = bbox.Bottom - this.mCY;
+                        bbox = new Box2F(
+                            (float)(this.mCX - dx), (float)(this.mCY - dy),
+                            (float)(2.0 * dx), (float)(2.0 * dy));
                         break;
                     // No need to calculate for Predefined, as the center 
                     // is the current position of the root node
+                }
+                if (bbox != null)
+                {
+                    ang = Math.Sqrt(bbox.W * bbox.W + bbox.H * bbox.H) / 2;
+                    fx = fy = 0.0;
+                    // Spring Force from Top Left Corner
+                    dx = bbox.X - node.X;
+                    dy = bbox.Y - node.Y;
+                    r = Math.Sqrt(dx * dx + dy * dy);
+                    if (r > 0.0)
+                    {
+                        force = this.mSpringMult * Math.Log(r / ang);
+                        fx += force * dx / r;
+                        fy += force * dy / r;
+                    }
+                    // Spring Force from Top Right Corner
+                    dx += bbox.W;
+                    r = Math.Sqrt(dx * dx + dy * dy);
+                    if (r > 0.0)
+                    {
+                        force = this.mSpringMult * Math.Log(r / ang);
+                        fx += force * dx / r;
+                        fy += force * dy / r;
+                    }
+                    // Spring Force from Bottom Right Corner
+                    dy += bbox.H;
+                    r = Math.Sqrt(dx * dx + dy * dy);
+                    if (r > 0.0)
+                    {
+                        force = this.mSpringMult * Math.Log(r / ang);
+                        fx += force * dx / r;
+                        fy += force * dy / r;
+                    }
+                    // Spring Force from Bottom Left Corner
+                    dx -= bbox.W;
+                    r = Math.Sqrt(dx * dx + dy * dy);
+                    if (r > 0.0)
+                    {
+                        force = this.mSpringMult * Math.Log(r / ang);
+                        fx += force * dx / r;
+                        fy += force * dy / r;
+                    }
+                    // Apply force to root position
+                    node.SetNewPosition(node.X + (float)fx, 
+                                        node.Y + (float)fy);
                 }
             }
             if (this.bAdjustRoots)
@@ -638,32 +677,33 @@ namespace GraphForms.Algorithms.Layout.Tree
                 //this.PullOnRoots(this.mCircleTree);
                 if (this.mStack == null)
                 {
-                    this.mStack = new Stack<CircleTree<Node>>(nodes.Length);
+                    this.mStack = new Stack<CircleTree<Node, Edge>>(
+                        nodes.Length);
                 }
                 this.mStack.Push(this.mCircleTree);
                 while (this.mStack.Count > 0)
                 {
                     root = this.mStack.Pop();
-                    if (root.Data.PositionFixed)
+                    if (root.NodeData.PositionFixed)
                     {
                         ct = root;
                         root = ct.Root;
                         while (root != null)
                         {
                             // Calculate force on root
-                            cx = root.Data.NewX;
-                            cy = root.Data.NewY;
+                            cx = root.NodeData.NewX;
+                            cy = root.NodeData.NewY;
                             if (root.Root == null)
                             {
                                 ang = this.mRootAngle;
                             }
                             else
                             {
-                                node = root.Root.Data;
+                                node = root.Root.NodeData;
                                 ang = Math.Atan2(cy - node.NewY,
                                                  cx - node.NewX);
                             }
-                            node = ct.Data;
+                            node = ct.NodeData;
                             // TODO: make sure all the signs (+/-) are right
                             dx = cx - node.NewX;
                             dy = cy - node.NewY;
@@ -673,7 +713,6 @@ namespace GraphForms.Algorithms.Layout.Tree
                             }
                             else
                             {
-                                r = dx * dx + dy * dy;
                                 if (this.bAdjustAngle && root.Root == null)
                                 {
                                     this.mRootAngle = Math.Atan2(-dy, -dx)
@@ -683,9 +722,11 @@ namespace GraphForms.Algorithms.Layout.Tree
                                     while (this.mRootAngle > Math.PI)
                                         this.mRootAngle -= 2 * Math.PI;
                                     fx = fy = 0;
+                                    r = Math.Sqrt(dx * dx + dy * dy);
                                 }
                                 else
                                 {
+                                    r = dx * dx + dy * dy;
                                     // Magnetic Torque
                                     force = ct.Angle + ang;
                                     // dx and dy have to be negated here in
@@ -700,16 +741,16 @@ namespace GraphForms.Algorithms.Layout.Tree
                                         Math.Pow(force, this.mMagnetExp) / r;
                                     fx = force * -dy;
                                     fy = force * dx;
+                                    r = Math.Sqrt(r);
                                 }
                                 // Spring Force
-                                r = Math.Sqrt(r);
                                 force = this.mSpringMult *
                                     Math.Log(r / ct.Distance);
                                 fx += force * dx / r;
                                 fy += force * dy / r;
                             }
                             // Apply force to root position
-                            node = root.Data;
+                            node = root.NodeData;
                             node.SetNewPosition(node.NewX - (float)fx,
                                                 node.NewY - (float)fy);
                             // Progress up the ancestry chain
@@ -730,28 +771,29 @@ namespace GraphForms.Algorithms.Layout.Tree
             // Pull movable branches towards their roots
             if (this.mQueue == null)
             {
-                this.mQueue = new Queue<CircleTree<Node>>(nodes.Length);
+                this.mQueue = new Queue<CircleTree<Node, Edge>>(
+                    nodes.Length);
             }
             this.mQueue.Enqueue(this.mCircleTree);
             while (this.mQueue.Count > 0)
             {
                 ct = this.mQueue.Dequeue();
-                cx = ct.Data.NewX;
-                cy = ct.Data.NewY;
+                cx = ct.NodeData.NewX;
+                cy = ct.NodeData.NewY;
                 if (ct.Root == null)
                 {
                     ang = this.mRootAngle;
                 }
                 else
                 {
-                    node = ct.Root.Data;
+                    node = ct.Root.NodeData;
                     ang = Math.Atan2(cy - node.NewY, cx - node.NewX);
                 }
                 branches = ct.Branches;
                 for (i = 0; i < branches.Length; i++)
                 {
                     ct = branches[i];
-                    node = ct.Data;
+                    node = ct.NodeData;
                     if (!node.PositionFixed)
                     {
                         // TODO: make sure all the signs (+/-) are right
@@ -847,7 +889,7 @@ namespace GraphForms.Algorithms.Layout.Tree
             }
             switch (this.mRootFindingMethod)
             {
-                case RootFinder.UserDefined:
+                case TreeRootFinding.UserDefined:
                     rootIndex = this.HasRoot
                         ? this.mSpanTree.IndexOfNode(this.TryGetRoot())
                         : 0;
@@ -855,7 +897,7 @@ namespace GraphForms.Algorithms.Layout.Tree
                         rootIndex = 0;
                     root = nodes[rootIndex];
                     break;
-                case RootFinder.Center:
+                case TreeRootFinding.Center:
                     root = this.mSpanTree.FindCenter(false, false);
                     if (root == null)
                     {
@@ -868,18 +910,17 @@ namespace GraphForms.Algorithms.Layout.Tree
                     }
                     break;
             }
-            this.mCircleTree = this.BuildBranch(root);
+            this.mCircleTree = this.BuildBranch(root, default(Edge));
         }
 
-        private CircleTree<Node> BuildBranch(
-            Digraph<Node, Edge>.GNode root)
+        private CircleTree<Node, Edge> BuildBranch(
+            Digraph<Node, Edge>.GNode root, Edge edge)
         {
             root.Color = GraphColor.Gray;
 
-            Box2F bbox = root.mData.LayoutBBox;
-            double rad = Math.Sqrt(bbox.W * bbox.W + bbox.H * bbox.H) / 2;
-            CircleTree<Node> child, data
-                = new CircleTree<Node>(root.mData, rad, root.AllEdgeCount);
+            CircleTree<Node, Edge> child, data = new CircleTree<Node, Edge>(
+                root.mData, edge, this.GetBoundingRadius(root.mData), 
+                root.AllEdgeCount);
 
             // Recursively add child branches.
             int i;
@@ -891,7 +932,7 @@ namespace GraphForms.Algorithms.Layout.Tree
                 node = edges[i].mDstNode;
                 if (node.Color == GraphColor.White)
                 {
-                    child = this.BuildBranch(node);
+                    child = this.BuildBranch(node, edges[i].mData);
                     child.SetRoot(data);
                 }
             }
@@ -901,7 +942,7 @@ namespace GraphForms.Algorithms.Layout.Tree
                 node = edges[i].mSrcNode;
                 if (node.Color == GraphColor.White)
                 {
-                    child = this.BuildBranch(node);
+                    child = this.BuildBranch(node, edges[i].mData);
                     child.SetRoot(data);
                 }
             }
@@ -910,7 +951,46 @@ namespace GraphForms.Algorithms.Layout.Tree
             return data;
         }
 
-        private void CalculatePositions(CircleTree<Node> root)
+        /// <summary>
+        /// Calculates the radius of a circle that encloses the given
+        /// <paramref name="node"/>, which is used to calculate the convex
+        /// hulls of the subtrees that include the given node in their
+        /// branches.</summary>
+        /// <param name="node">The node enclosed within a circle of the
+        /// returned radius.</param>
+        /// <returns>The radius of the bounding circle of the given
+        /// <paramref name="node"/>, which by default is the smallest circle
+        /// that circumscribes the given node's bounding box.</returns>
+        /// <remarks><para>
+        /// This function is only used when the layout algorithm builds its
+        /// balloon tree data structure, which is only done when its 
+        /// <see cref="P:LayoutAlgorithm`2.Graph"/> and/or the values of its
+        /// <see cref="SpanningTreeGeneration"/> and/or 
+        /// <see cref="RootFindingMethod"/> parameters are changed.
+        /// </para><para>
+        /// By default, this function simply returns half the length of the
+        /// diagonal of the given <paramref name="node"/>'s 
+        /// <see cref="ILayoutNode.LayoutBBox"/>, which is the radius of the
+        /// smallest circle that circumscribes it.  It does not compensate
+        /// for the possibility that the node's "center" might not be the
+        /// center of its bounding box (the box's <see cref="Box2F.X"/>
+        /// might not be equal to <c>-<see cref="Box2F.W"/> / 2</c>, or its
+        /// <see cref="Box2F.Y"/> might not be equal to 
+        /// <c>-<see cref="Box2F.H"/> / 2</c>).</para><para>
+        /// This method can be overridden to take that into account, and/or
+        /// to provide a more efficient bounding radius calculation for
+        /// certain nodes. However, be aware that if this function ever
+        /// returns a value less than or equal to zero, an
+        /// <see cref="ArgumentOutOfRangeException"/> will be thrown when
+        /// the layout algorithm attempts to use that invalid radius.
+        /// </para></remarks>
+        protected virtual double GetBoundingRadius(Node node)
+        {
+            Box2F bbox = node.LayoutBBox;
+            return Math.Sqrt(bbox.W * bbox.W + bbox.H * bbox.H) / 2.0;
+        }
+
+        private void CalculatePositions(CircleTree<Node, Edge> root)
         {
             if (root.BranchCount == 0)
             {
@@ -918,7 +998,7 @@ namespace GraphForms.Algorithms.Layout.Tree
             }
             else
             {
-                CircleTree<Node>[] branches = root.Branches;
+                CircleTree<Node, Edge>[] branches = root.Branches;
                 for (int i = 0; i < branches.Length; i++)
                 {
                     this.CalculatePositions(branches[i]);
@@ -930,44 +1010,44 @@ namespace GraphForms.Algorithms.Layout.Tree
 
         /// <summary>
         /// Calculates the polar coordinates (the 
-        /// <see cref="P:CircleTree`1{Node}.Angle"/> and 
-        /// <see cref="P:CircleTree`1{Node}.Distance"/>) of each
+        /// <see cref="P:CircleTree`2{Node,Edge}.Angle"/> and 
+        /// <see cref="P:CircleTree`2{Node,Edge}.Distance"/>) of each
         /// subtree or leaves in the given array of 
         /// <paramref name="branches"/>.</summary>
         /// <param name="branches">An array of layout node subtrees or leaves
-        /// that share the same <see cref="P:CircleTree`1{Node}.Root"/>.
+        /// that share the same <see cref="P:CircleTree`2{Node,Edge}.Root"/>.
         /// </param><remarks><para>
         /// For classes that reimplement this function, be aware that this
         /// function is invoked recursively from the root down to the leaves
         /// of the layout tree, so the polar coordinates of the positions of 
-        /// the <see cref="P:CircleTree`1{Node}.Branches"/> of each subtree
-        /// in the given <paramref name="branches"/> have already been 
-        /// calculated by a previous invocation of this function, and then
-        /// the <see cref="P:CircleTree`1{Node}.ConvexHull"/> of each subtree
-        /// was calculated based on those positions.
+        /// the <see cref="P:CircleTree`2{Node,Edge}.Branches"/> of each 
+        /// subtree in the given <paramref name="branches"/> have already 
+        /// been calculated by a previous invocation of this function, and 
+        /// then the <see cref="P:CircleTree`2{Node,Edge}.ConvexHull"/> of 
+        /// each subtree was calculated based on those positions.
         /// </para><para>
         /// In general, take great care when reimplementing this function, as
         /// it is the most important function of the entire balloon tree
         /// layout algorithm. The polar coordinate positions of the given
         /// <paramref name="branches"/> calculated by this function are not 
         /// only used to calculate the convex hull of their shared
-        /// <see cref="P:CircleTree`1{Node}.Root"/>, but they are also used 
-        /// to determine the final positions of the layout nodes at their 
-        /// centers.</para></remarks>
+        /// <see cref="P:CircleTree`2{Node,Edge}.Root"/>, but they are also 
+        /// used to determine the final positions of the layout nodes at 
+        /// their centers.</para></remarks>
         protected virtual void CalculateBranchPositions(
-            CircleTree<Node>[] branches)
+            CircleTree<Node, Edge>[] branches)
         {
             int i, j;
             // Set the initial distance of each branch based on MinEdgeLen
             Box2F bbox;
-            CircleTree<Node> ct;
-            double rootRad = branches[0].Root.Radius;
+            CircleTree<Node, Edge> ct;
+            double rootRad = branches[0].Root.Radius + this.mMinEdgeLen;
             double maxDist = -double.MaxValue;
             for (i = 0; i < branches.Length; i++)
             {
                 ct = branches[i];
                 bbox = ct.CalculateBoundingBox();
-                ct.Distance = rootRad + this.mMinEdgeLen - bbox.X;
+                ct.Distance = rootRad - bbox.X;
                 if (ct.Distance > maxDist)
                     maxDist = ct.Distance;
             }
@@ -1073,7 +1153,7 @@ namespace GraphForms.Algorithms.Layout.Tree
 
         /// <summary><para>
         /// Gets the maximum allowable wedge in radians that the
-        /// <see cref="P:CircleTree`1{Node}.Branches"/> of the given 
+        /// <see cref="P:CircleTree`2{Node,Edge}.Branches"/> of the given 
         /// <paramref name="root"/> can occupy around it.</para><para>
         /// Be aware that this angle will be normalized to the range [0,2π] 
         /// ( [0°,360°] ) when used.</para></summary>
@@ -1090,11 +1170,12 @@ namespace GraphForms.Algorithms.Layout.Tree
         /// <see cref="MaximumTreeWedge"/> is greater than that amount (when
         /// normalized) in order to make the tree look better. 
         /// See those properties for further details on what the 
-        /// <see cref="M:CalculateBranchPositions(CircleTree`1{Node}[])"/>
+        /// <see cref="M:CalculateBranchPositions(CircleTree`2[])"/>
         /// function does with the wedge angle this function returns.
         /// </remarks><seealso cref="MaximumRootWedge"/>
         /// <seealso cref="MaximumTreeWedge"/>
-        protected virtual double GetMaximumTreeWedge(CircleTree<Node> root)
+        protected virtual double GetMaximumTreeWedge(
+            CircleTree<Node, Edge> root)
         {
             if (root.Root == null)
                 return this.mMaxRootWedge;
@@ -1118,15 +1199,15 @@ namespace GraphForms.Algorithms.Layout.Tree
         /// </summary><remarks>
         /// This comparer is provided for any descendant balloon tree layout
         /// algorithms that reimplement the 
-        /// <see cref="M:SortBranches(CircleTree`1{Node}[])"/> function and
-        /// still support <see cref="InSketchMode"/> property.
+        /// <see cref="M:SortBranches(CircleTree`2{Node,Edge}[])"/> function 
+        /// and still support <see cref="InSketchMode"/> property.
         /// Anything that uses this comparer should give meaningful values to
         /// its <see cref="SketchSorter.CX"/>, <see cref="SketchSorter.CY"/>,
         /// and <see cref="SketchSorter.RootAngle"/> fields before using it
-        /// to sort of a set of <see cref="T:CircleTree`1{Node}"/> instances
-        /// that share the same <see cref="P:CircleTree`1{Node}.Root"/>.
-        /// </remarks>
-        public class SketchSorter : IComparer<CircleTree<Node>>
+        /// to sort of a set of <see cref="T:CircleTree`2{Node,Edge}"/>
+        /// instances that share the same 
+        /// <see cref="P:CircleTree`2{Node,Edge}.Root"/>.</remarks>
+        public class SketchSorter : IComparer<CircleTree<Node, Edge>>
         {
             /// <summary>
             /// The X-coordinate of the center of the shared root of x and y.
@@ -1158,7 +1239,7 @@ namespace GraphForms.Algorithms.Layout.Tree
             /// <summary>
             /// Compares the two given subtree/leaf nodes based their current
             /// angles (measured counterclockwise from the +X-axis) around
-            /// their shared <see cref="P:CircleTree`1.Root"/>.</summary>
+            /// their shared <see cref="P:CircleTree`2.Root"/>.</summary>
             /// <param name="x">A node to compare by angle.</param>
             /// <param name="y">A node to compare by angle.</param>
             /// <returns>0 if <paramref name="x"/> and <paramref name="y"/>
@@ -1166,12 +1247,13 @@ namespace GraphForms.Algorithms.Layout.Tree
             /// <paramref name="x"/> is at a greater angle than 
             /// <paramref name="y"/>; -1 if <paramref name="x"/> is at a
             /// lesser angle than <paramref name="y"/>.</returns>
-            public int Compare(CircleTree<Node> x, CircleTree<Node> y)
+            public int Compare(CircleTree<Node, Edge> x, 
+                               CircleTree<Node, Edge> y)
             {
-                xAng = Math.Atan2(x.Data.Y - this.CY, x.Data.X - this.CX);
+                xAng = Math.Atan2(x.NodeData.Y - this.CY, x.NodeData.X - this.CX);
                 if (xAng < this.RootAngle)
                     xAng += 2 * Math.PI;
-                yAng = Math.Atan2(y.Data.Y - this.CY, y.Data.X - this.CX);
+                yAng = Math.Atan2(y.NodeData.Y - this.CY, y.NodeData.X - this.CX);
                 if (yAng < this.RootAngle)
                     yAng += 2 * Math.PI;
                 return xAng == yAng ? 0 : (xAng < yAng ? -1 : 1);
@@ -1180,7 +1262,7 @@ namespace GraphForms.Algorithms.Layout.Tree
         private SketchSorter mSketchSorter;
 
         /// <summary><para>
-        /// Used by <see cref="M:CalculateBranchPositions(CircleTree`1[])"/>
+        /// Used by <see cref="M:CalculateBranchPositions(CircleTree`2[])"/>
         /// to sort the given <paramref name="branches"/> in the order in
         /// which they will be arranged counterclockwise around their shared
         /// root from -π (-180°) to π (180°). </para><para>
@@ -1188,21 +1270,22 @@ namespace GraphForms.Algorithms.Layout.Tree
         /// the position of each subtree or leaf in 
         /// <paramref name="branches"/>.</para></summary>
         /// <param name="branches">An array of layout node subtrees or leaves
-        /// that share the same <see cref="P:CircleTree`1{Node}.Root"/>.
+        /// that share the same <see cref="P:CircleTree`2{Node,Edge}.Root"/>.
         /// </param><remarks>
         /// Be aware that if this function is reimplemented, it will make
         /// <see cref="InSketchMode"/> and <see cref="BranchSorter"/>
         /// meaningless, unless the reimplementation uses their values.
         /// </remarks>
-        protected virtual void SortBranches(CircleTree<Node>[] branches)
+        protected virtual void SortBranches(
+            CircleTree<Node, Edge>[] branches)
         {
             if (this.bInSketchMode)
             {
                 if (this.mSketchSorter == null)
                     this.mSketchSorter = new SketchSorter();
-                CircleTree<Node> root = branches[0].Root;
-                this.mSketchSorter.CX = root.Data.X;
-                this.mSketchSorter.CY = root.Data.Y;
+                CircleTree<Node, Edge> root = branches[0].Root;
+                this.mSketchSorter.CX = root.NodeData.X;
+                this.mSketchSorter.CY = root.NodeData.Y;
                 if (root.Root == null)
                 {
                     this.mSketchSorter.RootAngle = -Math.PI;
@@ -1210,16 +1293,16 @@ namespace GraphForms.Algorithms.Layout.Tree
                 else
                 {
                     this.mSketchSorter.RootAngle = Math.Atan2(
-                        root.Root.Data.Y - this.mSketchSorter.CY,
-                        root.Root.Data.X - this.mSketchSorter.CX);
+                        root.Root.NodeData.Y - this.mSketchSorter.CY,
+                        root.Root.NodeData.X - this.mSketchSorter.CX);
                 }
-                Array.Sort<CircleTree<Node>>(branches, 0, branches.Length,
-                    this.mSketchSorter);
+                Array.Sort<CircleTree<Node, Edge>>(branches, 0, 
+                    branches.Length, this.mSketchSorter);
             }
             else if (this.mBranchSorter != null)
             {
-                Array.Sort<CircleTree<Node>>(branches, 0, branches.Length,
-                    this.mBranchSorter);
+                Array.Sort<CircleTree<Node, Edge>>(branches, 0, 
+                    branches.Length, this.mBranchSorter);
             }
         }
     }

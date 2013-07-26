@@ -62,6 +62,11 @@ namespace GraphForms.Algorithms.Layout
         /// equilibrium and finished.
         /// </summary>
         private bool bItemMoved;
+        /// <summary>
+        /// Whether this layout algorithm is currently in an iteration and 
+        /// executing code between <see cref="BeginIteration(uint)"/> and
+        /// <see cref="EndIteration(uint)"/>.</summary>
+        private bool bInIteration = false;
 
         /// <summary>
         /// The X-coordinates of the positions of all the nodes 
@@ -208,12 +213,39 @@ namespace GraphForms.Algorithms.Layout
         }
 
         /// <summary>
+        /// Whether any nodes changed position during the last iteration.
+        /// If nodes aren't moving, the algorithm has obviously reached an
+        /// equilibrium and finished.
+        /// </summary>
+        public bool ItemMoved
+        {
+            get { return this.bItemMoved; }
+        }
+
+        /// <summary>
+        /// Whether this layout algorithm is currently in an iteration.
+        /// </summary>
+        public bool InIteration
+        {
+            get { return this.bInIteration; }
+        }
+
+        /// <summary>
         /// The current state of the asynchronous computation 
         /// of this layout algorithm.
         /// </summary>
         public ComputeState AsyncState
         {
             get { return this.mAsyncState; }
+        }
+
+        /// <summary>
+        /// The current number of asynchronous iterations completed by the
+        /// asynchronous computation of this layout algorithm.
+        /// </summary>
+        public uint AsyncIterations
+        {
+            get { return this.mIter; }
         }
 
         /// <summary>
@@ -539,8 +571,24 @@ namespace GraphForms.Algorithms.Layout
             return true;
         }
 
-        private void BeginIteration(uint iteration)
+        /// <summary>
+        /// Performs all the necessary actions needed to start a single
+        /// iteration calculation of this layout algorithm and then calls
+        /// <see cref="OnBeginIteration(uint,bool,int,int)"/> to run any
+        /// custom code.</summary>
+        /// <param name="iteration">The current number of iterations that 
+        /// have already occurred in this algorithm's computation.</param>
+        /// <exception cref="InvalidOperationException">This layout algorithm
+        /// is already in an iteration that hasn't been ended yet with the
+        /// <see cref="EndIteration(uint)"/> function.</exception>
+        protected void BeginIteration(uint iteration)
         {
+            /*if (this.bInIteration)
+            {
+                throw new InvalidOperationException(
+                    "Iteration already started.");
+            }
+            this.bInIteration = true;/* */
             Digraph<Node, Edge>.GNode[] nodes
                 = this.mGraph.InternalNodes;
             // Expand the last position logs if necessary
@@ -597,8 +645,23 @@ namespace GraphForms.Algorithms.Layout
         {
         }
 
-        private void EndIteration(uint iteration)
+        /// <summary>
+        /// Performs all the necessary actions needed to finish a single
+        /// iteration calculation of this layout algorithm and then calls
+        /// <see cref="OnEndIteration(uint,double)"/> to run any
+        /// custom code.</summary>
+        /// <param name="iteration">The current number of iterations that 
+        /// have already occurred in this algorithm's computation.</param>
+        /// <exception cref="InvalidOperationException">This layout algorithm
+        /// hasn't started started an iteration yet with the
+        /// <see cref="BeginIteration(uint)"/> function.</exception>
+        protected virtual void EndIteration(uint iteration)
         {
+            /*if (!this.bInIteration)
+            {
+                throw new InvalidOperationException(
+                    "Iteration already finished.");
+            }/* */
             int i;
             float dx, dy;
             Node node;
@@ -636,17 +699,11 @@ namespace GraphForms.Algorithms.Layout
                 minY = this.mBBox.Y;
                 maxX = this.mBBox.Right;//minX + this.mBBox.W;
                 maxY = this.mBBox.Bottom;//minY + this.mBBox.H;
-                //PointF np;
                 for (i = 0; i < nodes.Length; i++)
                 {
                     node = nodes[i].mData;
                     dx = Math.Min(Math.Max(node.NewX, minX), maxX);
                     dy = Math.Min(Math.Max(node.NewY, minY), maxY);
-                    //dx = node.NewX;
-                    //dy = node.NewY;
-                    //np = (node as GraphElement).MapToScene(new PointF(dx - node.X, dy - node.Y));
-                    //dx = dx + Math.Min(Math.Max(np.X, minX), maxX) - np.X;
-                    //dy = dy + Math.Min(Math.Max(np.Y, minY), maxY) - np.Y;
                     node.SetNewPosition(dx, dy);
                 }
             }
@@ -737,6 +794,8 @@ namespace GraphForms.Algorithms.Layout
             }
             // Step 5: Run any code unique to the specific layout algorithm.
             this.OnEndIteration(iteration, totalDist);
+            // Step 6: End the iteration
+            //this.bInIteration = false;
         }
 
         /// <summary>

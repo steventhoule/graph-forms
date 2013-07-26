@@ -14,7 +14,9 @@ namespace GraphForms.Algorithms.Collections
     /// <typeparam name="Node">The type of data stored in each circle
     /// in the tree, which usually represent something inscribed within
     /// each circle.</typeparam>
-    public class CircleTree<Node>
+    /// <typeparam name="Edge">The type of data that connects each circle
+    /// back to its root in this tree.</typeparam>
+    public class CircleTree<Node, Edge>
     {
         /// <summary><para>
         /// This data structure represents an individual arc in the convex
@@ -28,9 +30,9 @@ namespace GraphForms.Algorithms.Collections
         public class CHArc
         {
             /// <summary>
-            /// The <see cref="P:CircleTree`1{Node}.Data"/> of the circle
-            /// that formed this arc in its convex hull and/or the convex
-            /// hulls of its ancestors.
+            /// The <see cref="P:CircleTree`2{Node,Edge}.NodeData"/> of the 
+            /// circle that formed this arc in its convex hull and/or the 
+            /// convex hulls of its ancestors.
             /// </summary>
             public Node Data;
             /// <summary>
@@ -126,7 +128,7 @@ namespace GraphForms.Algorithms.Collections
             /// almost always equal to <see cref="Ang"/>, as
             /// <see cref="WedgeOffset"/> is almost always zero.
             /// </summary><seealso cref="WedgeOffset"/><seealso cref="Ang"/>
-            public double SortAngle
+            public double ZSortAngle
             {
                 get { return this.Ang + this.WedgeOffset; }
             }
@@ -164,18 +166,30 @@ namespace GraphForms.Algorithms.Collections
             {
                 get { return 180.0 * this.WedgeOffset / Math.PI; }
             }
-            /*/// <summary>
-            /// The <see cref="SortAngle"/> property in degrees
+            /// <summary>
+            /// The <see cref="ZSortAngle"/> property in degrees
             /// instead of radians for debugging.
             /// </summary>
-            public double DegSortAngle
+            public double DegZSortAngle
             {
                 get 
                 { 
                     return 180.0 * (this.Ang + this.WedgeOffset) / 
                         Math.PI; 
                 }
-            }/* */
+            }
+            /// <summary>
+            /// Returns the results of the <see cref="Object.ToString()"/>
+            /// method of the <see cref="Data"/> field for debugging.
+            /// </summary>
+            /// <returns>The <see cref="Data"/> field as a string.</returns>
+            public override string ToString()
+            {
+                string str = "";
+                try { str = this.Data.ToString(); }
+                catch (NullReferenceException) { str = "{NULL}"; }
+                return str;
+            }
             #endregion
         }
         /// <summary>
@@ -192,11 +206,11 @@ namespace GraphForms.Algorithms.Collections
 
             public int Compare(CHArc x, CHArc y)
             {
-                if (x.Rad == y.Rad)
-                {
-                    return x.Dst == y.Dst ? 0 : (x.Dst > y.Dst ? -1 : 1);
-                }
-                return x.Rad > y.Rad ? -1 : 1;
+                return x.Rad == y.Rad
+                    ? (x.Dst == y.Dst ? 0 : (x.Dst > y.Dst ? -1 : 1))
+                    : (x.Rad > y.Rad ? -1 : 1);/* */
+                /*return (x.Rad == y.Rad ? 0 : (x.Rad > y.Rad ? -2 : 2))
+                     + (x.Dst == y.Dst ? 0 : (x.Dst > y.Dst ? -1 : 1));/* */
             }
         }
         /// <summary>
@@ -218,11 +232,12 @@ namespace GraphForms.Algorithms.Collections
         private CHAngComp mCHAngComp;
 
         #region Fields and Constructors
-        private Node mData;
+        private Node mNodeData;
+        private Edge mEdgeData;
 
-        private CircleTree<Node> mRoot;
+        private CircleTree<Node, Edge> mRoot;
         private int mIndex;
-        private CircleTree<Node>[] mBranches;
+        private CircleTree<Node, Edge>[] mBranches;
         private int mBCount;
 
         private double mRad;
@@ -238,27 +253,31 @@ namespace GraphForms.Algorithms.Collections
         private double mLowerWedge;
 
         /// <summary>
-        /// Creates a new circle tree with the given <paramref name="data"/>
+        /// Creates a new circle tree with the given <paramref name="nData"/>
         /// that has a circle of the given <paramref name="radius"/> at its 
         /// center.</summary>
-        /// <param name="data">The <see cref="Data"/> stored in this circle
-        /// tree instance.</param>
+        /// <param name="nData">The <see cref="NodeData"/> stored in this 
+        /// circle tree instance.</param>
+        /// <param name="eData">The <see cref="EdgeData"/> stored in this
+        /// circle tree instance.</param>
         /// <param name="radius">The radius of the circle at the center
         /// of the new circle tree.</param>
         /// <exception cref="ArgumentOutOfRangeException">
         /// <paramref name="radius"/> is less than or equal to zero.
         /// </exception>
-        public CircleTree(Node data, double radius)
-            : this(data, radius, 0)
+        public CircleTree(Node nData, Edge eData, double radius)
+            : this(nData, eData, radius, 0)
         {
         }
         /// <summary>
-        /// Creates a new circle tree with the given <paramref name="data"/>
+        /// Creates a new circle tree with the given <paramref name="nData"/>
         /// that has a circle of the given <paramref name="radius"/> at its 
         /// center and the specified initial capacity for storing its 
         /// branches.</summary>
-        /// <param name="data">The <see cref="Data"/> stored in this circle
-        /// tree instance.</param>
+        /// <param name="nData">The <see cref="NodeData"/> stored in this 
+        /// circle tree instance.</param>
+        /// <param name="eData">The <see cref="EdgeData"/> stored in this
+        /// circle tree instance.</param>
         /// <param name="radius">The radius of the circle at the center
         /// of the new circle tree.</param>
         /// <param name="capacity">The number of branches that the new
@@ -266,18 +285,19 @@ namespace GraphForms.Algorithms.Collections
         /// <exception cref="ArgumentOutOfRangeException">
         /// <paramref name="radius"/> is less than or equal to zero or 
         /// <paramref name="capacity"/> is less than zero.</exception>
-        public CircleTree(Node data, double radius, int capacity)
+        public CircleTree(Node nData, Edge eData, double radius, int capacity)
         {
             if (radius <= 0.0)
                 throw new ArgumentOutOfRangeException("radius");
             if (capacity < 0)
                 throw new ArgumentOutOfRangeException("capacity");
 
-            this.mData = data;
+            this.mNodeData = nData;
+            this.mEdgeData = eData;
 
             this.mRoot = null;
             this.mIndex = -1;
-            this.mBranches = new CircleTree<Node>[capacity];
+            this.mBranches = new CircleTree<Node, Edge>[capacity];
             this.mBCount = 0;
 
             this.mRad = radius;
@@ -304,13 +324,20 @@ namespace GraphForms.Algorithms.Collections
         }
 
         /// <summary>
-        /// The data stored in this circle tree instance, which usually
+        /// The node data stored in this circle tree instance, which usually
         /// represents something inside the circle at the center of this
-        /// circle tree.
-        /// </summary>
-        public Node Data
+        /// circle tree.</summary>
+        public Node NodeData
         {
-            get { return this.mData; }
+            get { return this.mNodeData; }
+        }
+        /// <summary>
+        /// The edge data stored in this circle tree instance, which usually
+        /// represents something that connects this circle to its
+        /// <see cref="Root"/>.</summary>
+        public Edge EdgeData
+        {
+            get { return this.mEdgeData; }
         }
 
         #region Tree Properties
@@ -318,9 +345,8 @@ namespace GraphForms.Algorithms.Collections
         /// Gets the root (parent) of this circle tree, which is invalidated
         /// (along with its root through the ancestry chain) every time this
         /// circle is invalidated or its <see cref="Distance"/> or
-        /// <see cref="Angle"/> is changed.
-        /// </summary>
-        public CircleTree<Node> Root
+        /// <see cref="Angle"/> is changed.</summary>
+        public CircleTree<Node, Edge> Root
         {
             get { return this.mRoot; }
         }
@@ -334,11 +360,11 @@ namespace GraphForms.Algorithms.Collections
         /// invalidated as well.</summary>
         /// <param name="root">The new <see cref="Root"/> 
         /// of this circle tree.</param>
-        public void SetRoot(CircleTree<Node> root)
+        public void SetRoot(CircleTree<Node, Edge> root)
         {
             if (this.mRoot != root)
             {
-                CircleTree<Node> p;
+                CircleTree<Node, Edge> p;
                 if (this.mRoot != null)
                 {
                     p = this.mRoot;
@@ -361,12 +387,12 @@ namespace GraphForms.Algorithms.Collections
                     {
                         if (p.mBCount == 0)
                         {
-                            p.mBranches = new CircleTree<Node>[4];
+                            p.mBranches = new CircleTree<Node, Edge>[4];
                         }
                         else
                         {
-                            CircleTree<Node>[] children
-                                = new CircleTree<Node>[2 * p.mBCount];
+                            CircleTree<Node, Edge>[] children
+                                = new CircleTree<Node, Edge>[2 * p.mBCount];
                             Array.Copy(p.mBranches, 0,
                                 children, 0, p.mBCount);
                             p.mBranches = children;
@@ -395,12 +421,12 @@ namespace GraphForms.Algorithms.Collections
         /// this circle tree and all of its ancestors are also invalidated,
         /// which means their <see cref="ConvexHull"/>s will be
         /// recalculated.</remarks>
-        public CircleTree<Node>[] Branches
+        public CircleTree<Node, Edge>[] Branches
         {
             get
             {
-                CircleTree<Node>[] branches
-                    = new CircleTree<Node>[this.mBCount];
+                CircleTree<Node, Edge>[] branches
+                    = new CircleTree<Node, Edge>[this.mBCount];
                 if (this.mBCount > 0)
                     Array.Copy(this.mBranches, 0, branches, 0, this.mBCount);
                 return branches;
@@ -434,8 +460,8 @@ namespace GraphForms.Algorithms.Collections
             {
                 if (value < this.mBCount)
                     throw new ArgumentOutOfRangeException("Capacity");
-                CircleTree<Node>[] branches
-                    = new CircleTree<Node>[value];
+                CircleTree<Node, Edge>[] branches
+                    = new CircleTree<Node, Edge>[value];
                 if (this.mBCount > 0)
                     Array.Copy(this.mBranches, 0, branches, 0, this.mBCount);
                 this.mBranches = branches;
@@ -538,7 +564,7 @@ namespace GraphForms.Algorithms.Collections
         /// <summary>
         /// The convex hull that encloses the circle at the center of this
         /// circle tree and all the circles on all the branches of this
-        /// circle tree, ordered by increasing <see cref="CHArc.SortAngle"/>.
+        /// circle tree, ordered by increasing <see cref="CHArc.ZSortAngle"/>.
         /// </summary><remarks>
         /// This forces the circle tree to recalculate its convex hull 
         /// if it hasn't done so already or if its <see cref="Radius"/> or
@@ -588,41 +614,46 @@ namespace GraphForms.Algorithms.Collections
         /// </para></remarks>
         public void CalculateConvexHull()
         {
+            #region Initialization and Quick Completions
             // TODO: Will any of these calculations be FUBAR'd if the
-            // radius, distance or angle for any of the circles are
+            // radius, distance, or angle for any of the circles are
             // really really small?
             if (this.mBCount == 0)
             {
-                this.mCHCircle = new CHArc(this.mData, this.mRad);
+                this.mCHCircle = new CHArc(this.mNodeData, this.mRad);
                 this.mCHCircle.LowerWedge = Math.PI;
                 this.mCHCircle.UpperWedge = Math.PI;
                 this.mConvexHull = new CHArc[] { this.mCHCircle };
                 return;
             }
+#if DEBUG
+            string cvHullStr;
+#endif
             bool split1, split3;
             int i, j, i1, i3, root, len = 1;
             double a1, a2, hyp, ch3LoW, ch1UpW;
             CHArc ch1 = null;
             CHArc ch2 = null;
             CHArc ch3 = null;
-            CircleTree<Node> child;
+            CircleTree<Node, Edge> child;
             // Temp holder for child convex hulls, sorted by
             // decreasing radius (largest first)
             CHArc[] chByRad;
             for (i = 0; i < this.mBCount; i++)
             {
-                chByRad = this.mBranches[i].mConvexHull;
+                child = this.mBranches[i];
+                if (child.bCHDirty)
+                    child.CalculateConvexHull();
+                chByRad = child.mConvexHull;
                 len += chByRad.Length;
             }
             chByRad = new CHArc[len];
-            chByRad[0] = new CHArc(this.mData, this.mRad);
+            chByRad[0] = new CHArc(this.mNodeData, this.mRad);
             chByRad[0].Ang = 16.0;
             len = 1;
             for (i = 0; i < this.mBCount; i++)
             {
                 child = this.mBranches[i];
-                if (child.bCHDirty)
-                    child.CalculateConvexHull();
                 for (j = 0; j < child.mConvexHull.Length; j++)
                 {
                     ch1 = child.mConvexHull[j];
@@ -634,18 +665,14 @@ namespace GraphForms.Algorithms.Collections
                     a1 = Math.Asin(ch1.Dst * Math.Sin(a1) / ch2.Dst);
                     ch2.Ang = ch1.Ang < 0.0
                         ? child.mAng - a1 : child.mAng + a1;
-                    if (ch2.Ang < -Math.PI)
+                    while (ch2.Ang < -Math.PI)
                         ch2.Ang += 2 * Math.PI;
-                    if (ch2.Ang > Math.PI)
+                    while (ch2.Ang > Math.PI)
                         ch2.Ang -= 2 * Math.PI;
                     chByRad[len++] = ch2;
                 }
-                //ch2 = new CHArc(child.mData, child.mRad);
-                //ch2.Dst = child.mDst;
-                //ch2.Ang = child.mAng;
-                //chByRad[len++] = ch2;
             }
-            // Sort the list of arcs by decreasing radius
+            // Sort the list of arcs by decreasing radius and distance
             Array.Sort<CHArc>(chByRad, 0, len, CHRadComp.S);
             // Find the root's index
             root = -1;
@@ -654,7 +681,7 @@ namespace GraphForms.Algorithms.Collections
                 if (chByRad[i].Ang == 16.0)
                     root = i;
             }
-            // Check if the root should be zero if it isn't
+            // If the root isn't zero, check if it should be and make it zero
             ch1 = chByRad[0];
             if (root != 0 && ch1.Rad == chByRad[root].Rad)
             {
@@ -711,21 +738,24 @@ namespace GraphForms.Algorithms.Collections
                 }
                 return;
             }
+            #endregion
+
+            #region Main Computation Loop
             // The final convex hull, sorted counterclockwise
             // by angle (-PI to PI).
             // TODO: Find the optimal length for this.
             // The final convex hull will have no more than
-            // 2 * len - 1 arcs, but extra length is needed
-            // for Array.Copy operations.
-            CHArc[] cvHull = new CHArc[3 * len];
+            // 2 * len - 1 arcs, but extra length might be 
+            // needed for Array.Copy operations.
+            CHArc[] cvHull = new CHArc[(len << 1) + (len >> 1)];
             // angle between line connecting their centers
             // and ch1's radial line tangent to their tube
             // boundary line
             a1 = Math.Acos((ch1.Rad - ch2.Rad) / ch2.Dst);
-            ch1.LowerWedge = a1;
-            ch1.UpperWedge = a1;
-            ch2.LowerWedge = Math.PI - a1;
-            ch2.UpperWedge = Math.PI - a1;
+            ch1.LowerWedge = Math.PI - a1;
+            ch1.UpperWedge = Math.PI - a1;
+            ch2.LowerWedge = a1;
+            ch2.UpperWedge = a1;
             if (ch2.Ang < 0.0)
             {
                 ch1.Ang = ch2.Ang + Math.PI;
@@ -742,8 +772,9 @@ namespace GraphForms.Algorithms.Collections
             // Add further circles to the convex hull.
             for (i++; i < chByRad.Length; i++)
             {
-                string cvHullStr = PrintConvexHull(cvHull, len);
-
+#if DEBUG
+                cvHullStr = PrintConvexHull(cvHull, len);
+#endif
                 #region Initialization and Fast Concavity Tests
                 ch2 = chByRad[i];
                 // Within largest circle, so within convex hull
@@ -752,6 +783,8 @@ namespace GraphForms.Algorithms.Collections
                 // Find the two arcs the circle lies between.
                 // TODO: Does WedgeOffset fully compensate for multiple 
                 // arcs with the same angle but different wedges?
+                // TODO: Would WedgeOffset ever FUBAR this algorithm
+                // in any case where it causes i1 == i3 ?
                 a1 = cvHull[0].Ang + cvHull[0].WedgeOffset;
                 a2 = cvHull[len - 1].Ang + cvHull[len - 1].WedgeOffset;
                 if (ch2.Ang < a1 || ch2.Ang > a2)
@@ -786,10 +819,6 @@ namespace GraphForms.Algorithms.Collections
                 }
                 ch1 = cvHull[i1];
                 ch3 = cvHull[i3];
-                // Within minimum convex circle, so within convex hull
-                //if (ch2.Dst + ch2.Rad <=
-                //    Math.Min(ch1.Dst + ch1.Rad, ch3.Dst + ch3.Rad))
-                //    continue;
 
                 // Perform fast concavity tests prior to split tests
                 // and more complex wedge-based concavity tests
@@ -800,9 +829,16 @@ namespace GraphForms.Algorithms.Collections
                 }
                 else if (ch1.Dst > 0.0)
                 {
-                    a1 = ch2.Ang - ch1.Ang;
-                    if (a1 < 0.0)
+                    // TODO: Ensure this subtract always 
+                    // works correctly and efficiently
+                    /*a1 = ch2.Ang - ch1.Ang;
+                    while (a1 < -Math.PI)
                         a1 += 2 * Math.PI;
+                    while (a1 > Math.PI)
+                        a1 -= 2 * Math.PI;/* */
+                    a1 = Math.Abs(ch2.Ang - ch1.Ang);
+                    if (a1 > Math.PI)
+                        a1 = 2 * Math.PI - a1;/* */
                     if (a1 == 0.0 &&
                         ch2.Dst + ch2.Rad <= ch1.Dst + ch1.Rad)
                     {
@@ -829,9 +865,16 @@ namespace GraphForms.Algorithms.Collections
                     }
                     else if (ch3.Dst > 0.0)
                     {
+                        // TODO: Ensure this subtract always 
+                        // works correctly and efficiently
                         a1 = ch3.Ang - ch2.Ang;
-                        if (a1 < 0.0)
+                        while (a1 < -Math.PI)
                             a1 += 2 * Math.PI;
+                        while (a1 > Math.PI)
+                            a1 -= 2 * Math.PI;/* */
+                        /*a1 = Math.Abs(ch3.Ang - ch2.Ang);
+                        if (a1 > Math.PI)
+                            a1 = 2 * Math.PI - a1;/* */
                         if (a1 == 0.0 &&
                             ch2.Dst + ch2.Rad <= ch3.Dst + ch3.Rad)
                         {
@@ -856,6 +899,8 @@ namespace GraphForms.Algorithms.Collections
                                 - ch2.Dst * ch2.Dst) / (2 * hyp * ch3.Dst);
                             a2 = Math.Acos(//a2);
                                 a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+                            if (a1 < 0.0)
+                                a2 = 2 * Math.PI - a2;
 
                             a1 = ch3.Ang - ch1.Ang;
                             // length of line connecting ch1 and ch3
@@ -911,11 +956,6 @@ namespace GraphForms.Algorithms.Collections
                         // concavity test, and will be reset or deleted
                         ch3 = new CHArc(ch1);
                         // Shrink ch1 to outside ch2's shadow
-                        /*ch1.UpperWedge = (a2 - a1) / 2.0;
-                        if (double.IsNaN(ch2.UpperWedge))
-                            throw new Exception();
-                        ch1.Ang = a1 + ch1.UpperWedge;
-                        ch1.LowerWedge = ch1.UpperWedge;/* */
                         ch1.LowerWedge = (ch1.UpperWedge - a1) / 2.0;
                         ch1.Ang += a1 + ch1.LowerWedge;
                         ch1.UpperWedge = ch1.LowerWedge;
@@ -923,35 +963,41 @@ namespace GraphForms.Algorithms.Collections
                         Array.Copy(cvHull, i1, cvHull, i1 + 1, len - i1);
                         cvHull[i1] = ch3;
                         len++;
+                        // ..., copy1, ch13, ...
+                        // ..., copy1, ch1, ch3, ...
+                        // ch3, ..., copy1, ch1
                         i3 = i1 <= i3 ? i3 + 1 : i3;
                         // TODO: Will this only happen if i1 == len - 1 ?
                         if (ch1.Ang > Math.PI)
                         {
+#if DEBUG
+                            if (i1 != len - 2) throw new Exception();
+#endif
                             ch1.Ang -= 2 * Math.PI;
                             Array.Copy(cvHull, 0, cvHull, 1, len);
                             cvHull[0] = ch1;
                             i1 = (i1 + 1) % len;
                             i3 = (i3 + 1) % len;
+                            // ch13, ..., copy1
+                            // ch1, ch3, ..., copy1
                         }
                         ch1 = ch3;
                         ch3 = cvHull[i3];
                         split1 = true;
                     }
-                    /*else if (a1 == a2)
-                    {
-                        // half of split is empty; no need to insert
-                        // TODO: Is there more to do here?
-                        // ch2 will still need to be added to convex hull
-                        // WILL TRAVERSAL IN OPPOSITE DIRECTION HANDLE THIS?
-                        split1 = true;
-                    }/* */
                 }
                 else
                 {
-                    // TODO: Ensure this subtract always works
+                    // TODO: Ensure this subtract always 
+                    // works correctly and efficiently
                     a2 = ch2.Ang - ch1.Ang;
-                    if (a2 < 0.0)
+                    while (a2 < -Math.PI)
                         a2 += 2 * Math.PI;
+                    while (a2 > Math.PI)
+                        a2 -= 2 * Math.PI;/* */
+                    /*a2 = Math.Abs(ch2.Ang - ch1.Ang);
+                    if (a2 > Math.PI)
+                        a2 = 2 * Math.PI - a2;/* */
                     if (a2 == 0.0)
                     {
                         ch2.UpperWedge = Math.Acos(
@@ -961,8 +1007,6 @@ namespace GraphForms.Algorithms.Collections
                         if (double.IsNaN(ch2.UpperWedge))
                             throw new Exception();
 #endif
-                        //a2 = Math.PI - ch2.UpperWedge;
-
                         // Potential new ch1.UpperWedge [-PI,PI]
                         a1 = ch2.UpperWedge;
                     }
@@ -975,50 +1019,77 @@ namespace GraphForms.Algorithms.Collections
                         // angle between line connecting ch2 and ch1
                         // and ch1's radial line tangent to their tube
                         a1 = Math.Acos((ch1.Rad - ch2.Rad) / hyp);
-                        // previous angle plus
-                        // angle between line connecting ch2 and ch1
-                        // and line connecting ch2 to CH center
-                        ch2.UpperWedge = a1 + 
-                            Math.Asin(ch1.Dst * Math.Sin(a2) / hyp);
+                        if (a2 > 0.0)
+                        {
+                            // previous angle plus
+                            // angle between line connecting ch2 and ch1
+                            // and line connecting ch2 to CH center
+                            a2 = (hyp * hyp + ch2.Dst * ch2.Dst
+                                - ch1.Dst * ch1.Dst) / (2.0 * hyp * ch2.Dst);
+                            ch2.UpperWedge = a1 + Math.Acos(//a2);
+                                a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
 #if DEBUG
-                        if (double.IsNaN(ch2.UpperWedge))
-                            throw new Exception();
+                            if (double.IsNaN(ch2.UpperWedge))
+                                throw new Exception();
 #endif
-                        //a2 = Math.Asin(ch2.Dst * Math.Sin(a2) / hyp) - a1;
-
-                        // angle between line connecting ch2 and ch1
-                        // and line connecting ch1 to CH center
-                        a2 = (hyp * hyp + ch1.Dst * ch1.Dst
-                            - ch2.Dst * ch2.Dst) / (2.0 * hyp * ch1.Dst);
-                        a2 = Math.Acos(//a2);
-                            a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+                            // angle between line connecting ch2 and ch1
+                            // and line connecting ch1 to CH center
+                            a2 = (hyp * hyp + ch1.Dst * ch1.Dst
+                                - ch2.Dst * ch2.Dst) / (2.0 * hyp * ch1.Dst);
+                            a2 = Math.Acos(//a2);
+                                a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+                        }
+                        else
+                        {
+                            // previous angle minus
+                            // angle between line connecting ch2 and ch1
+                            // and line connecting ch2 to CH center
+                            a2 = (hyp * hyp + ch2.Dst * ch2.Dst
+                                - ch1.Dst * ch1.Dst) / (2.0 * hyp * ch2.Dst);
+                            ch2.UpperWedge = a1 - Math.Acos(//a2);
+                                a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+#if DEBUG
+                            if (double.IsNaN(ch2.UpperWedge))
+                                throw new Exception();
+#endif
+                            // angle between line connecting ch2 and ch1
+                            // and line connecting ch1 to CH center
+                            a2 = (hyp * hyp + ch1.Dst * ch1.Dst
+                                - ch2.Dst * ch2.Dst) / (2.0 * hyp * ch1.Dst);
+                            a2 = 2 * Math.PI - Math.Acos(//a2);
+                                a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+                        }
                         // Potential new ch1.UpperWedge [-PI,PI]
                         a1 += Math.PI - a2;
                     }
                     // Test if ch2's shadow is within the ch1 arc
-                    if (a1 < ch1.UpperWedge)//(a2 > Math.PI - ch1.UpperWedge)
+                    if (a1 < ch1.UpperWedge)
                     {
                         // Upper Wedge of copy is only needed for initial
                         // concavity test, and will be reset or deleted
                         ch3 = new CHArc(ch1);
                         // Shrink ch1 to outside ch2's shadow
-                        //ch1.LowerWedge = a2 - Math.PI;
                         ch1.LowerWedge = -a1;
 #if DEBUG
                         if (double.IsNaN(ch1.LowerWedge))
                             throw new Exception();
 #endif
-                        // angle of midpoint of ch3
-                        a1 = (ch1.LowerWedge + ch1.UpperWedge) / 2.0;
+                        // absolute value of angle of midpoint of ch1
+                        a1 = ch1.LowerWedge < 0.0
+                            ? (ch1.UpperWedge - ch1.LowerWedge) / 2.0
+                            : (ch1.LowerWedge - ch1.UpperWedge) / 2.0;
                         // length of line connecting midpoint of ch1
                         // to CH center
                         hyp = Math.Sqrt(ch1.Dst * ch1.Dst
                             + ch1.Rad * ch1.Rad
-                            + 2 * ch1.Dst * ch1.Rad * Math.Cos(a1));
+                            - 2 * ch1.Dst * ch1.Rad * Math.Cos(a1));
                         // angle between line connecting ch1 to CH center
                         // & line connecting midpoint of ch1 to CH center
-                        ch1.WedgeOffset
-                            = Math.Asin(ch1.Rad * Math.Sin(a1) / hyp);
+                        a1 = Math.Asin(ch1.Rad * Math.Sin(a1) / hyp);
+                        if (ch1.LowerWedge < 0.0)
+                            ch1.WedgeOffset = a1;
+                        else
+                            ch1.WedgeOffset = -a1;
 #if DEBUG
                         if (double.IsNaN(ch1.WedgeOffset))
                             throw new Exception();
@@ -1027,30 +1098,29 @@ namespace GraphForms.Algorithms.Collections
                         Array.Copy(cvHull, i1, cvHull, i1 + 1, len - i1);
                         cvHull[i1] = ch3;
                         len++;
+                        // ..., copy1, ch13, ...
+                        // ..., copy1, ch1, ch3, ...
+                        // ch3, ..., copy1, ch1
                         i3 = i1 <= i3 ? i3 + 1 : i3;
                         // TODO: Will this only happen if i1 == len - 1 ?
                         if (ch1.Ang + ch1.WedgeOffset > Math.PI)
                         {
+#if DEBUG
+                            if (i1 != len - 2) throw new Exception();
+#endif
                             ch1.WedgeOffset -= 2 * Math.PI;
                             Array.Copy(cvHull, 0, cvHull, 1, len);
                             cvHull[0] = ch1;
                             i1 = (i1 + 1) % len;
                             i3 = (i3 + 1) % len;
+                            // ch13, ..., copy1
+                            // ch1, ch3, ..., copy1
                         }
                         ch1 = ch3;
                         ch3 = cvHull[i3];
                         split1 = true;
                     }
-                    /*else if (a2 == Math.PI - ch1.UpperWedge)
-                    {
-                        // half of split is empty; no need to insert
-                        // TODO: Is there more to do here?
-                        // ch2 will still need to be added to convex hull
-                        // WILL TRAVERSAL IN OPPOSITE DIRECTION HANDLE THIS?
-                        split1 = true;
-                    }/* */
                 }
-                // ..., copy1, ch1, ch3, ...
                 #endregion
 
                 #region Clockwise Split Test
@@ -1085,11 +1155,6 @@ namespace GraphForms.Algorithms.Collections
                         // concavity test, and will be reset or deleted
                         ch1 = new CHArc(ch3);
                         // Shrink ch3 to outside ch2's shadow
-                        /*ch3.UpperWedge = (a1 - a2) / 2.0;
-                        if (double.IsNaN(ch3.UpperWedge))
-                            throw new Exception();
-                        ch3.Ang = a1 - ch3.UpperWedge;
-                        ch3.LowerWedge = ch3.UpperWedge;/* */
                         ch3.UpperWedge = (ch3.LowerWedge - a1) / 2.0;
                         ch3.Ang -= a1 + ch3.UpperWedge;
                         ch3.LowerWedge = ch3.UpperWedge;
@@ -1098,35 +1163,48 @@ namespace GraphForms.Algorithms.Collections
                         Array.Copy(cvHull, i3, cvHull, i3 + 1, len - i3);
                         cvHull[i3] = ch1;
                         len++;
+                        //     ..., ch13, copy3, ...
+                        // ..., ch1, ch3, copy3, ...
+                        // ch3, copy3, ..., ch1
+                        // ..., copy1, ch13, copy3, ...
+                        // ..., copy1, ch1, ch3, copy3, ...
+                        // ch13, copy3, ..., copy1
+                        // ch1, ch3, copy3, ..., copy1
+                        // ch3, copy3, ..., copy1, ch1
                         i1 = i3 <= i1 ? i1 + 1 : i1;
                         // TODO: Will this only happen if i3 == 0 ?
                         if (ch3.Ang < -Math.PI)
                         {
+#if DEBUG
+                            if (i3 != 1) throw new Exception();
+#endif
                             ch3.Ang += 2 * Math.PI;
                             Array.Copy(cvHull, 1, cvHull, 0, len - 1);
                             cvHull[len - 1] = ch3;
-                            i1 = (i1 - 1) % len;
-                            i3 = (i3 - 1) % len;
+                            i1 = (i1 - 1 + len) % len;
+                            i3 = (i3 - 1 + len) % len;
+                            // copy3, ..., ch13
+                            // copy3, ..., ch1, ch3
+                            // copy3, ..., copy1, ch13
+                            // copy3, ..., copy1, ch1, ch3
                         }
                         ch3 = ch1;
                         ch1 = cvHull[i1];
                         split3 = true;
                     }
-                    /*else if (a1 == a2)
-                    {
-                        // half of split is empty; no need to insert
-                        // TODO: Is there more to do here?
-                        // ch2 will still need to be added to convex hull
-                        // WILL TRAVERSAL IN OPPOSITE DIRECTION HANDLE THIS?
-                        split3 = true;
-                    }/* */
                 }
                 else
                 {
-                    // TODO: Ensure this subtract always works
+                    // TODO: Ensure this subtract always 
+                    // works correctly and efficiently
                     a2 = ch3.Ang - ch2.Ang;
-                    if (a2 < 0.0)
+                    while (a2 < -Math.PI)
                         a2 += 2 * Math.PI;
+                    while (a2 > Math.PI)
+                        a2 -= 2 * Math.PI;/* */
+                    /*a2 = Math.Abs(ch3.Ang - ch2.Ang);
+                    if (a2 > Math.PI)
+                        a2 = 2 * Math.PI - a2;/* */
                     if (a2 == 0.0)
                     {
                         // angle between line connecting ch2 and ch3
@@ -1138,8 +1216,6 @@ namespace GraphForms.Algorithms.Collections
                         if (double.IsNaN(ch2.LowerWedge))
                             throw new Exception();
 #endif
-                        //a2 = Math.PI - ch2.LowerWedge;
-
                         // Potential new ch3.LowerWedge [-PI,PI]
                         a1 = ch2.LowerWedge;
                     }
@@ -1152,50 +1228,77 @@ namespace GraphForms.Algorithms.Collections
                         // angle between line connecting ch2 and ch3
                         // and ch3's radial line tangent to their tube
                         a1 = Math.Acos((ch3.Rad - ch2.Rad) / hyp);
-                        // previous angle plus
-                        // angle between line connecting ch2 and ch3
-                        // and line connecting ch2 to CH center
-                        ch2.LowerWedge = a1 + 
-                            Math.Asin(ch3.Dst * Math.Sin(a2) / hyp);
+                        if (a2 > 0.0)
+                        {
+                            // previous angle plus
+                            // angle between line connecting ch2 and ch3
+                            // and line connecting ch2 to CH center
+                            a2 = (hyp * hyp + ch2.Dst * ch2.Dst
+                                - ch3.Dst * ch3.Dst) / (2.0 * hyp * ch2.Dst);
+                            ch2.LowerWedge = a1 + Math.Acos(//a2);
+                                a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
 #if DEBUG
-                        if (double.IsNaN(ch2.LowerWedge))
-                            throw new Exception();
+                            if (double.IsNaN(ch2.LowerWedge))
+                                throw new Exception();
 #endif
-                        //a2 = Math.Asin(ch2.Dst * Math.Sin(a2) / hyp) - a1;
-
-                        // angle between line connecting ch2 and ch3
-                        // and line connecting ch3 to CH center
-                        a2 = (hyp * hyp + ch3.Dst * ch3.Dst
-                            - ch2.Dst * ch2.Dst) / (2.0 * hyp * ch3.Dst);
-                        a2 = Math.Acos(//a2);
-                            a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+                            // angle between line connecting ch2 and ch3
+                            // and line connecting ch3 to CH center
+                            a2 = (hyp * hyp + ch3.Dst * ch3.Dst
+                                - ch2.Dst * ch2.Dst) / (2.0 * hyp * ch3.Dst);
+                            a2 = Math.Acos(//a2);
+                                a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+                        }
+                        else
+                        {
+                            // previous angle minus
+                            // angle between line connecting ch2 and ch3
+                            // and line connecting ch2 to CH center
+                            a2 = (hyp * hyp + ch2.Dst * ch2.Dst
+                                - ch3.Dst * ch3.Dst) / (2.0 * hyp * ch2.Dst);
+                            ch2.LowerWedge = a1 - Math.Acos(//a2);
+                                a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+#if DEBUG
+                            if (double.IsNaN(ch2.LowerWedge))
+                                throw new Exception();
+#endif
+                            // angle between line connecting ch2 and ch3
+                            // and line connecting ch3 to CH center
+                            a2 = (hyp * hyp + ch3.Dst * ch3.Dst
+                                - ch2.Dst * ch2.Dst) / (2.0 * hyp * ch3.Dst);
+                            a2 = 2 * Math.PI - Math.Acos(//a2);
+                                a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+                        }
                         // Potential new ch3.LowerWedge [-PI,PI]
                         a1 += Math.PI - a2;
                     }
                     // Test if ch2's shadow is within the ch3 arc
-                    if (a1 < ch3.LowerWedge)//(a2 > Math.PI - ch3.LowerWedge)
+                    if (a1 < ch3.LowerWedge)
                     {
                         // Lower Wedge of copy is only needed for initial
                         // concavity test, and will be reset or deleted
                         ch1 = new CHArc(ch3);
                         // Shrink ch3 to outside ch2's shadow
-                        //ch3.UpperWedge = a2 - Math.PI;
                         ch3.UpperWedge = -a1;
 #if DEBUG
                         if (double.IsNaN(ch3.UpperWedge))
                             throw new Exception();
 #endif
-                        // angle of midpoint of ch3
-                        a1 = (ch3.LowerWedge + ch3.UpperWedge) / 2.0;
+                        // absolute value angle of midpoint of ch3
+                        a1 = ch3.UpperWedge < 0.0
+                            ? (ch3.LowerWedge - ch3.UpperWedge) / 2.0
+                            : (ch3.UpperWedge - ch3.LowerWedge) / 2.0;
                         // length of line connecting midpoint of ch3
                         // to CH center
                         hyp = Math.Sqrt(ch3.Dst * ch3.Dst
                             + ch3.Rad * ch3.Rad
-                            + 2 * ch3.Dst * ch3.Rad * Math.Cos(a1));
+                            - 2 * ch3.Dst * ch3.Rad * Math.Cos(a1));
                         // angle between line connecting ch3 to CH center
                         // & line connecting midpoint of ch3 to CH center
-                        ch3.WedgeOffset
-                            = -Math.Asin(ch3.Rad * Math.Sin(a1) / hyp);
+                        a1 = Math.Asin(ch3.Rad * Math.Sin(a1) / hyp);
+                        if (ch3.UpperWedge < 0.0)
+                            ch3.WedgeOffset = -a1;
+                        else
+                            ch3.WedgeOffset = a1;
 #if DEBUG
                         if (double.IsNaN(ch3.WedgeOffset))
                             throw new Exception();
@@ -1205,34 +1308,41 @@ namespace GraphForms.Algorithms.Collections
                         Array.Copy(cvHull, i3, cvHull, i3 + 1, len - i3);
                         cvHull[i3] = ch1;
                         len++;
+                        //     ..., ch13, copy3, ...
+                        // ..., ch1, ch3, copy3, ...
+                        // ch3, copy3, ..., ch1
+                        // ..., copy1, ch13, copy3, ...
+                        // ..., copy1, ch1, ch3, copy3, ...
+                        // ch13, copy3, ..., copy1
+                        // ch1, ch3, copy3, ..., copy1
+                        // ch3, copy3, ..., copy1, ch1
                         i1 = i3 <= i1 ? i1 + 1 : i1;
                         // TODO: Will this only happen if i3 == 0 ?
                         if (ch3.Ang + ch3.WedgeOffset < -Math.PI)
                         {
+#if DEBUG
+                            if (i3 != 1) throw new Exception();
+#endif
                             ch1.WedgeOffset += 2 * Math.PI;
                             Array.Copy(cvHull, 1, cvHull, 0, len - 1);
                             cvHull[len - 1] = ch3;
-                            i1 = (i1 - 1) % len;
-                            i3 = (i3 - 1) % len;
+                            i1 = (i1 - 1 + len) % len;
+                            i3 = (i3 - 1 + len) % len;
+                            // copy3, ..., ch13
+                            // copy3, ..., ch1, ch3
+                            // copy3, ..., copy1, ch13
+                            // copy3, ..., copy1, ch1, ch3
                         }
                         ch3 = ch1;
                         ch1 = cvHull[i1];
                         split3 = true;
                     }
-                    /*else if (a2 == Math.PI - ch1.LowerWedge)
-                    {
-                        // half of split is empty; no need to insert
-                        // TODO: Is there more to do here?
-                        // ch2 will still need to be added to convex hull
-                        // WILL TRAVERSAL IN OPPOSITE DIRECTION HANDLE THIS?
-                        split3 = true;
-                    }/* */
                 }
-                // ..., ch1, ch3, copy3, ...
                 #endregion
 
+                #region Split Test Post Processing
                 // TODO: Does this only happen when i1 == i3 
-                // before the split occurs?
+                // before the split tests occur?
                 if (split1 && split3)
                 {
                     // Remove copies created by the splitting, because
@@ -1241,6 +1351,7 @@ namespace GraphForms.Algorithms.Collections
                     // i1/ch1 and i3/ch3 currently point to the copies
                     if (i1 < i3)
                     {
+                        // ..., copy1, ch13, copy3, ...
                         // ..., copy1, ch1, ch3, copy3, ... 
                         Array.Copy(cvHull, i3 + 1, cvHull, i3, len - i3);
                         i3 = i3 - 2;
@@ -1251,8 +1362,10 @@ namespace GraphForms.Algorithms.Collections
                     }
                     else// if (i3 < i1)
                     {
+                        // ch13, copy3, ..., copy1
                         // ch1, ch3, copy3, ..., copy1
                         // ch3, copy3, ..., copy1, ch1
+                        // copy3, ..., copy1, ch13
                         // copy3, ..., copy1, ch1, ch3
                         Array.Copy(cvHull, i1 + 1, cvHull, i1, len - i1);
                         len--;
@@ -1264,6 +1377,30 @@ namespace GraphForms.Algorithms.Collections
                     ch1 = cvHull[i1];
                     ch3 = cvHull[i3];
                 }
+                else if (split1)
+                {
+                    // i1 points to the copy of ch1
+                    // i3 should point to the original ch1, right?
+                    // ..., copy1, ch13, ...
+                    // ..., copy1, ch1, ch3, ...
+                    // ch13, ..., copy1
+                    // ch3, ..., copy1, ch1
+                    i3 = (i1 + 1) % len;
+                    ch3 = cvHull[i3];
+                }
+                else if (split3)
+                {
+                    // i3 points to the copy of ch3
+                    // i1 should point to the original ch3, right?
+                    // ..., ch13, copy3, ...
+                    // ..., ch1, ch3, copy3, ...
+                    // ch3, copy3, ..., ch1
+                    // copy3, ..., ch13
+                    // copy3, ..., ch1, ch3
+                    i1 = (i3 - 1 + len) % len;
+                    ch1 = cvHull[i1];
+                }
+                #endregion
 
                 #region Counterclockwise Concavity Test
                 ch3LoW = double.NaN;
@@ -1294,10 +1431,16 @@ namespace GraphForms.Algorithms.Collections
                     }
                     else
                     {
-                        // TODO: Ensure this subtract always works
+                        // TODO: Ensure this subtract always 
+                        // works correctly and efficiently
                         a2 = ch3.Ang - ch2.Ang;
-                        if (a2 < 0.0)
+                        while (a2 < -Math.PI)
                             a2 += 2 * Math.PI;
+                        while (a2 > Math.PI)
+                            a2 -= 2 * Math.PI;/* */
+                        /*a2 = Math.Abs(ch3.Ang - ch2.Ang);
+                        if (a2 > Math.PI)
+                            a2 = 2 * Math.PI - a2;/* */
                         if (a2 == 0.0)
                         {
                             // angle between line connecting ch2 and ch3
@@ -1310,7 +1453,7 @@ namespace GraphForms.Algorithms.Collections
                                 throw new Exception();
 #endif
                             // Potential new ch3.LowerWedge [-PI,PI]
-                            ch3LoW = ch2.UpperWedge;
+                            ch3LoW = -ch2.UpperWedge;
                             // TODO: Make sure preliminary concavity tests
                             // eliminate all cases that could make this NaN.
                         }
@@ -1323,26 +1466,46 @@ namespace GraphForms.Algorithms.Collections
                             // angle between line connecting ch2 and ch3
                             // and ch3's radial line tangent to their tube
                             a1 = Math.Acos((ch3.Rad - ch2.Rad) / hyp);
-                            // previous angle minus
-                            // angle between line connecting ch2 and ch3
-                            // and line connecting ch2 to CH center
-                            //ch2.UpperWedge
-                            //    = Math.Asin(ch3.Dst * Math.Sin(a2) / hyp);
-                            a2 = (hyp * hyp + ch2.Dst * ch2.Dst
-                                - ch3.Dst * ch3.Dst) / (2 * hyp * ch2.Dst);
-                            ch2.UpperWedge = a1 - Math.Acos(//a2);
-                                a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+                            if (a2 > 0.0)
+                            {
+                                // previous angle minus
+                                // angle between line connecting ch2 and ch3
+                                // and line connecting ch2 to CH center
+                                a2 = (hyp * hyp + ch2.Dst * ch2.Dst
+                                    - ch3.Dst * ch3.Dst) / (2 * hyp * ch2.Dst);
+                                ch2.UpperWedge = a1 - Math.Acos(//a2);
+                                    a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
 #if DEBUG
-                            if (double.IsNaN(ch2.UpperWedge))
-                                throw new Exception();
+                                if (double.IsNaN(ch2.UpperWedge))
+                                    throw new Exception();
 #endif
-                            // angle between line connecting ch2 and ch3
-                            // and line connecting ch3 to CH center
-                            //a2 = Math.Asin(ch2.Dst * Math.Sin(a2) / hyp);
-                            a2 = (hyp * hyp + ch3.Dst * ch3.Dst
-                                - ch2.Dst * ch2.Dst) / (2 * hyp * ch3.Dst);
-                            a2 = Math.Acos(//a2);
-                                a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+                                // angle between line connecting ch2 and ch3
+                                // and line connecting ch3 to CH center
+                                a2 = (hyp * hyp + ch3.Dst * ch3.Dst
+                                    - ch2.Dst * ch2.Dst) / (2 * hyp * ch3.Dst);
+                                a2 = Math.Acos(//a2);
+                                    a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+                            }
+                            else
+                            {
+                                // previous angle plus
+                                // angle between line connecting ch2 and ch3
+                                // and line connecting ch2 to CH center
+                                a2 = (hyp * hyp + ch2.Dst * ch2.Dst
+                                    - ch3.Dst * ch3.Dst) / (2 * hyp * ch2.Dst);
+                                ch2.UpperWedge = a1 - Math.Acos(//a2);
+                                    a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+#if DEBUG
+                                if (double.IsNaN(ch2.UpperWedge))
+                                    throw new Exception();
+#endif
+                                // angle between line connecting ch2 and ch3
+                                // and line connecting ch3 to CH center
+                                a2 = (hyp * hyp + ch3.Dst * ch3.Dst
+                                    - ch2.Dst * ch2.Dst) / (2 * hyp * ch3.Dst);
+                                a2 = 2 * Math.PI - Math.Acos(//a2);
+                                    a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+                            }
                             // Potential new ch3.LowerWedge [-PI,PI]
                             a1 = Math.PI - (a1 + a2);
 #if DEBUG
@@ -1388,10 +1551,16 @@ namespace GraphForms.Algorithms.Collections
                     }
                     else
                     {
-                        // TODO: Ensure this subtract always works
+                        // TODO: Ensure this subtract always 
+                        // works correctly and efficiently
                         a2 = ch2.Ang - ch1.Ang;
-                        if (a2 < 0.0)
+                        while (a2 < -Math.PI)
                             a2 += 2 * Math.PI;
+                        while (a2 > Math.PI)
+                            a2 -= 2 * Math.PI;/* */
+                        /*a2 = Math.Abs(ch2.Ang - ch1.Ang);
+                        if (a2 > Math.PI)
+                            a2 = 2 * Math.PI - a2;/* */
                         if (a2 == 0.0)
                         {
                             // angle between line connecting ch2 and ch1
@@ -1404,7 +1573,7 @@ namespace GraphForms.Algorithms.Collections
                                 throw new Exception();
 #endif
                             // Potential new ch1.UpperWedge [-PI,PI]
-                            ch1UpW = ch2.LowerWedge;
+                            ch1UpW = -ch2.LowerWedge;
                             // TODO: Make sure preliminary concavity tests
                             // eliminate all cases that could make this NaN.
                         }
@@ -1415,28 +1584,49 @@ namespace GraphForms.Algorithms.Collections
                                 + ch2.Dst * ch2.Dst
                                 - 2 * ch1.Dst * ch2.Dst * Math.Cos(a2));
                             // angle between line connecting ch2 and ch1
-                            // and ch3's radial line tangent to their tube
+                            // and ch1's radial line tangent to their tube
                             a1 = Math.Acos((ch1.Rad - ch2.Rad) / hyp);
-                            // previous angle minus
-                            // angle between line connecting ch2 and ch1
-                            // and line connecting ch2 to CH center
-                            //ch2.LowerWedge = a1 -
-                            //    Math.Asin(ch1.Dst * Math.Sin(a2) / hyp);
-                            a2 = (hyp * hyp + ch2.Dst * ch2.Dst
-                                - ch1.Dst * ch1.Dst) / (2 * hyp * ch2.Dst);
-                            ch2.LowerWedge = a1 - Math.Acos(//a2);
-                                a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+                            if (a2 > 0.0)
+                            {
+                                // previous angle minus
+                                // angle between line connecting ch2 and ch1
+                                // and line connecting ch2 to CH center
+                                a2 = (hyp * hyp + ch2.Dst * ch2.Dst
+                                    - ch1.Dst * ch1.Dst) / (2 * hyp * ch2.Dst);
+                                ch2.LowerWedge = a1 - Math.Acos(//a2);
+                                    a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
 #if DEBUG
-                            if (double.IsNaN(ch2.LowerWedge))
-                                throw new Exception();
+                                if (double.IsNaN(ch2.LowerWedge))
+                                    throw new Exception();
 #endif
-                            // angle between line connecting ch2 and ch1
-                            // and line connecting ch1 to CH center
-                            //a2 = Math.Asin(ch2.Dst * Math.Sin(a2) / hyp);
-                            a2 = (hyp * hyp + ch1.Dst * ch1.Dst
-                                - ch2.Dst * ch2.Dst) / (2 * hyp * ch1.Dst);
-                            a2 = Math.Acos(//a2);
-                                a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+                                // angle between line connecting ch2 and ch1
+                                // and line connecting ch1 to CH center
+                                a2 = (hyp * hyp + ch1.Dst * ch1.Dst
+                                    - ch2.Dst * ch2.Dst) / (2 * hyp * ch1.Dst);
+                                a2 = Math.Acos(//a2);
+                                    a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+                            }
+                            else
+                            {
+                                // previous angle plus
+                                // angle between line connecting ch2 and ch1
+                                // and line connecting ch2 to CH center
+                                a2 = (hyp * hyp + ch2.Dst * ch2.Dst
+                                    - ch1.Dst * ch1.Dst) / (2 * hyp * ch2.Dst);
+                                ch2.LowerWedge = a1 + Math.Acos(//a2);
+                                    a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+#if DEBUG
+                                if (double.IsNaN(ch2.LowerWedge))
+                                    throw new Exception();
+#endif
+                                // angle between line connecting ch2 and ch1
+                                // and line connecting ch1 to CH center
+                                //a2 = Math.Asin(ch2.Dst * Math.Sin(a2) / hyp);
+                                a2 = (hyp * hyp + ch1.Dst * ch1.Dst
+                                    - ch2.Dst * ch2.Dst) / (2 * hyp * ch1.Dst);
+                                a2 = 2 * Math.PI - Math.Acos(//a2);
+                                    a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+                            }
                             // Potential new ch1.UpperWedge [-PI,PI]
                             a1 = Math.PI - (a1 + a2);
 #if DEBUG
@@ -1487,10 +1677,16 @@ namespace GraphForms.Algorithms.Collections
                         }
                         else
                         {
-                            // TODO: Ensure this subtract always works
+                            // TODO: Ensure this subtract always 
+                            // works correctly and efficiently
                             a2 = ch3.Ang - ch2.Ang;
-                            if (a2 < 0.0)
+                            while (a2 < -Math.PI)
                                 a2 += 2 * Math.PI;
+                            while (a2 > Math.PI)
+                                a2 -= 2 * Math.PI;/* */
+                            /*a2 = Math.Abs(ch3.Ang - ch2.Ang);
+                            if (a2 > Math.PI)
+                                a2 = 2 * Math.PI - a2;/* */
                             if (a2 == 0.0)
                             {
                                 // angle between line connecting ch2 and ch3
@@ -1514,26 +1710,46 @@ namespace GraphForms.Algorithms.Collections
                                 // angle between line connecting ch2 and ch3
                                 // and ch3's radial line tangent to the tube
                                 a1 = Math.Acos((ch3.Rad - ch2.Rad) / hyp);
-                                // previous angle minus
-                                // angle between line connecting ch2 and ch3
-                                // and line connecting ch2 to CH center
-                                //ch2.UpperWedge = a1 - 
-                                //    Math.Asin(ch3.Dst * Math.Sin(a2) / hyp);
-                                a2 = (hyp * hyp + ch2.Dst * ch2.Dst
-                                    - ch3.Dst * ch3.Dst) / (2 * hyp * ch2.Dst);
-                                ch2.UpperWedge = a1 - Math.Acos(//a2);
-                                    a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+                                if (a2 > 0.0)
+                                {
+                                    // previous angle minus
+                                    // angle between line connecting ch2 and ch3
+                                    // and line connecting ch2 to CH center
+                                    a2 = (hyp * hyp + ch2.Dst * ch2.Dst
+                                        - ch3.Dst * ch3.Dst) / (2 * hyp * ch2.Dst);
+                                    ch2.UpperWedge = a1 - Math.Acos(//a2);
+                                        a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
 #if DEBUG
-                                if (double.IsNaN(ch2.UpperWedge))
-                                    throw new Exception();
+                                    if (double.IsNaN(ch2.UpperWedge))
+                                        throw new Exception();
 #endif
-                                // angle between line connecting ch2 and ch3
-                                // and line connecting ch3 to CH center
-                                //a2 = Math.Asin(ch2.Dst * Math.Sin(a2) / hyp);
-                                a2 = (hyp * hyp + ch3.Dst * ch3.Dst
-                                    - ch2.Dst * ch2.Dst) / (2 * hyp * ch3.Dst);
-                                a2 = Math.Acos(//a2);
-                                    a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+                                    // angle between line connecting ch2 and ch3
+                                    // and line connecting ch3 to CH center
+                                    a2 = (hyp * hyp + ch3.Dst * ch3.Dst
+                                        - ch2.Dst * ch2.Dst) / (2 * hyp * ch3.Dst);
+                                    a2 = Math.Acos(//a2);
+                                        a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+                                }
+                                else
+                                {
+                                    // previous angle plus
+                                    // angle between line connecting ch2 and ch3
+                                    // and line connecting ch2 to CH center
+                                    a2 = (hyp * hyp + ch2.Dst * ch2.Dst
+                                        - ch3.Dst * ch3.Dst) / (2 * hyp * ch2.Dst);
+                                    ch2.UpperWedge = a1 + Math.Acos(//a2);
+                                        a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+#if DEBUG
+                                    if (double.IsNaN(ch2.UpperWedge))
+                                        throw new Exception();
+#endif
+                                    // angle between line connecting ch2 and ch3
+                                    // and line connecting ch3 to CH center
+                                    a2 = (hyp * hyp + ch3.Dst * ch3.Dst
+                                        - ch2.Dst * ch2.Dst) / (2 * hyp * ch3.Dst);
+                                    a2 = 2 * Math.PI - Math.Acos(//a2);
+                                        a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+                                }
                                 // Potential new ch3.LowerWedge [-PI,PI]
                                 a1 = Math.PI - (a1 + a2);
 #if DEBUG
@@ -1553,6 +1769,8 @@ namespace GraphForms.Algorithms.Collections
                     // If it does, how do we find the new i1/ch1?
                     // TODO: Make sure i1 & i3 are correctly updated
                     // so that ch1 == cvHull[i1] && ch3 == cvHull[i3]
+                    // Since j is the source index of the copy,
+                    // i3 needs to point to the destination index
                     if (i3 < j)
                     {
                         if (i1 == i3 && !split3)
@@ -1561,14 +1779,19 @@ namespace GraphForms.Algorithms.Collections
                             // for clockwise traversal
                             Array.Copy(cvHull, j, cvHull, i3 + 1, len - j);
                             len = len + i3 - j + 1;
-                            i3 = j - 1;
+                            i3++;//i3 = j - 1;
                         }
                         else
                         {
                             Array.Copy(cvHull, j, cvHull, i3, len - j);
                             len = len + i3 - j;
+                            // TODO: What if i1 >= i3 && i1 < j, 
+                            // which would make it one of the arcs removed?
+#if DEBUG
+                            if (i1 >= i3 && i1 < j) throw new Exception();
+#endif
                             if (i1 >= j)
-                                i1 += i3 - j;
+                                i1 -= j - i3;
                         }
                     }
                     else if (j < i3)
@@ -1588,11 +1811,16 @@ namespace GraphForms.Algorithms.Collections
                             Array.Copy(cvHull, j, cvHull, 0, i3 - j);
                             len = i3 - j;
                         }
+                        // TODO: What if i1 < j || i1 >= i3,
+                        // which would make it one of the arcs removed?
+#if DEBUG
+                        if (i1 < j || i1 > i3) throw new Exception();
+#endif
                         if (i1 >= j)
                             i1 -= j;
                         i3 = 0;
                     }
-                    // Update the arc at j
+                    // Update the arc at new i3
                     if (ch3.UpperWedge > -a1)
                     {
                         ch3.LowerWedge = a1;
@@ -1604,8 +1832,11 @@ namespace GraphForms.Algorithms.Collections
                             // TODO: Will this only happen if i3 == len - 1 ?
                             if (ch3.Ang > Math.PI)
                             {
+#if DEBUG
+                                if (i3 != len - 1) throw new Exception();
+#endif
                                 ch3.Ang -= 2 * Math.PI;
-                                Array.Copy(cvHull, 0, cvHull, 1, len);
+                                Array.Copy(cvHull, 0, cvHull, 1, len - 1);
                                 cvHull[0] = ch3;
                                 i1 = (i1 + 1) % len;
                                 i3 = (i3 + 1) % len;
@@ -1613,13 +1844,13 @@ namespace GraphForms.Algorithms.Collections
                         }
                         else if (a1 <= 0.0)
                         {
-                            // angle of midpoint of ch3
-                            a2 = (a1 + ch3.UpperWedge) / 2.0;
+                            // absolute value of angle of midpoint of ch3
+                            a2 = (ch3.UpperWedge - a1) / 2.0;
                             // length of line connecting midpoint of ch3
                             // to CH center
                             hyp = Math.Sqrt(ch3.Dst * ch3.Dst
                                 + ch3.Rad * ch3.Rad
-                                + 2 * ch3.Dst * ch3.Rad * Math.Cos(a2));
+                                - 2 * ch3.Dst * ch3.Rad * Math.Cos(a2));
                             // angle between line connecting ch3 to CH center
                             // & line connecting midpoint of ch3 to CH center
                             ch3.WedgeOffset
@@ -1631,8 +1862,11 @@ namespace GraphForms.Algorithms.Collections
                             // TODO: Will this only happen if i3 == len - 1 ?
                             if (ch3.Ang + ch3.WedgeOffset > Math.PI)
                             {
+#if DEBUG
+                                if (i3 != len - 1) throw new Exception();
+#endif
                                 ch3.WedgeOffset -= 2 * Math.PI;
-                                Array.Copy(cvHull, 0, cvHull, 1, len);
+                                Array.Copy(cvHull, 0, cvHull, 1, len - 1);
                                 cvHull[0] = ch3;
                                 i1 = (i1 + 1) % len;
                                 i3 = (i3 + 1) % len;
@@ -1676,10 +1910,16 @@ namespace GraphForms.Algorithms.Collections
                         }
                         else
                         {
-                            // TODO: Ensure this subtract always works
+                            // TODO: Ensure this subtract always 
+                            // works correctly and efficiently
                             a2 = ch2.Ang - ch1.Ang;
-                            if (a2 < 0.0)
+                            while (a2 < -Math.PI)
                                 a2 += 2 * Math.PI;
+                            while (a2 > Math.PI)
+                                a2 -= 2 * Math.PI;/* */
+                            /*a2 = Math.Abs(ch2.Ang - ch1.Ang);
+                            if (a2 > Math.PI)
+                                a2 = 2 * Math.PI - a2;/* */
                             if (a2 == 0.0)
                             {
                                 // angle between line connecting ch2 and ch1
@@ -1703,26 +1943,46 @@ namespace GraphForms.Algorithms.Collections
                                 // angle between line connecting ch2 and ch1
                                 // and ch1's radial line tangent to the tube
                                 a1 = Math.Acos((ch1.Rad - ch2.Rad) / hyp);
-                                // previous angle minus
-                                // angle between line connecting ch2 and ch1
-                                // and line connecting ch2 to CH center
-                                //ch2.LowerWedge = a1 -
-                                //    Math.Asin(ch1.Dst * Math.Sin(a2) / hyp);
-                                a2 = (hyp * hyp + ch2.Dst * ch2.Dst 
-                                    - ch1.Dst * ch1.Dst) / (2 * hyp * ch2.Dst);
-                                ch2.LowerWedge = a1 - Math.Acos(//a2);
-                                    a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+                                if (a2 > 0.0)
+                                {
+                                    // previous angle minus
+                                    // angle between line connecting ch2 and ch1
+                                    // and line connecting ch2 to CH center
+                                    a2 = (hyp * hyp + ch2.Dst * ch2.Dst
+                                        - ch1.Dst * ch1.Dst) / (2 * hyp * ch2.Dst);
+                                    ch2.LowerWedge = a1 - Math.Acos(//a2);
+                                        a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
 #if DEBUG
-                                if (double.IsNaN(ch2.LowerWedge))
-                                    throw new Exception();
+                                    if (double.IsNaN(ch2.LowerWedge))
+                                        throw new Exception();
 #endif
-                                // angle between line connecting ch2 and ch1
-                                // and line connecting ch1 to CH center
-                                //a2 = Math.Asin(ch2.Dst * Math.Sin(a2) / hyp);
-                                a2 = (hyp * hyp + ch1.Dst * ch1.Dst
-                                    - ch2.Dst * ch2.Dst) / (2 * hyp * ch1.Dst);
-                                a2 = Math.Acos(//a2);
-                                    a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+                                    // angle between line connecting ch2 and ch1
+                                    // and line connecting ch1 to CH center
+                                    a2 = (hyp * hyp + ch1.Dst * ch1.Dst
+                                        - ch2.Dst * ch2.Dst) / (2 * hyp * ch1.Dst);
+                                    a2 = Math.Acos(//a2);
+                                        a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+                                }
+                                else
+                                {
+                                    // previous angle plus
+                                    // angle between line connecting ch2 and ch1
+                                    // and line connecting ch2 to CH center
+                                    a2 = (hyp * hyp + ch2.Dst * ch2.Dst
+                                        - ch1.Dst * ch1.Dst) / (2 * hyp * ch2.Dst);
+                                    ch2.LowerWedge = a1 + Math.Acos(//a2);
+                                        a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+#if DEBUG
+                                    if (double.IsNaN(ch2.LowerWedge))
+                                        throw new Exception();
+#endif
+                                    // angle between line connecting ch2 and ch1
+                                    // and line connecting ch1 to CH center
+                                    a2 = (hyp * hyp + ch1.Dst * ch1.Dst
+                                        - ch2.Dst * ch2.Dst) / (2 * hyp * ch1.Dst);
+                                    a2 = 2 * Math.PI - Math.Acos(//a2);
+                                        a2 > 1.0 ? 1.0 : (a2 < -1.0 ? -1.0 : a2));
+                                }
                                 // Potential new ch1.UpperWedge [-PI,PI]
                                 a1 = Math.PI - (a1 + a2);
 #if DEBUG
@@ -1746,21 +2006,26 @@ namespace GraphForms.Algorithms.Collections
                     {
                         Array.Copy(cvHull, i1 + 1, cvHull, j + 1, len - i1 - 1);
                         len = len + j - i1;
-                        if (i3 >= j)
-                            i3 += j - i1;
+                        // TODO: What if i3 >= j + 1 && i3 < i1 + 1, 
+                        // which would make it one of the arcs removed?
+#if DEBUG
+                        if (i3 > j && i3 <= i1) throw new Exception();
+#endif
+                        if (i3 > i1)
+                            i3 -= i1 - j;
                         i1 = j;
                     }
                     else if (i1 < j)
                     {
                         Array.Copy(cvHull, i1 + 1, cvHull, 0, j - i1);
                         len = j - i1;
-                        if (i3 <= j)
+                        // TODO: What if i3 < i1 + 1 || i3 > j,
+                        // which would make it one of the arcs removed?
+#if DEBUG
+                        if (i3 <= i1 || i3 > j) throw new Exception();
+#endif
+                        if (i3 > i1)
                             i3 -= i1 + 1;
-                        // TODO: Is this the right behavior?
-                        // If i3 is "lapped", it just needs to point
-                        // to the node after i1 to ensure insertion works?
-                        if (i3 < 0)
-                            i3 = 0;
                         i1 = len - 1;
                     }
                     // Update the arc at j
@@ -1775,6 +2040,9 @@ namespace GraphForms.Algorithms.Collections
                             // TODO: Will this only happen if i1 == 0 ?
                             if (ch1.Ang < -Math.PI)
                             {
+#if DEBUG
+                                if (i1 != 0) throw new Exception();
+#endif
                                 ch1.Ang += 2 * Math.PI;
                                 Array.Copy(cvHull, 1, cvHull, 0, len - 1);
                                 cvHull[len - 1] = ch1;
@@ -1784,13 +2052,13 @@ namespace GraphForms.Algorithms.Collections
                         }
                         else if (a1 <= 0.0)
                         {
-                            // angle of midpoint of ch1
-                            a2 = (ch1.LowerWedge + a1) / 2.0;
+                            // absolute value of angle of midpoint of ch1
+                            a2 = (ch1.LowerWedge - a1) / 2.0;
                             // length of line connecting midpoint of ch1
                             // to CH center
                             hyp = Math.Sqrt(ch1.Dst * ch1.Dst
                                 + ch1.Rad * ch1.Rad
-                                + 2 * ch1.Dst * ch1.Rad * Math.Cos(a2));
+                                - 2 * ch1.Dst * ch1.Rad * Math.Cos(a2));
                             // angle between line connecting ch3 to CH center
                             // & line connecting midpoint of ch3 to CH center
                             ch1.WedgeOffset
@@ -1800,9 +2068,12 @@ namespace GraphForms.Algorithms.Collections
                                 throw new Exception();
 #endif
                             // TODO: Will this only happen if i1 == 0 ?
-                            if (ch3.Ang + ch3.WedgeOffset < -Math.PI)
+                            if (ch1.Ang + ch1.WedgeOffset < -Math.PI)
                             {
-                                ch3.WedgeOffset += 2 * Math.PI;
+#if DEBUG
+                                if (i1 != 0) throw new Exception();
+#endif
+                                ch1.WedgeOffset += 2 * Math.PI;
                                 Array.Copy(cvHull, 1, cvHull, 0, len - 1);
                                 cvHull[len - 1] = ch1;
                                 i1 = (i1 - 1 + len) % len;
@@ -1812,7 +2083,8 @@ namespace GraphForms.Algorithms.Collections
                     }
                 }
                 #endregion
-                
+
+                #region Arc Insertion
                 // Insert the new arc into the convex hull
                 // TODO: Make sure Mod(i3 - i1) <= 1 still holds here
                 if (i3 == 0)
@@ -1833,10 +2105,16 @@ namespace GraphForms.Algorithms.Collections
                     cvHull[i3] = ch2;
                 }
                 len++;
+                #endregion
             }
+#if DEBUG
+            cvHullStr = PrintConvexHull(cvHull, len);
+#endif
+            #endregion
 
+            #region Finalization
             // Calculate the bounding circle
-            this.mCHCircle = new CHArc(this.mData, chByRad[0].Rad);
+            this.mCHCircle = new CHArc(this.mNodeData, chByRad[0].Rad);
             this.mCHCircle.LowerWedge = Math.PI;
             this.mCHCircle.UpperWedge = Math.PI;
             for (i = 0; i < len; i++)
@@ -1845,7 +2123,6 @@ namespace GraphForms.Algorithms.Collections
                 if (this.mCHCircle.Rad < ch2.Rad + ch2.Dst)
                     this.mCHCircle.Rad = ch2.Rad + ch2.Dst;
             }
-
             // Offset the convex hull back to the original root
             if (root != 0)
             {
@@ -1861,30 +2138,36 @@ namespace GraphForms.Algorithms.Collections
                 // Offset the convex hull
                 for (i = 0; i < len; i++)
                 {
+#if DEBUG
+                    cvHullStr = PrintConvexHull(cvHull, len);
+#endif
                     ch2 = cvHull[i];
                     x2 = ch2.Dst * Math.Cos(ch2.Ang) - a1;
                     y2 = ch2.Dst * Math.Sin(ch2.Ang) - a2;
-                    ang = ch2.Ang - Math.Atan2(y2, x2);
-                    // TODO: Make sure this math is right
-                    ch2.LowerWedge -= ang;
-                    if (ch2.LowerWedge < -Math.PI)
-                        ch2.LowerWedge += 2 * Math.PI;
-                    if (ch2.LowerWedge > Math.PI)
-                        ch2.LowerWedge -= 2 * Math.PI;
-                    ch2.UpperWedge += ang;
-                    if (ch2.UpperWedge < -Math.PI)
-                        ch2.UpperWedge += 2 * Math.PI;
-                    if (ch2.UpperWedge > Math.PI)
-                        ch2.UpperWedge -= 2 * Math.PI;
-                    ch2.Ang -= ang;
-                    // No need to normalize ch2.Ang, as Atan2 does that.
+                    if (x2 != 0.0 || y2 != 0.0)
+                    {
+                        ang = ch2.Ang - Math.Atan2(y2, x2);
+                        // TODO: Make sure this math is right
+                        ch2.LowerWedge -= ang;
+                        while (ch2.LowerWedge < -Math.PI)
+                            ch2.LowerWedge += 2 * Math.PI;
+                        while (ch2.LowerWedge > Math.PI)
+                            ch2.LowerWedge -= 2 * Math.PI;
+                        ch2.UpperWedge += ang;
+                        while (ch2.UpperWedge < -Math.PI)
+                            ch2.UpperWedge += 2 * Math.PI;
+                        while (ch2.UpperWedge > Math.PI)
+                            ch2.UpperWedge -= 2 * Math.PI;
+                        // No need to normalize ch2.Ang, as Atan2 does that
+                        ch2.Ang -= ang;
+                    }
                     ch2.Dst = Math.Sqrt(x2 * x2 + y2 * y2);
                     // TODO: Make sure wedge offsets are assigned to arcs
                     // that were previously centered.
                     if (ch2.LowerWedge < 0.0 && ch2.UpperWedge < 0.0)
                     {
-                        ang = ch2.LowerWedge;
-                        ch2.LowerWedge = ch2.UpperWedge;
+                        ang = -ch2.LowerWedge;
+                        ch2.LowerWedge = -ch2.UpperWedge;
                         ch2.UpperWedge = ang;
                         ch2.WedgeOffset = -ch2.WedgeOffset;
                     }
@@ -1892,42 +2175,86 @@ namespace GraphForms.Algorithms.Collections
                     {
                         if (ch2.Dst == 0.0)
                         {
-                            ang = (ch2.UpperWedge + ch2.LowerWedge) / 2.0;
-                            if (ch2.LowerWedge < 0.0)
-                                ch2.Ang += ang;
-                            else
-                                ch2.Ang -= ang;
-                            if (ch2.Ang < -Math.PI)
+                            ang = (ch2.UpperWedge - ch2.LowerWedge) / 2.0;
+                            ch2.Ang += ang;
+                            while (ch2.Ang < -Math.PI)
                                 ch2.Ang += 2 * Math.PI;
-                            if (ch2.Ang > Math.PI)
+                            while (ch2.Ang > Math.PI)
                                 ch2.Ang -= 2 * Math.PI;
+                            ang = (ch2.UpperWedge + ch2.LowerWedge) / 2.0;
                             ch2.LowerWedge = ang;
                             ch2.UpperWedge = ang;
+                            ch2.WedgeOffset = 0.0;
                         }
                         else
                         {
-                            ang = Math.PI - 
-                                (ch2.UpperWedge + ch2.LowerWedge) / 2.0;
+                            // absolute value of angle of midpoint of ch2
+                            ang = ch2.LowerWedge < 0.0
+                                ? (ch2.UpperWedge - ch2.LowerWedge) / 2.0
+                                : (ch2.LowerWedge - ch2.UpperWedge) / 2.0;
+                            // length of line connecting midpoint of ch2
+                            // to CH center
                             hyp = Math.Sqrt(ch2.Rad * ch2.Rad
                                 + ch2.Dst * ch2.Dst
                                 - 2 * ch2.Rad * ch2.Dst * Math.Cos(ang));
+                            // angle between line connecting ch2 to CH center
+                            // & line connecting midpoint of ch2 to CH center
                             ang = Math.Asin(ch2.Rad * Math.Sin(ang) / hyp);
                             if (ch2.LowerWedge < 0.0)
                                 ch2.WedgeOffset = ang;
                             else
                                 ch2.WedgeOffset = -ang;
+                            while (ch2.Ang + ch2.WedgeOffset < -Math.PI)
+                                ch2.WedgeOffset += 2 * Math.PI;
+                            while (ch2.Ang + ch2.WedgeOffset > Math.PI)
+                                ch2.WedgeOffset -= 2 * Math.PI;
                         }
                     }
                 }
-                // Resort the convex hull by angle
+#if DEBUG
+                cvHullStr = PrintConvexHull(cvHull, len);
+#endif
+                // Re-sort the convex hull by angle
                 // TODO: Can this be faster/simpler?
-                if (this.mCHAngComp == null)
+                /*if (this.mCHAngComp == null)
                     this.mCHAngComp = new CHAngComp();
-                Array.Sort<CHArc>(cvHull, 0, len, this.mCHAngComp);
+                Array.Sort<CHArc>(cvHull, 0, len, this.mCHAngComp);/* */
+
+                i1 = 0;
+                a1 = cvHull[0].Ang + cvHull[0].WedgeOffset;
+                for (i = 1; i < len; i++)
+                {
+                    a2 = cvHull[i].Ang + cvHull[i].WedgeOffset;
+                    if (a1 > a2)
+                    {
+                        i1 = i;
+                        break;
+                    }
+                    a1 = a2;
+                }
+                // Set the convex hull value for this instance
+                this.mConvexHull = new CHArc[len];
+                if (i1 > 0)
+                {
+                    Array.Copy(cvHull, i1, this.mConvexHull, 0, len - i1);
+                    Array.Copy(cvHull, 0, this.mConvexHull, len - i1, i1);
+                }
+                else
+                {
+                    Array.Copy(cvHull, 0, this.mConvexHull, 0, len);
+                }
             }
-            // Set the convex hull value for this instance
-            this.mConvexHull = new CHArc[len];
-            Array.Copy(cvHull, 0, this.mConvexHull, 0, len);
+            else
+            {
+                // Set the convex hull value for this instance
+                this.mConvexHull = new CHArc[len];
+                Array.Copy(cvHull, 0, this.mConvexHull, 0, len);
+            }
+            #endregion
+#if DEBUG
+            cvHullStr = PrintConvexHull(this.mConvexHull, len);
+#endif
+            // Update the invalidation flags
             this.bCHDirty = false;
             this.bWedgeDirty = true;
         }
@@ -1936,28 +2263,36 @@ namespace GraphForms.Algorithms.Collections
         {
             // Assuming a maximum precision of 17 for double
             // double.ToString() seems to print with max precision of 15
+            CHArc arc;
             double ang;
             int decPlace;
             string angStr, decSep = System.Globalization.
                 NumberFormatInfo.CurrentInfo.NumberDecimalSeparator;
-            StringBuilder sb = new StringBuilder((len + 1) * 125);
-            sb.Append("| i  | ");
+            StringBuilder sb = new StringBuilder((len + 1) * 150);
+            sb.Append("| i  | Radius   | ");
             sb.Append("Angle                    | Distance                | ");
             sb.Append("Lower Wedge              | Upper Wedge              | ");
-            //sb.Append("Wedge Offset             | ");
+            sb.Append("Sort Angle               | ");
             sb.AppendLine();
             for (int i = 0; i < len; i++)
             {
                 sb.AppendFormat("| {0:00} | ", i);
-                if (cvHull[i] == null)
+                arc = cvHull[i];
+                if (arc == null)
                 {
                     sb.AppendFormat(
-                        "{0,-25}| {0,-24}| {0,-25}| {0,-25}| {0,-25}|", "NULL");
+                        "{0,-9}| {0,-25}| {0,-24}| {0,-25}| {0,-25}| {0,-25}|", "NULL");
                     sb.AppendLine();
                     continue;
                 }
+                // Print Radius
+                angStr = arc.Rad.ToString("0.0###");
+                decPlace = angStr.IndexOf('.');
+                sb.Append(string.Concat(
+                    new string(' ', 3 - decPlace), angStr).PadRight(9));
+                sb.Append("| ");
                 // Print Angle
-                ang = 180.0 * cvHull[i].Ang / Math.PI;
+                ang = 180.0 * arc.Ang / Math.PI;
                 // Print in scientific notation if really small
                 if (ang != 0.0 && Math.Abs(ang) < 0.00001)
                     angStr = ang.ToString("0.0##############e+0");
@@ -1968,7 +2303,7 @@ namespace GraphForms.Algorithms.Collections
                     new string(' ', 4 - decPlace), angStr).PadRight(25));
                 sb.Append("| ");
                 // Print Distance
-                ang = cvHull[i].Dst;
+                ang = arc.Dst;
                 // Print in scientific notation if really small
                 if (ang != 0.0 && Math.Abs(ang) < 0.000001)
                     angStr = ang.ToString("0.0##############e+0");
@@ -1979,7 +2314,7 @@ namespace GraphForms.Algorithms.Collections
                     new string(' ', 3 - decPlace), angStr).PadRight(24));
                 sb.Append("| ");
                 // Print Lower Wedge
-                ang = 180.0 * cvHull[i].LowerWedge / Math.PI;
+                ang = 180.0 * arc.LowerWedge / Math.PI;
                 // Print in scientific notation if really small
                 if (ang != 0.0 && Math.Abs(ang) < 0.00001)
                     angStr = ang.ToString("0.0##############e+0");
@@ -1990,7 +2325,7 @@ namespace GraphForms.Algorithms.Collections
                     new string(' ', 4 - decPlace), angStr).PadRight(25));
                 sb.Append("| ");
                 // Print Upper Wedge
-                ang = 180.0 * cvHull[i].UpperWedge / Math.PI;
+                ang = 180.0 * arc.UpperWedge / Math.PI;
                 // Print in scientific notation if really small
                 if (ang != 0.0 && Math.Abs(ang) < 0.00001)
                     angStr = ang.ToString("0.0##############e+0");
@@ -2000,8 +2335,8 @@ namespace GraphForms.Algorithms.Collections
                 sb.Append(string.Concat(
                     new string(' ', 4 - decPlace), angStr).PadRight(25));
                 sb.Append("| ");
-                // Print Wedge Offset
-                /*ang = 180.0 * cvHull[i].WedgeOffset / Math.PI;
+                // Print Sort Angle
+                ang = 180.0 * (arc.Ang + arc.WedgeOffset) / Math.PI;
                 // Print in scientific notation if really small
                 if (ang != 0.0 && Math.Abs(ang) < 0.00001)
                     angStr = ang.ToString("0.0##############e+0");
@@ -2012,7 +2347,7 @@ namespace GraphForms.Algorithms.Collections
                     new string(' ', 4 - decPlace), angStr).PadRight(25));
                 sb.Append("| ");/* */
                 // Print Data
-                sb.Append(cvHull[i].Data.ToString());
+                sb.Append(arc.Data.ToString());
                 sb.AppendLine(" ");
             }
             return sb.ToString();
@@ -2482,7 +2817,6 @@ namespace GraphForms.Algorithms.Collections
         }
 
         #region Debugging
-
         /// <summary>
         /// Gets this circle tree's <see cref="Angle"/> in degrees 
         /// instead of radians for debugging.

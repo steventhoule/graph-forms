@@ -32,6 +32,7 @@ namespace GraphForms.Algorithms.Layout.Circular
 
         // Flags and Calculated Values
         private double mRadius;
+        private double mBoundingRadius;
         private double[] mAngles;
         private bool bCenterDirty = true;
         private double mCX;
@@ -51,7 +52,7 @@ namespace GraphForms.Algorithms.Layout.Circular
 
         #region Parameters
 
-        #region Postion Calculation Parameters
+        #region Position Calculation Parameters
         /// <summary>
         /// Gets or sets the method this algorithm uses to calculate the
         /// angles between nodes around the center of the embedding circle.
@@ -264,6 +265,64 @@ namespace GraphForms.Algorithms.Layout.Circular
         #endregion
 
         #endregion
+
+        /// <summary>
+        /// Gets the current radius of the embedding circle of this layout
+        /// algorithm, as calculated based on the values of
+        /// <see cref="NodeSpacing"/>, <see cref="MinRadius"/>, and
+        /// <see cref="FreeArc"/>.</summary>
+        public double Radius
+        {
+            get { return this.mRadius; }
+        }
+        /// <summary>
+        /// Gets the current radius of the smallest circle concentric with
+        /// the embedding circle of this layout algorithm that can enclose
+        /// all the nodes in the graph processed by this layout algorithm.
+        /// </summary>
+        public double BoundingRadius
+        {
+            get { return this.mBoundingRadius; }
+        }
+        /// <summary>
+        /// Gets the calculated angles of the nodes of the graph of this
+        /// layout algorithm around the center of its embedding circle, 
+        /// measured in radians counterclockwise from the +X-axis, in the
+        /// same order as their corresponding nodes are stored in the graph.
+        /// </summary>
+        public double[] Angles
+        {
+            get
+            {
+                double[] angles = new double[this.mAngles.Length];
+                Array.Copy(this.mAngles, 0, angles, 0, this.mAngles.Length);
+                return angles;
+            }
+        }
+        /// <summary>
+        /// Gets or sets the current X-coordinate of the center of the
+        /// embedding circle of this layout algorithm, as calculated during 
+        /// the last iteration based on the <see cref="Centering"/>,
+        /// <see cref="CenterX"/>, <see cref="CenterY"/>, 
+        /// <see cref="AdjustCenter"/>, and <see cref="AdjustAngle"/>
+        /// parameters.</summary>
+        public double CalcCenterX
+        {
+            get { return this.mCX; }
+            set { this.mCX = value; }
+        }
+        /// <summary>
+        /// Gets or sets the current Y-coordinate of the center of the
+        /// embedding circle of this layout algorithm, as calculated during 
+        /// the last iteration based on the <see cref="Centering"/>,
+        /// <see cref="CenterX"/>, <see cref="CenterY"/>, 
+        /// <see cref="AdjustCenter"/>, and <see cref="AdjustAngle"/>
+        /// parameters.</summary>
+        public double CalcCenterY
+        {
+            get { return this.mCY; }
+            set { this.mCY = value; }
+        }
 
         private void CalculateEmbeddingCircle()
         {
@@ -755,9 +814,12 @@ namespace GraphForms.Algorithms.Layout.Circular
             this.mAngles = new double[count];
 
             // precalculation
+            perimeter = 0;
             ang = 0;
             for (i = 0; i < nodes.Length; i++)
             {
+                perimeter = Math.Max(2 * halfSize[i], perimeter);
+                halfSize[i] += this.mFreeArc;
                 a = Math.Sin(halfSize[i] / this.mRadius) * 4;
                 ang += a;
             }
@@ -792,6 +854,7 @@ namespace GraphForms.Algorithms.Layout.Circular
             }
 
             this.mRadius = Math.Max(this.mRadius, this.mMinRadius);
+            this.mBoundingRadius = this.mRadius + perimeter;
 
             this.CalculatePortNodeAngles();
 
@@ -854,7 +917,6 @@ namespace GraphForms.Algorithms.Layout.Circular
                         this.mCY /= nodes.Length;
                         break;
                     case CircleCentering.Predefined:
-                    default:
                         this.mCX = this.mCenterX;
                         this.mCY = this.mCenterY;
                         break;

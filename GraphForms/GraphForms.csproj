@@ -80,6 +80,7 @@
     <Compile Include="Algorithms\GraphColor.cs" />
     <Compile Include="Algorithms\IRootedAlgorithm.cs" />
     <Compile Include="Algorithms\ISpecialNode.cs" />
+    <Compile Include="Algorithms\Layout\Circular\BalloonCirclesLayoutAlgorithm.cs" />
     <Compile Include="Algorithms\Layout\Circular\CircleCentering.cs" />
     <Compile Include="Algorithms\Layout\Circular\CircleSpacing.cs" />
     <Compile Include="Algorithms\Layout\Circular\FDSingleCircleLayoutAlgorithm.cs" />
@@ -95,6 +96,7 @@
     <Compile Include="Algorithms\Layout\Tree\BalloonTreeLayoutAlgorithm.cs" />
     <Compile Include="Algorithms\Layout\Circular\CircularLayoutAlgorithm.cs" />
     <Compile Include="Algorithms\Layout\Tree\SimpleTreeLayoutAlgorithm.cs" />
+    <Compile Include="Algorithms\Layout\Tree\TreeRootFinding.cs" />
     <Compile Include="Algorithms\Path\AAllShortestPaths.cs" />
     <Compile Include="Algorithms\Path\AShortestPath.cs" />
     <Compile Include="Algorithms\Path\BasicAllShortestPaths.cs" />
@@ -118,6 +120,7 @@
     <Compile Include="Algorithms\SpanningTree\PrimMinSpanningTree.cs" />
     <Compile Include="Algorithms\SpanningTree\SpanningTreeGen.cs" />
     <Compile Include="Box2F.cs" />
+    <Compile Include="PrintArray.cs" />
     <Compile Include="Vec2F.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

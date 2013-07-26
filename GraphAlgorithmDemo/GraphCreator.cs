@@ -29,8 +29,20 @@ namespace GraphAlgorithmDemo
             get { return 30; }//degrees
         }
 
-        protected float mCenterX = 200;
-        protected float mCenterY = 200;
+        protected float mCenterX;
+        protected float mCenterY;
+
+        public AGraphCreator()
+        {
+            this.mCenterX = 200;
+            this.mCenterY = 200;
+        }
+
+        public AGraphCreator(float cx, float cy)
+        {
+            this.mCenterX = cx;
+            this.mCenterY = cy;
+        }
 
         public float CenterX
         {
@@ -50,6 +62,10 @@ namespace GraphAlgorithmDemo
 
     public class RandomGraphCreator : AGraphCreator
     {
+        public RandomGraphCreator() { }
+
+        public RandomGraphCreator(float cx, float cy) : base(cx, cy) { }
+
         private void GenerateRandomGraph(CircleNodeScene scene, 
             float rad, float ang, int minNodes, int maxNodes, 
             int minEdgesPerNode, int maxEdgeDiff, bool preventSelfLoops)
@@ -120,6 +136,10 @@ namespace GraphAlgorithmDemo
     // Article: http://en.wikipedia.org/wiki/Biconnected_component
     public class BCCTestGraphCreator : AGraphCreator
     {
+        public BCCTestGraphCreator() { }
+
+        public BCCTestGraphCreator(float cx, float cy) : base(cx, cy) { }
+
         private void CreateGraph(CircleNodeScene scene, float rad, float ang,
             bool undirected, bool reversed)
         {
@@ -232,6 +252,10 @@ namespace GraphAlgorithmDemo
     // Article: http://en.wikipedia.org/wiki/Tarjan's_strongly_connected_components_algorithm
     public class SCCTestGraphCreator : AGraphCreator
     {
+        public SCCTestGraphCreator() { }
+
+        public SCCTestGraphCreator(float cx, float cy) : base(cx, cy) { }
+
         public override void CreateGraph(CircleNodeScene scene, 
             float rad, float ang)
         {
@@ -290,6 +314,13 @@ namespace GraphAlgorithmDemo
         public override float DefaultNodeRad
         {
             get { return 20; }
+        }
+
+        public MinSpanTreeTestGraphCreator() { }
+
+        public MinSpanTreeTestGraphCreator(float cx, float cy) 
+            : base(cx, cy) 
+        { 
         }
 
         public override void CreateGraph(CircleNodeScene scene, 
@@ -353,6 +384,10 @@ namespace GraphAlgorithmDemo
         {
             get { return 10; }//degrees
         }
+
+        public SPQRTestGraphCreator() { }
+
+        public SPQRTestGraphCreator(float cx, float cy) : base(cx, cy) { }
 
         public override void CreateGraph(CircleNodeScene scene, 
             float rad, float ang)
@@ -454,6 +489,10 @@ namespace GraphAlgorithmDemo
             get { return 10; }//degrees
         }
 
+        public WagonWheelGraphCreator() { }
+
+        public WagonWheelGraphCreator(float cx, float cy) : base(cx, cy) { }
+
         private void GenerateWagonWheelGraph(CircleNodeScene scene, 
             float rad, float ang, int spokeCount, 
             float freeArc, float minRadius, bool clockwise,
@@ -519,4 +558,232 @@ namespace GraphAlgorithmDemo
             return "Wagon Wheel Graph";
         }
     }
+
+    public class BalloonCirclesTestGraph01 : AGraphCreator
+    {
+        public BalloonCirclesTestGraph01() { }
+
+        public BalloonCirclesTestGraph01(float cx, float cy) 
+            : base(cx, cy) 
+        { 
+        }
+
+        public override void CreateGraph(CircleNodeScene scene, 
+            float rad, float ang)
+        {
+            CircleNode n01 = new CircleNode(scene, rad, "n01");
+            CircleNode n02 = new CircleNode(scene, rad, "n02");
+            CircleNode n03 = new CircleNode(scene, rad, "n03");
+            CircleNode n04 = new CircleNode(scene, rad, "n04");
+            CircleNode n05 = new CircleNode(scene, rad, "n05");
+            CircleNode n06 = new CircleNode(scene, rad, "n06");
+
+            ArrowEdge e01 = new ArrowEdge(n01, n02, scene, 1, ang);
+            ArrowEdge e02 = new ArrowEdge(n02, n03, scene, 1, ang);
+            ArrowEdge e03 = new ArrowEdge(n03, n04, scene, 1, ang);
+            ArrowEdge e04 = new ArrowEdge(n04, n05, scene, 1, ang);
+            ArrowEdge e05 = new ArrowEdge(n05, n06, scene, 1, ang);
+            ArrowEdge e06 = new ArrowEdge(n06, n01, scene, 1, ang);
+
+            CircleNode n07 = new CircleNode(scene, rad, "n07");
+            CircleNode n08 = new CircleNode(scene, rad, "n08");
+            CircleNode n09 = new CircleNode(scene, rad, "n09");
+            CircleNode n10 = new CircleNode(scene, rad, "n10");
+            CircleNode n11 = new CircleNode(scene, rad, "n11");
+            CircleNode n12 = new CircleNode(scene, rad, "n12");
+
+            ArrowEdge e07 = new ArrowEdge(n01, n07, scene, 1, ang);
+            ArrowEdge e08 = new ArrowEdge(n02, n08, scene, 1, ang);
+            ArrowEdge e09 = new ArrowEdge(n03, n09, scene, 1, ang);
+            ArrowEdge e10 = new ArrowEdge(n04, n10, scene, 1, ang);
+            ArrowEdge e11 = new ArrowEdge(n05, n11, scene, 1, ang);
+            ArrowEdge e12 = new ArrowEdge(n06, n12, scene, 1, ang);
+
+            ArrowEdge e13 = new ArrowEdge(n01, n08, scene, 1, ang);
+            ArrowEdge e14 = new ArrowEdge(n02, n09, scene, 1, ang);
+            ArrowEdge e15 = new ArrowEdge(n03, n10, scene, 1, ang);
+            ArrowEdge e16 = new ArrowEdge(n04, n11, scene, 1, ang);
+            ArrowEdge e17 = new ArrowEdge(n05, n12, scene, 1, ang);
+            ArrowEdge e18 = new ArrowEdge(n06, n07, scene, 1, ang);
+
+            CircleNode n13 = new CircleNode(scene, rad, "n13");
+            CircleNode n14 = new CircleNode(scene, rad, "n14");
+            CircleNode n15 = new CircleNode(scene, rad, "n15");
+            CircleNode n16 = new CircleNode(scene, rad, "n16");
+            CircleNode n17 = new CircleNode(scene, rad, "n17");
+            CircleNode n18 = new CircleNode(scene, rad, "n18");
+
+            ArrowEdge e19 = new ArrowEdge(n07, n13, scene, 1, ang);
+            ArrowEdge e20 = new ArrowEdge(n08, n14, scene, 1, ang);
+            ArrowEdge e21 = new ArrowEdge(n09, n15, scene, 1, ang);
+            ArrowEdge e22 = new ArrowEdge(n10, n16, scene, 1, ang);
+            ArrowEdge e23 = new ArrowEdge(n11, n17, scene, 1, ang);
+            ArrowEdge e24 = new ArrowEdge(n12, n18, scene, 1, ang);
+
+            float u = 25;
+
+            n01.SetPosition(this.mCenterX - 2 * u, this.mCenterY);
+            n02.SetPosition(this.mCenterX - 1 * u, this.mCenterY + 2 * u);
+            n03.SetPosition(this.mCenterX + 1 * u, this.mCenterY + 2 * u);
+            n04.SetPosition(this.mCenterX + 2 * u, this.mCenterY);
+            n05.SetPosition(this.mCenterX + 1 * u, this.mCenterY - 2 * u);
+            n06.SetPosition(this.mCenterX - 1 * u, this.mCenterY - 2 * u);
+
+            n07.SetPosition(this.mCenterX - 3 * u, this.mCenterY - 2 * u);
+            n08.SetPosition(this.mCenterX - 3 * u, this.mCenterY + 2 * u);
+            n09.SetPosition(this.mCenterX + 0 * u, this.mCenterY + 4 * u);
+            n10.SetPosition(this.mCenterX + 3 * u, this.mCenterY + 2 * u);
+            n11.SetPosition(this.mCenterX + 3 * u, this.mCenterY - 2 * u);
+            n12.SetPosition(this.mCenterX + 0 * u, this.mCenterY - 4 * u);
+
+            n13.SetPosition(this.mCenterX - 5 * u, this.mCenterY - 3 * u);
+            n14.SetPosition(this.mCenterX - 5 * u, this.mCenterY + 3 * u);
+            n15.SetPosition(this.mCenterX + 0 * u, this.mCenterY + 6 * u);
+            n16.SetPosition(this.mCenterX + 5 * u, this.mCenterY + 3 * u);
+            n17.SetPosition(this.mCenterX + 5 * u, this.mCenterY - 3 * u);
+            n18.SetPosition(this.mCenterX + 0 * u, this.mCenterY - 6 * u);
+
+            scene.UpdateEdges();
+        }
+
+        public override string ToString()
+        {
+            return "Balloon Circles Test Graph 1";
+        }
+    }
+
+    public class BalloonCirclesTestGraph02 : AGraphCreator
+    {
+        public override float DefaultNodeRad
+        {
+            get { return 10; }
+        }
+
+        public override float DefaultEdgeAng
+        {
+            get { return 10; }//degrees
+        }
+
+        public BalloonCirclesTestGraph02() { }
+
+        public BalloonCirclesTestGraph02(float cx, float cy)
+            : base(cx, cy)
+        {
+        }
+
+        public override void CreateGraph(CircleNodeScene scene, 
+            float rad, float ang)
+        {
+            CircleNode n01 = new CircleNode(scene, rad, "n01");
+            CircleNode n02 = new CircleNode(scene, rad, "n02");
+            CircleNode n03 = new CircleNode(scene, rad, "n03");
+            CircleNode n04 = new CircleNode(scene, rad, "n04");
+            CircleNode n05 = new CircleNode(scene, rad, "n05");
+            CircleNode n06 = new CircleNode(scene, rad, "n06");
+
+            ArrowEdge e01 = new ArrowEdge(n01, n02, scene, 1, ang);
+            ArrowEdge e02 = new ArrowEdge(n02, n03, scene, 1, ang);
+            ArrowEdge e03 = new ArrowEdge(n03, n04, scene, 1, ang);
+            ArrowEdge e04 = new ArrowEdge(n04, n05, scene, 1, ang);
+            ArrowEdge e05 = new ArrowEdge(n05, n06, scene, 1, ang);
+            ArrowEdge e06 = new ArrowEdge(n06, n01, scene, 1, ang);
+
+            CircleNode n07 = new CircleNode(scene, rad, "n07");
+            CircleNode n08 = new CircleNode(scene, rad, "n08");
+            CircleNode n09 = new CircleNode(scene, rad, "n09");
+
+            ArrowEdge e07 = new ArrowEdge(n01, n07, scene, 1, ang);
+            ArrowEdge e08 = new ArrowEdge(n01, n08, scene, 1, ang);
+            ArrowEdge e09 = new ArrowEdge(n01, n09, scene, 1, ang);
+
+            CircleNode n10 = new CircleNode(scene, rad, "n10");
+            CircleNode n11 = new CircleNode(scene, rad, "n11");
+            CircleNode n12 = new CircleNode(scene, rad, "n12");
+            CircleNode n13 = new CircleNode(scene, rad, "n13");
+            CircleNode n14 = new CircleNode(scene, rad, "n14");
+
+            ArrowEdge e28 = new ArrowEdge(n02, n10, scene, 1, ang);
+
+            ArrowEdge e10 = new ArrowEdge(n10, n11, scene, 1, ang);
+            ArrowEdge e11 = new ArrowEdge(n11, n12, scene, 1, ang);
+            ArrowEdge e12 = new ArrowEdge(n12, n13, scene, 1, ang);
+            ArrowEdge e13 = new ArrowEdge(n13, n14, scene, 1, ang);
+            ArrowEdge e14 = new ArrowEdge(n14, n10, scene, 1, ang);
+
+            CircleNode n15 = new CircleNode(scene, rad, "n15");
+            CircleNode n16 = new CircleNode(scene, rad, "n16");
+            CircleNode n17 = new CircleNode(scene, rad, "n17");
+
+            ArrowEdge e15 = new ArrowEdge(n12, n15, scene, 1, ang);
+            ArrowEdge e16 = new ArrowEdge(n12, n16, scene, 1, ang);
+            ArrowEdge e17 = new ArrowEdge(n12, n17, scene, 1, ang);
+
+            /*CircleNode n18 = new CircleNode(scene, rad, "n18");
+
+            ArrowEdge e18 = new ArrowEdge(n04, n18, scene, 1, ang);
+
+            CircleNode n19 = new CircleNode(scene, rad, "n19");
+            CircleNode n20 = new CircleNode(scene, rad, "n20");
+            CircleNode n21 = new CircleNode(scene, rad, "n21");
+            CircleNode n22 = new CircleNode(scene, rad, "n22");
+            CircleNode n23 = new CircleNode(scene, rad, "n23");
+            CircleNode n24 = new CircleNode(scene, rad, "n24");
+            CircleNode n25 = new CircleNode(scene, rad, "n25");
+            CircleNode n26 = new CircleNode(scene, rad, "n26");
+            CircleNode n27 = new CircleNode(scene, rad, "n27");
+
+            ArrowEdge e19 = new ArrowEdge(n18, n19, scene, 1, ang);
+            ArrowEdge e20 = new ArrowEdge(n18, n20, scene, 1, ang);
+            ArrowEdge e21 = new ArrowEdge(n18, n21, scene, 1, ang);
+            ArrowEdge e22 = new ArrowEdge(n18, n22, scene, 1, ang);
+            ArrowEdge e23 = new ArrowEdge(n18, n23, scene, 1, ang);
+            ArrowEdge e24 = new ArrowEdge(n18, n24, scene, 1, ang);
+            ArrowEdge e25 = new ArrowEdge(n18, n25, scene, 1, ang);
+            ArrowEdge e26 = new ArrowEdge(n18, n26, scene, 1, ang);
+            ArrowEdge e27 = new ArrowEdge(n18, n27, scene, 1, ang);/* */
+
+            float u = 25;
+
+            n01.SetPosition(this.mCenterX - 4 * u, this.mCenterY - 2 * u);
+            n02.SetPosition(this.mCenterX - 2 * u, this.mCenterY - 1 * u);
+            n03.SetPosition(this.mCenterX - 2 * u, this.mCenterY + 1 * u);
+            n04.SetPosition(this.mCenterX - 4 * u, this.mCenterY + 2 * u);
+            n05.SetPosition(this.mCenterX - 6 * u, this.mCenterY + 1 * u);
+            n06.SetPosition(this.mCenterX - 6 * u, this.mCenterY - 1 * u);
+
+            n07.SetPosition(this.mCenterX - 6 * u, this.mCenterY - 3 * u);
+            n08.SetPosition(this.mCenterX - 4 * u, this.mCenterY - 4 * u);
+            n09.SetPosition(this.mCenterX - 2 * u, this.mCenterY - 3 * u);
+
+            n10.SetPosition(this.mCenterX + 0 * u, this.mCenterY + 0 * u);
+            n11.SetPosition(this.mCenterX + 2 * u, this.mCenterY + 1 * u);
+            n12.SetPosition(this.mCenterX + 4 * u, this.mCenterY + 0 * u);
+            n13.SetPosition(this.mCenterX + 3 * u, this.mCenterY - 2 * u);
+            n14.SetPosition(this.mCenterX + 1 * u, this.mCenterY - 2 * u);
+
+            n15.SetPosition(this.mCenterX + 6 * u, this.mCenterY + 1 * u);
+            n16.SetPosition(this.mCenterX + 6 * u, this.mCenterY + 0 * u);
+            n17.SetPosition(this.mCenterX + 6 * u, this.mCenterY - 1 * u);
+
+            /*n18.SetPosition(this.mCenterX - 4 * u, this.mCenterY + 4 * u);
+
+            n19.SetPosition(this.mCenterX - 6 * u, this.mCenterY + 3 * u);
+            n20.SetPosition(this.mCenterX - 6 * u, this.mCenterY + 4 * u);
+            n21.SetPosition(this.mCenterX - 6 * u, this.mCenterY + 5 * u);
+            n22.SetPosition(this.mCenterX - 5 * u, this.mCenterY + 6 * u);
+            n23.SetPosition(this.mCenterX - 4 * u, this.mCenterY + 6 * u);
+            n24.SetPosition(this.mCenterX - 3 * u, this.mCenterY + 6 * u);
+            n25.SetPosition(this.mCenterX - 2 * u, this.mCenterY + 5 * u);
+            n26.SetPosition(this.mCenterX - 2 * u, this.mCenterY + 4 * u);
+            n27.SetPosition(this.mCenterX - 2 * u, this.mCenterY + 3 * u);/* */
+
+            scene.UpdateEdges();
+        }
+
+        public override string ToString()
+        {
+            return "Balloon Circles Test Graph 2";
+        }
+    }
+
 }

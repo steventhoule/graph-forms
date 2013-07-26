@@ -57,6 +57,7 @@ namespace GraphAlgorithmDemo
                 new KKLayoutForCircles(mScene, mScene.LayoutBBox),
                 new LinLogLayoutForCircles(mScene, mScene.LayoutBBox),
                 new FDSCircleLayoutForCircles(mScene, mScene.LayoutBBox),
+                new BalloonCirclesLayoutForCircles(mScene, mScene.LayoutBBox),
                 new BalloonTreeLayoutForCircles(mScene, mScene.LayoutBBox),
                 new SimpleTreeLayoutForCircles(mScene, mScene.LayoutBBox)
             };/* */
@@ -69,6 +70,7 @@ namespace GraphAlgorithmDemo
                 new KKLayoutForCircles(this.mScene, this.mScene),
                 new LinLogLayoutForCircles(this.mScene, this.mScene),
                 new FDSCircleLayoutForCircles(this.mScene, this.mScene),
+                new BalloonCirclesLayoutForCircles(this.mScene, this.mScene),
                 new BalloonTreeLayoutForCircles(this.mScene, this.mScene),
                 new SimpleTreeLayoutForCircles(this.mScene, this.mScene)
             };/* */
@@ -105,7 +107,9 @@ namespace GraphAlgorithmDemo
                 new SCCTestGraphCreator(),
                 new MinSpanTreeTestGraphCreator(),
                 new SPQRTestGraphCreator(),
-                new WagonWheelGraphCreator()
+                new WagonWheelGraphCreator(),
+                new BalloonCirclesTestGraph01(),
+                new BalloonCirclesTestGraph02()
             };
             this.graphCreatorCMB.Items.AddRange(this.mGraphCreators);
 

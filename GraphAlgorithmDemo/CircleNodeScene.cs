@@ -438,15 +438,34 @@ namespace GraphAlgorithmDemo
                 if (btlfc != null)
                 {
                     Graphics g = e.Graphics;
-                    CircleTree<CircleNode> ct = btlfc.CircleTree;
+                    CircleTree<CircleNode, ArrowEdge> ct = btlfc.CircleTree;
                     if (ct != null)
                     {
-                        float dx = ct.Data.X;
-                        float dy = ct.Data.Y;
+                        float dx = ct.NodeData.X;
+                        float dy = ct.NodeData.Y;
                         float ang = (float)btlfc.DegRootAngle;
                         g.TranslateTransform(dx, dy);
                         g.RotateTransform(ang);
-                        this.DrawCircleTreeConvexHull(g, ct);
+                        this.DrawBalloonTreeConvexHull(g, ct);
+                        g.TranslateTransform(-dx, -dy);
+                        g.RotateTransform(-ang);
+                    }
+                }
+                BalloonCirclesLayoutForCircles bclfc
+                    = this.mLayout as BalloonCirclesLayoutForCircles;
+                if (bclfc != null)
+                {
+                    Graphics g = e.Graphics;
+                    CircleTree<PrintArray<CircleNode>, int> ct = bclfc.DebugTree;
+                    if (ct != null)
+                    {
+                        Vec2F pos = bclfc.DebugRootPosition;
+                        float dx = pos.X;
+                        float dy = pos.Y;
+                        float ang = (float)bclfc.DegRootAngle;
+                        g.TranslateTransform(dx, dy);
+                        g.RotateTransform(ang);
+                        this.DrawBalloonCirclesConvexHull(g, ct);
                         g.TranslateTransform(-dx, -dy);
                         g.RotateTransform(-ang);
                     }
@@ -454,14 +473,14 @@ namespace GraphAlgorithmDemo
             }
         }
 
-        private void DrawCircleTreeConvexHull(Graphics g,
-            CircleTree<CircleNode> root)
+        private void DrawBalloonTreeConvexHull(Graphics g,
+            CircleTree<CircleNode, ArrowEdge> root)
         {
             bool drawHull = true;
             if (this.bDrawSelectedConvexHullOnly)
             {
                 if (this.mMouseUpHistory[0] == -1 ||
-                    root.Data != this.mGraph.NodeAt(this.mMouseUpHistory[0]))
+                    root.NodeData != this.mGraph.NodeAt(this.mMouseUpHistory[0]))
                 {
                     drawHull = false;
                 }
@@ -470,19 +489,19 @@ namespace GraphAlgorithmDemo
             float dx, dy, px, py, len;
             double a1, a2, hyp;
             // Draw the convex hull of the root itself
-            CircleTree<CircleNode>.CHArc[] convexHull = root.ConvexHull;
-            if (drawHull && convexHull.Length == 1)
+            CircleTree<CircleNode, ArrowEdge>.CHArc[] cvHull = root.ConvexHull;
+            if (drawHull && cvHull.Length == 1)
             {
-                CircleTree<CircleNode>.CHArc ch1 = convexHull[0];
+                CircleTree<CircleNode, ArrowEdge>.CHArc ch1 = cvHull[0];
                 dx = (float)(ch1.Dst * Math.Cos(ch1.Ang) - ch1.Rad);
                 dy = (float)(ch1.Dst * Math.Sin(ch1.Ang) - ch1.Rad);
                 len = (float)(2.0 * ch1.Rad);
                 g.DrawEllipse(this.mConvexHullPen, dx, dy, len, len);
             }
-            if (drawHull && convexHull.Length > 1)
+            if (drawHull && cvHull.Length > 1)
             {
-                CircleTree<CircleNode>.CHArc arc 
-                    = convexHull[convexHull.Length - 1];
+                CircleTree<CircleNode, ArrowEdge>.CHArc arc 
+                    = cvHull[cvHull.Length - 1];
                 if (arc.Dst == 0)
                 {
                     a1 = arc.Ang + arc.UpperWedge;
@@ -499,9 +518,9 @@ namespace GraphAlgorithmDemo
                     px = (float)(hyp * Math.Cos(a1));
                     py = (float)(hyp * Math.Sin(a1));
                 }
-                for (i = 0; i < convexHull.Length; i++)
+                for (i = 0; i < cvHull.Length; i++)
                 {
-                    arc = convexHull[i];
+                    arc = cvHull[i];
                     if (this.bDrawConvexHullAngleLines)
                     {
                         dx = (float)(arc.Dst * Math.Cos(arc.Ang));
@@ -571,10 +590,10 @@ namespace GraphAlgorithmDemo
             if (root.BranchCount > 0)
             {
                 float ang;
-                px = root.Data.X;
-                py = root.Data.Y;
-                CircleTree<CircleNode> ct;
-                CircleTree<CircleNode>[] branches
+                px = root.NodeData.X;
+                py = root.NodeData.Y;
+                CircleTree<CircleNode, ArrowEdge> ct;
+                CircleTree<CircleNode, ArrowEdge>[] branches
                     = root.Branches;
                 for (i = 0; i < branches.Length; i++)
                 {
@@ -584,7 +603,153 @@ namespace GraphAlgorithmDemo
                     ang = (float)ct.DegAngle;
                     g.TranslateTransform(dx, dy);
                     g.RotateTransform(ang);
-                    this.DrawCircleTreeConvexHull(g, ct);
+                    this.DrawBalloonTreeConvexHull(g, ct);
+                    g.RotateTransform(-ang);
+                    g.TranslateTransform(-dx, -dy);
+                }
+            }
+        }
+
+        private void DrawBalloonCirclesConvexHull(Graphics g,
+           CircleTree<PrintArray<CircleNode>, int> root)
+        {
+            int i;
+            bool drawHull = true;
+            if (this.bDrawSelectedConvexHullOnly)
+            {
+                if (this.mMouseUpHistory[0] == -1)
+                {
+                    drawHull = false;
+                }
+                else
+                {
+                    CircleNode node = this.mGraph.NodeAt(this.mMouseUpHistory[0]);
+                    CircleNode[] datas = root.NodeData.Data;
+                    drawHull = false;
+                    for (i = 0; i < datas.Length && !drawHull; i++)
+                    {
+                        drawHull = datas[i] == node;
+                    }
+                }
+            }
+            float dx, dy, px, py, len;
+            double a1, a2, hyp;
+            // Draw the convex hull of the root itself
+            CircleTree<PrintArray<CircleNode>, int>.CHArc[] cvHull 
+                = root.ConvexHull;
+            if (drawHull && cvHull.Length == 1)
+            {
+                CircleTree<PrintArray<CircleNode>, int>.CHArc ch1 
+                    = cvHull[0];
+                dx = (float)(ch1.Dst * Math.Cos(ch1.Ang) - ch1.Rad);
+                dy = (float)(ch1.Dst * Math.Sin(ch1.Ang) - ch1.Rad);
+                len = (float)(2.0 * ch1.Rad);
+                g.DrawEllipse(this.mConvexHullPen, dx, dy, len, len);
+            }
+            if (drawHull && cvHull.Length > 1)
+            {
+                CircleTree<PrintArray<CircleNode>, int>.CHArc arc
+                    = cvHull[cvHull.Length - 1];
+                if (arc.Dst == 0)
+                {
+                    a1 = arc.Ang + arc.UpperWedge;
+                    px = (float)(arc.Rad * Math.Cos(a1));
+                    py = (float)(arc.Rad * Math.Sin(a1));
+                }
+                else
+                {
+                    a1 = Math.PI - arc.UpperWedge;
+                    hyp = Math.Sqrt(arc.Rad * arc.Rad + arc.Dst * arc.Dst
+                        - 2 * arc.Rad * arc.Dst * Math.Cos(a1));
+                    a2 = Math.Asin(arc.Rad * Math.Sin(a1) / hyp);
+                    a1 = arc.Ang + a2;
+                    px = (float)(hyp * Math.Cos(a1));
+                    py = (float)(hyp * Math.Sin(a1));
+                }
+                for (i = 0; i < cvHull.Length; i++)
+                {
+                    arc = cvHull[i];
+                    if (this.bDrawConvexHullAngleLines)
+                    {
+                        dx = (float)(arc.Dst * Math.Cos(arc.Ang));
+                        dy = (float)(arc.Dst * Math.Sin(arc.Ang));
+                        a1 = arc.Rad * Math.Cos(arc.Ang);
+                        a2 = arc.Rad * Math.Sin(arc.Ang);
+                        g.DrawLine(this.mConvexHullPen, 0f, 0f,
+                                dx + (float)a1, dy + (float)a2);
+                        a1 = arc.Rad * Math.Cos(arc.Ang - arc.LowerWedge);
+                        a2 = arc.Rad * Math.Sin(arc.Ang - arc.LowerWedge);
+                        g.DrawLine(this.mConvexHullPen, dx, dy,
+                            dx + (float)a1, dy + (float)a2);
+                        a1 = arc.Rad * Math.Cos(arc.Ang + arc.UpperWedge);
+                        a2 = arc.Rad * Math.Sin(arc.Ang + arc.UpperWedge);
+                        g.DrawLine(this.mConvexHullPen, dx, dy,
+                            dx + (float)a1, dy + (float)a2);
+                    }
+                    dx = (float)(arc.Dst * Math.Cos(arc.Ang) - arc.Rad);
+                    dy = (float)(arc.Dst * Math.Sin(arc.Ang) - arc.Rad);
+                    len = (float)(2.0 * arc.Rad);
+                    a1 = arc.Ang - arc.LowerWedge;
+                    a2 = arc.Ang + arc.UpperWedge - a1;
+                    if (a1 < -Math.PI)
+                        a1 += 2 * Math.PI;
+                    //if (a2 < -Math.PI)
+                    //    a2 += 2 * Math.PI;
+                    a1 = 180.0 * a1 / Math.PI;
+                    a2 = 180.0 * a2 / Math.PI;
+                    g.DrawArc(this.mConvexHullPen, dx, dy, len, len,
+                        (float)a1, (float)a2);
+                    if (arc.Dst == 0)
+                    {
+                        a1 = arc.Ang - arc.LowerWedge;
+                        dx = (float)(arc.Rad * Math.Cos(a1));
+                        dy = (float)(arc.Rad * Math.Sin(a1));
+
+                        g.DrawLine(this.mConvexHullPen, px, py, dx, dy);
+
+                        a1 = arc.Ang + arc.UpperWedge;
+                        px = (float)(arc.Rad * Math.Cos(a1));
+                        py = (float)(arc.Rad * Math.Sin(a1));
+                    }
+                    else
+                    {
+                        a1 = Math.PI - arc.LowerWedge;
+                        hyp = Math.Sqrt(arc.Rad * arc.Rad + arc.Dst * arc.Dst
+                            - 2 * arc.Rad * arc.Dst * Math.Cos(a1));
+                        a2 = Math.Asin(arc.Rad * Math.Sin(a1) / hyp);
+                        a1 = arc.Ang - a2;
+                        dx = (float)(hyp * Math.Cos(a1));
+                        dy = (float)(hyp * Math.Sin(a1));
+
+                        g.DrawLine(this.mConvexHullPen, px, py, dx, dy);
+
+                        a1 = Math.PI - arc.UpperWedge;
+                        hyp = Math.Sqrt(arc.Rad * arc.Rad + arc.Dst * arc.Dst
+                            - 2 * arc.Rad * arc.Dst * Math.Cos(a1));
+                        a2 = Math.Asin(arc.Rad * Math.Sin(a1) / hyp);
+                        a1 = arc.Ang + a2;
+                        px = (float)(hyp * Math.Cos(a1));
+                        py = (float)(hyp * Math.Sin(a1));
+                    }
+                }
+            }
+
+            // Draw the convex hull of the root's branches
+            if (root.BranchCount > 0)
+            {
+                float ang;
+                CircleTree<PrintArray<CircleNode>, int> ct;
+                CircleTree<PrintArray<CircleNode>, int>[] branches 
+                    = root.Branches;
+                for (i = 0; i < branches.Length; i++)
+                {
+                    ct = branches[i];
+                    dx = (float)(ct.Distance * Math.Cos(ct.Angle));
+                    dy = (float)(ct.Distance * Math.Sin(ct.Angle));
+                    ang = (float)ct.DegAngle;
+                    g.TranslateTransform(dx, dy);
+                    g.RotateTransform(ang);
+                    this.DrawBalloonCirclesConvexHull(g, ct);
                     g.RotateTransform(-ang);
                     g.TranslateTransform(-dx, -dy);
                 }

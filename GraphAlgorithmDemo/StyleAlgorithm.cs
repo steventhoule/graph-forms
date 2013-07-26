@@ -14,8 +14,8 @@ namespace GraphAlgorithmDemo
     {
         public static readonly Color[] sLineColors = new Color[]
         {
-            Color.Red, Color.Green, Color.Blue,
-            Color.Orange, Color.Magenta, Color.Cyan
+            Color.Red, Color.Green, Color.Blue, Color.Yellow,
+            Color.Magenta, Color.Orange, Color.Cyan, Color.Purple
         };
 
         private bool bDirected;

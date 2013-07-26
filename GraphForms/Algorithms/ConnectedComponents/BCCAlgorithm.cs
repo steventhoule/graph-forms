@@ -196,10 +196,9 @@ namespace GraphForms.Algorithms.ConnectedComponents
         {
             get
             {
-                int i, count = this.mArtNodes.Count + this.mComponents.Count;
-                int[] gids = new int[count];
-                count = this.mComponents.Count;
-                for (i = 0; i < this.mDatas.Length; i++)
+                int count = this.mComponents.Count;
+                int[] gids = new int[this.mDatas.Length];
+                for (int i = 0; i < this.mDatas.Length; i++)
                 {
                     gids[i] = this.mDatas[i].IsCut 
                         ? count++ : this.mDatas[i].GroupID;
