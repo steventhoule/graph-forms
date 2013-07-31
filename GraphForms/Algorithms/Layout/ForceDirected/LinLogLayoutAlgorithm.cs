@@ -407,14 +407,16 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
 
         private void InitAlgorithm()
         {
+            Digraph<Node, Edge>.GEdge edge;
+            Digraph<Node, Edge>.GEdge[] edges
+                = this.mGraph.InternalEdges;
+
+            Digraph<Node, Edge>.GNode node;
             Digraph<Node, Edge>.GNode[] nodes 
                 = this.mGraph.InternalNodes;
 
             this.mNodes = new LinLogNode[nodes.Length];
 
-            var nodeMap = new Dictionary<Digraph<Node, Edge>.GNode, LinLogNode>();
-
-            Digraph<Node, Edge>.GEdge[] edges;
             LinLogEdge e;
             LinLogNode n;
             float weight;
@@ -425,43 +427,43 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                 n = new LinLogNode();
                 n.Index = i;
                 n.OriginalNode = nodes[i].Data;
-                n.Attractions = new LinLogEdge[nodes[i].DstEdgeCount + nodes[i].SrcEdgeCount];
+                n.Attractions = new LinLogEdge[nodes[i].AllEdgeCount];
                 n.RepulsionWeight = 0;
                 //n.Position = n.OriginalNode.Position;
                 this.mNodes[i] = n;
-                nodeMap[nodes[i]] = n;
             }
             for (i = 0; i < this.mNodes.Length; i++)
             {
                 n = this.mNodes[i];
-                // each nodes builds an attractionWeights, attractionIndexes,
-                // and repulsionWeights structure and copies the position of the node
+                node = nodes[i];
+                // each node builds an attractionWeights, attractionIndexes,
+                // and repulsionWeights structure 
+                // and copies the position of the node
                 attrIndex = 0;
-                edges = nodes[i].InternalSrcEdges;
                 for (j = 0; j < edges.Length; j++)
                 {
-                    weight = edges[j].Data.Weight;
-                    e = new LinLogEdge();
-                    e.Target = nodeMap[edges[j].mSrcNode];
-                    e.AttractionWeight = weight;
-                    n.Attractions[attrIndex] = e;
-                    // TODO: look at this line below
-                    //n.RepulsionWeight += weight;
-                    n.RepulsionWeight += 1;
-                    attrIndex++;
-                }
-                edges = nodes[i].InternalDstEdges;
-                for (j = 0; j < edges.Length; j++)
-                {
-                    weight = edges[j].Data.Weight;
-                    e = new LinLogEdge();
-                    e.Target = nodeMap[edges[j].mDstNode];
-                    e.AttractionWeight = weight;
-                    n.Attractions[attrIndex] = e;
-                    // TODO: look at this line below
-                    //n.RepulsionWeight += weight;
-                    n.RepulsionWeight += 1;
-                    attrIndex++;
+                    e = null;
+                    edge = edges[j];
+                    if (edge.mSrcNode.Index == node.Index)
+                    {
+                        e = new LinLogEdge();
+                        e.Target = this.mNodes[edge.mDstNode.Index];
+                    }
+                    else if (edge.mDstNode.Index == node.Index)
+                    {
+                        e = new LinLogEdge();
+                        e.Target = this.mNodes[edge.mSrcNode.Index];
+                    }
+                    if (e != null)
+                    {
+                        weight = edge.mData.Weight;
+                        e.AttractionWeight = weight;
+                        n.Attractions[attrIndex] = e;
+                        // TODO: look at this line below
+                        //n.RepulsionWeight += weight;
+                        n.RepulsionWeight += 1;
+                        attrIndex++;
+                    }
                 }
             }
         }

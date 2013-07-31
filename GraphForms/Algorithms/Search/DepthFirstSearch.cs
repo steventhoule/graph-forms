@@ -9,7 +9,7 @@ namespace GraphForms.Algorithms.Search
         where Edge : IGraphEdge<Node>
     {
         private bool bImplicit = false;
-        private int mMaxDepth = int.MaxValue;
+        private uint mMaxDepth = uint.MaxValue;
 
         public DepthFirstSearch(Digraph<Node, Edge> graph,
             bool directed, bool reversed)
@@ -29,17 +29,17 @@ namespace GraphForms.Algorithms.Search
 
         /// <summary>
         /// Gets or sets the maximum exploration depth from the start vertex.
-        /// Default is <see cref="int.MaxValue"/>.
+        /// Default is <see cref="uint.MaxValue"/>.
         /// </summary>
         /// <value>
         /// Maximum exploration depth.
         /// </value>
-        public int MaxDepth
+        public uint MaxDepth
         {
             get { return this.mMaxDepth; }
             set 
             {
-                if (value <= 0)
+                if (value == 0)
                     throw new ArgumentOutOfRangeException("MaxDepth");
                 this.mMaxDepth = value; 
             }
@@ -64,19 +64,18 @@ namespace GraphForms.Algorithms.Search
         private class SearchFrame
         {
             public readonly Digraph<Node, Edge>.GNode Node;
-            public readonly Digraph<Node, Edge>.GEdge[] Edges;
-            public readonly int Depth;
+            public readonly uint Depth;
             public readonly int EdgeIndex;
+            public readonly int LastIndex;
             public readonly bool Reversed;
 
             public SearchFrame(Digraph<Node, Edge>.GNode node,
-                Digraph<Node, Edge>.GEdge[] edges,
-                int depth, int edgeIndex, bool reversed)
+                uint depth, int edgeIndex, int lastIndex, bool reversed)
             {
                 this.Node = node;
-                this.Edges = edges;
                 this.Depth = depth;
                 this.EdgeIndex = edgeIndex;
+                this.LastIndex = lastIndex;
                 this.Reversed = reversed;
             }
         }
@@ -87,21 +86,30 @@ namespace GraphForms.Algorithms.Search
             root.Color = GraphColor.Gray;
             this.OnDiscoverNode(root.Data, root.Index);
 
-            SearchFrame frame;
-            Digraph<Node, Edge>.GNode u, v;
-            Digraph<Node, Edge>.GEdge e;
-            Digraph<Node, Edge>.GEdge[] edges;
-            int depth, edgeIndex;
+            uint depth;
             bool reversed;
-
-            if (this.bUndirected)
-                edges = root.AllInternalEdges(this.bReversed);
-            else if (this.bReversed)
-                edges = root.InternalSrcEdges;
-            else
-                edges = root.InternalDstEdges;
+            SearchFrame frame;
+            Digraph<Node, Edge>.GEdge e;
+            Digraph<Node, Edge>.GNode u, v;
+            int i, j, edgeIndex, stop = this.bUndirected ? 2 : 1;
             
-            todo.Push(new SearchFrame(root, edges, 0, 0, false));
+            // Find the first edge connected to the root
+            reversed = this.bReversed;
+            for (j = 0; j < stop; j++)
+            {
+                for (i = 0; i < this.mGraphEdges.Length; i++)
+                {
+                    e = this.mGraphEdges[i];
+                    u = reversed ? e.mDstNode : e.mSrcNode;
+                    if (u.Index == root.Index)
+                        break;
+                }
+                if (i < this.mGraphEdges.Length)
+                    break;
+                reversed = !reversed;
+            }
+            
+            todo.Push(new SearchFrame(root, 0, 0, -1, reversed));
             while (todo.Count > 0)
             {
                 if (this.State == ComputeState.Aborting)
@@ -110,11 +118,9 @@ namespace GraphForms.Algorithms.Search
                 frame = todo.Pop();
                 u = frame.Node;
                 depth = frame.Depth;
-                edges = frame.Edges;
-                edgeIndex = frame.EdgeIndex;
-                if (edgeIndex > 0)
+                if (frame.LastIndex != -1)
                 {
-                    e = edges[edgeIndex - 1];
+                    e = this.mGraphEdges[frame.LastIndex];
                     this.OnFinishEdge(e.mData, e.mSrcNode.Index, 
                         e.mDstNode.Index, frame.Reversed);
                 }
@@ -126,40 +132,97 @@ namespace GraphForms.Algorithms.Search
                     continue;
                 }
 
-                while (edgeIndex < edges.Length)
+                edgeIndex = frame.EdgeIndex;
+                reversed = frame.Reversed;
+                for (j = reversed == this.bReversed ? 0 : 1; j < stop; j++)
                 {
-                    e = edges[edgeIndex];
-                    edgeIndex++;
+                    for (i = edgeIndex; i < this.mGraphEdges.Length; i++)
+                    {
+                        e = this.mGraphEdges[i];
+                        v = reversed ? e.mDstNode : e.mSrcNode;
+                        if (v.Index != u.Index)
+                            continue;
+                        v = reversed ? e.mSrcNode : e.mDstNode;
+
+                        if (this.bExSpecial && v.mData is ISpecialNode)
+                            continue;
+                        this.OnExamineEdge(e.mData, e.mSrcNode.Index,
+                            e.mDstNode.Index, reversed);
+
+                        switch (v.Color)
+                        {
+                            case GraphColor.White:
+                                this.OnTreeEdge(e.mData, e.mSrcNode.Index,
+                                    e.mDstNode.Index, reversed);
+                                todo.Push(new SearchFrame(
+                                    u, depth, i + 1, i, reversed));
+                                u = v;
+                                depth++;
+                                u.Color = GraphColor.Gray;
+                                this.OnDiscoverNode(u.mData, u.Index);
+                                // break or reset the loops appropriately
+                                i = this.mGraphEdges.Length;
+                                j = -1;
+                                reversed = !this.bReversed;
+                                break;
+                            case GraphColor.Gray:
+                                // OnBackEdge
+                                this.OnGrayEdge(e.mData, e.mSrcNode.Index,
+                                    e.mDstNode.Index, reversed);
+                                break;
+                            case GraphColor.Black:
+                                // OnForwardOrCrossEdge
+                                this.OnBlackEdge(e.mData, e.mSrcNode.Index,
+                                    e.mDstNode.Index, reversed);
+                                break;
+                        }
+                    }
+                    edgeIndex = 0;
+                    reversed = !reversed;
+                }
+                u.Color = GraphColor.Black;
+                this.OnFinishNode(u.mData, u.Index);
+            }
+        }
+
+        private void ImplicitVisit(Digraph<Node, Edge>.GNode u, uint depth)
+        {
+            if (depth > this.mMaxDepth)
+                return;
+
+            u.Color = GraphColor.Gray;
+            this.OnDiscoverNode(u.mData, u.Index);
+
+            Digraph<Node, Edge>.GEdge e;
+            Digraph<Node, Edge>.GNode v;
+            bool reversed = this.bReversed;
+            int i, j, stop = this.bUndirected ? 2 : 1;
+            for (j = 0; j < stop; j++)
+            {
+                for (i = 0; i < this.mGraphEdges.Length; i++)
+                {
+                    e = this.mGraphEdges[i];
                     if (this.State == ComputeState.Aborting)
                         return;
 
-                    v = e.mDstNode;
-                    reversed = v.Index == u.Index;//v.Equals(u);
-                    if (reversed)
-                        v = e.mSrcNode;
+                    v = reversed ? e.mDstNode : e.mSrcNode;
+                    if (v.Index != u.Index)
+                        continue;
+                    v = reversed ? e.mSrcNode : e.mDstNode;
+
                     if (this.bExSpecial && v.mData is ISpecialNode)
                         continue;
                     this.OnExamineEdge(e.mData, e.mSrcNode.Index,
                         e.mDstNode.Index, reversed);
-                    
+
                     switch (v.Color)
                     {
                         case GraphColor.White:
                             this.OnTreeEdge(e.mData, e.mSrcNode.Index,
                                 e.mDstNode.Index, reversed);
-                            todo.Push(new SearchFrame(u, edges, depth, 
-                                edgeIndex, reversed));
-                            u = v;
-                            edgeIndex = 0;
-                            depth++;
-                            if (this.bUndirected)
-                                edges = u.AllInternalEdges(this.bReversed);
-                            else if (this.bReversed)
-                                edges = u.InternalSrcEdges;
-                            else
-                                edges = u.InternalDstEdges;
-                            u.Color = GraphColor.Gray;
-                            this.OnDiscoverNode(u.mData, u.Index);
+                            this.ImplicitVisit(v, depth + 1);
+                            this.OnFinishEdge(e.mData, e.mSrcNode.Index,
+                                e.mDstNode.Index, reversed);
                             break;
                         case GraphColor.Gray:
                             // OnBackEdge
@@ -173,66 +236,7 @@ namespace GraphForms.Algorithms.Search
                             break;
                     }
                 }
-                u.Color = GraphColor.Black;
-                this.OnFinishNode(u.mData, u.Index);
-            }
-        }
-
-        private void ImplicitVisit(Digraph<Node, Edge>.GNode u,
-                                   int depth)
-        {
-            if (depth > this.mMaxDepth)
-                return;
-
-            u.Color = GraphColor.Gray;
-            this.OnDiscoverNode(u.mData, u.Index);
-
-            Digraph<Node, Edge>.GNode v;
-            Digraph<Node, Edge>.GEdge e;
-            Digraph<Node, Edge>.GEdge[] edges;
-            if (this.bUndirected)
-                edges = u.AllInternalEdges(this.bReversed);
-            else if (this.bReversed)
-                edges = u.InternalSrcEdges;
-            else
-                edges = u.InternalDstEdges;
-
-            bool reversed;
-            for (int i = 0; i < edges.Length; i++)
-            {
-                e = edges[i];
-                if (this.State == ComputeState.Aborting)
-                    return;
-
-                v = e.mDstNode;
-                reversed = v.Index == u.Index;//v.Equals(u);
-                if (reversed)
-                    v = e.mSrcNode;
-                if (this.bExSpecial && v.mData is ISpecialNode)
-                    continue;
-                this.OnExamineEdge(e.mData, e.mSrcNode.Index, 
-                    e.mDstNode.Index, reversed);
-
-                switch (v.Color)
-                {
-                    case GraphColor.White:
-                        this.OnTreeEdge(e.mData, e.mSrcNode.Index, 
-                            e.mDstNode.Index, reversed);
-                        this.ImplicitVisit(v, depth + 1);
-                        this.OnFinishEdge(e.mData, e.mSrcNode.Index, 
-                            e.mDstNode.Index, reversed);
-                        break;
-                    case GraphColor.Gray:
-                        // OnBackEdge
-                        this.OnGrayEdge(e.mData, e.mSrcNode.Index, 
-                            e.mDstNode.Index, reversed);
-                        break;
-                    case GraphColor.Black:
-                        // OnForwardOrCrossEdge
-                        this.OnBlackEdge(e.mData, e.mSrcNode.Index, 
-                            e.mDstNode.Index, reversed);
-                        break;
-                }
+                reversed = !reversed;
             }
             u.Color = GraphColor.Black;
             this.OnFinishNode(u.mData, u.Index);

@@ -43,58 +43,58 @@ namespace GraphForms.Algorithms.Search
 
         private void FlushVisitQueue()
         {
-            int i;
             bool reversed;
-            Digraph<Node, Edge>.GNode u, v;
+            int i, j, stop = this.bUndirected ? 2 : 1;
             Digraph<Node, Edge>.GEdge e;
-            Digraph<Node, Edge>.GEdge[] edges;
+            Digraph<Node, Edge>.GNode u, v;
 
             while (this.mNodeQueue.Count > 0 &&
                    this.State != ComputeState.Aborting)
             {
                 u = this.mNodeQueue.Dequeue();
                 this.OnExamineNode(u.mData, u.Index);
-                
-                if (this.bUndirected)
-                    edges = u.AllInternalEdges(this.bReversed);
-                else if (this.bReversed)
-                    edges = u.InternalSrcEdges;
-                else
-                    edges = u.InternalDstEdges;
-                for (i = 0; i < edges.Length; i++)
-                {
-                    e = edges[i];
-                    v = e.DstNode;
-                    reversed = v.Index == u.Index;//v.Equals(u);
-                    if (reversed)
-                        v = e.SrcNode;
-                    if (this.bExSpecial && v.mData is ISpecialNode)
-                        continue;
-                    this.OnExamineEdge(e.mData, e.mSrcNode.Index, 
-                        e.mDstNode.Index, reversed);
 
-                    switch (v.Color)
+                reversed = this.bReversed;
+                for (j = 0; j < stop; j++)
+                {
+                    for (i = 0; i < this.mGraphEdges.Length; i++)
                     {
-                        case GraphColor.White:
-                            this.OnTreeEdge(e.mData, e.mSrcNode.Index,
-                                e.mDstNode.Index, reversed);
-                            v.Color = GraphColor.Gray;
-                            this.OnDiscoverNode(v.mData, v.Index);
-                            this.mNodeQueue.Enqueue(v);
-                            break;
-                        case GraphColor.Gray:
-                            // OnNonTreeEdge
-                            // OnBackEdge
-                            this.OnGrayEdge(e.mData, e.mSrcNode.Index,
-                                e.mDstNode.Index, reversed);
-                            break;
-                        case GraphColor.Black:
-                            // OnNonTreeEdge
-                            // OnForwardOrCrossEdge
-                            this.OnBlackEdge(e.mData, e.mSrcNode.Index,
-                                e.mDstNode.Index, reversed);
-                            break;
+                        e = this.mGraphEdges[i];
+
+                        v = reversed ? e.mDstNode : e.mSrcNode;
+                        if (v.Index != u.Index)
+                            continue;
+                        v = reversed ? e.mSrcNode : e.mDstNode;
+
+                        if (this.bExSpecial && v.mData is ISpecialNode)
+                            continue;
+                        this.OnExamineEdge(e.mData, e.mSrcNode.Index,
+                            e.mDstNode.Index, reversed);
+
+                        switch (v.Color)
+                        {
+                            case GraphColor.White:
+                                this.OnTreeEdge(e.mData, e.mSrcNode.Index,
+                                    e.mDstNode.Index, reversed);
+                                v.Color = GraphColor.Gray;
+                                this.OnDiscoverNode(v.mData, v.Index);
+                                this.mNodeQueue.Enqueue(v);
+                                break;
+                            case GraphColor.Gray:
+                                // OnNonTreeEdge
+                                // OnBackEdge
+                                this.OnGrayEdge(e.mData, e.mSrcNode.Index,
+                                    e.mDstNode.Index, reversed);
+                                break;
+                            case GraphColor.Black:
+                                // OnNonTreeEdge
+                                // OnForwardOrCrossEdge
+                                this.OnBlackEdge(e.mData, e.mSrcNode.Index,
+                                    e.mDstNode.Index, reversed);
+                                break;
+                        }
                     }
+                    reversed = !reversed;
                 }
                 u.Color = GraphColor.Black;
                 this.OnFinishNode(u.mData, u.Index);

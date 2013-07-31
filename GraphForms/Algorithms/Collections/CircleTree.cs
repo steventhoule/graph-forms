@@ -1063,7 +1063,7 @@ namespace GraphForms.Algorithms.Collections
                         a1 += Math.PI - a2;
                     }
                     // Test if ch2's shadow is within the ch1 arc
-                    if (a1 < ch1.UpperWedge)
+                    if (a1 < ch1.UpperWedge && -a1 < ch1.LowerWedge)
                     {
                         // Upper Wedge of copy is only needed for initial
                         // concavity test, and will be reset or deleted
@@ -1272,7 +1272,7 @@ namespace GraphForms.Algorithms.Collections
                         a1 += Math.PI - a2;
                     }
                     // Test if ch2's shadow is within the ch3 arc
-                    if (a1 < ch3.LowerWedge)
+                    if (a1 < ch3.LowerWedge && -a1 < ch3.UpperWedge)
                     {
                         // Lower Wedge of copy is only needed for initial
                         // concavity test, and will be reset or deleted

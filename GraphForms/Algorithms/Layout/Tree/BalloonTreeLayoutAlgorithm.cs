@@ -38,6 +38,7 @@ namespace GraphForms.Algorithms.Layout.Tree
 
         // Flags and Calculated Values
         private Digraph<Node, Edge> mSpanTree;
+        private Digraph<Node, Edge>.GEdge[] mSpanTreeEdges;
         private CircleTree<Node, Edge> mCircleTree;
         private bool bSpanTreeDirty = true;
         private bool bCircleTreeDirty = true;
@@ -421,6 +422,16 @@ namespace GraphForms.Algorithms.Layout.Tree
         #endregion
 
         #endregion
+
+        protected override void OnRootChanged(Node oldRoot)
+        {
+            if (this.RootFindingMethod == TreeRootFinding.UserDefined)
+            {
+                this.bCircleTreeDirty = true;
+                this.MarkDirty();
+            }
+            base.OnRootChanged(oldRoot);
+        }
 
         protected override void OnBeginIteration(uint iteration, 
             bool dirty, int lastNodeCount, int lastEdgeCount)
@@ -910,7 +921,9 @@ namespace GraphForms.Algorithms.Layout.Tree
                     }
                     break;
             }
+            this.mSpanTreeEdges = this.mSpanTree.InternalEdges;
             this.mCircleTree = this.BuildBranch(root, default(Edge));
+            this.mSpanTreeEdges = null;
         }
 
         private CircleTree<Node, Edge> BuildBranch(
@@ -918,37 +931,40 @@ namespace GraphForms.Algorithms.Layout.Tree
         {
             root.Color = GraphColor.Gray;
 
-            CircleTree<Node, Edge> child, data = new CircleTree<Node, Edge>(
-                root.mData, edge, this.GetBoundingRadius(root.mData), 
-                root.AllEdgeCount);
+            CircleTree<Node, Edge> child, parent 
+                = new CircleTree<Node, Edge>(root.mData, edge, 
+                    this.GetBoundingRadius(root.mData), root.AllEdgeCount);
 
             // Recursively add child branches.
             int i;
+            Digraph<Node, Edge>.GEdge e;
             Digraph<Node, Edge>.GNode node;
-            Digraph<Node, Edge>.GEdge[] edges
-                = root.InternalDstEdges;
-            for (i = 0; i < edges.Length; i++)
+
+            for (i = 0; i < this.mSpanTreeEdges.Length; i++)
             {
-                node = edges[i].mDstNode;
-                if (node.Color == GraphColor.White)
+                e = this.mSpanTreeEdges[i];
+                if (e.mSrcNode.Index == root.Index)
                 {
-                    child = this.BuildBranch(node, edges[i].mData);
-                    child.SetRoot(data);
+                    node = e.mDstNode;
+                    if (node.Color == GraphColor.White)
+                    {
+                        child = this.BuildBranch(node, e.mData);
+                        child.SetRoot(parent);
+                    }
                 }
-            }
-            edges = root.InternalSrcEdges;
-            for (i = 0; i < edges.Length; i++)
-            {
-                node = edges[i].mSrcNode;
-                if (node.Color == GraphColor.White)
+                else if (e.mDstNode.Index == root.Index)
                 {
-                    child = this.BuildBranch(node, edges[i].mData);
-                    child.SetRoot(data);
+                    node = e.mSrcNode;
+                    if (node.Color == GraphColor.White)
+                    {
+                        child = this.BuildBranch(node, e.mData);
+                        child.SetRoot(parent);
+                    }
                 }
             }
             root.Color = GraphColor.Black;
 
-            return data;
+            return parent;
         }
 
         /// <summary>

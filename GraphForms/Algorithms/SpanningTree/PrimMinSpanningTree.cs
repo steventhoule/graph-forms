@@ -35,8 +35,13 @@ namespace GraphForms.Algorithms.SpanningTree
 
         protected override void InternalCompute()
         {
+            Digraph<Node, Edge>.GNode node;
             Digraph<Node, Edge>.GNode[] nodes
                 = this.mGraph.InternalNodes;
+
+            Digraph<Node, Edge>.GEdge edge;
+            Digraph<Node, Edge>.GEdge[] edges
+                = this.mGraph.InternalEdges;
 
             this.mQueue = new FibonacciNode<float, int>.Heap();
             this.mMinWeights = new FibonacciNode<float, int>[nodes.Length];
@@ -51,40 +56,43 @@ namespace GraphForms.Algorithms.SpanningTree
                 this.mSpanningTree.AddNode(nodes[i].mData);
             }
 
-            Digraph<Node, Edge>.GEdge[] edges;
             int u, v;
             float weight;
             while (this.mQueue.Count > 0)
             {
                 u = this.mQueue.Dequeue().Value;
                 if (this.mMinWeights[u].Priority != float.MaxValue)
+                {
                     this.mSpanningTree.AddEdge(this.mMinEdges[u]);
+                }
                 this.mQueue.ChangePriority(
                     this.mMinWeights[u], -float.MaxValue);
 
-                edges = nodes[u].InternalDstEdges;
+                node = nodes[u];
                 for (i = 0; i < edges.Length; i++)
                 {
-                    v = edges[i].mDstNode.Index;
-                    weight = edges[i].mData.Weight;
-                    if (weight < this.mMinWeights[v].Priority)
+                    edge = edges[i];
+                    if (edge.mSrcNode.Index == node.Index)
                     {
-                        this.mQueue.ChangePriority(
-                            this.mMinWeights[v], weight);
-                        this.mMinEdges[v] = edges[i].mData;
+                        v = edge.mDstNode.Index;
+                        weight = edge.mData.Weight;
+                        if (weight < this.mMinWeights[v].Priority)
+                        {
+                            this.mQueue.ChangePriority(
+                                this.mMinWeights[v], weight);
+                            this.mMinEdges[v] = edge.mData;
+                        }
                     }
-                }
-
-                edges = nodes[u].InternalSrcEdges;
-                for (i = 0; i < edges.Length; i++)
-                {
-                    v = edges[i].mSrcNode.Index;
-                    weight = edges[i].mData.Weight;
-                    if (weight < this.mMinWeights[v].Priority)
+                    else if (edge.mDstNode.Index == node.Index)
                     {
-                        this.mQueue.ChangePriority(
-                            this.mMinWeights[v], weight);
-                        this.mMinEdges[v] = edges[i].mData;
+                        v = edge.mSrcNode.Index;
+                        weight = edge.mData.Weight;
+                        if (weight < this.mMinWeights[v].Priority)
+                        {
+                            this.mQueue.ChangePriority(
+                                this.mMinWeights[v], weight);
+                            this.mMinEdges[v] = edge.mData;
+                        }
                     }
                 }
             }

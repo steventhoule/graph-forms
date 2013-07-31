@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using GraphForms.Algorithms.Search;
 using GraphForms.Algorithms.SpanningTree;
 
@@ -16,12 +14,14 @@ namespace GraphForms.Algorithms.Layout.Tree
         {
             public double Size;
             public double NextPosition;
-            public readonly List<Digraph<Node, Edge>.GNode> Nodes
-                = new List<Digraph<Node, Edge>.GNode>();
+            public Digraph<Node, Edge>.GNode[] Nodes;
+            public int NodeCount;
             public double LastTranslate;
 
             public Layer()
             {
+                this.Nodes = new Digraph<Node, Edge>.GNode[2];
+                this.NodeCount = 0;
                 this.LastTranslate = 0;
             }
         }
@@ -39,10 +39,12 @@ namespace GraphForms.Algorithms.Layout.Tree
         private SpanningTreeGen mSpanTreeGen = SpanningTreeGen.DFS;
 
         private Digraph<Node, Edge> mSpanningTree;
+        private Digraph<Node, Edge>.GEdge[] mSpanTreeEdges;
         private Vec2F[] mSizes;
         private NodeData[] mDatas;
         private int mDir;
-        private List<Layer> mLayers = new List<Layer>();
+        private Layer[] mLayers;
+        private int mLayerCount;
         
 
         /*public SimpleTreeLayoutAlgorithm(Digraph<Node, Edge> graph)
@@ -188,6 +190,11 @@ namespace GraphForms.Algorithms.Layout.Tree
 
             this.GenerateSpanningTree();
 
+            this.mLayers = new Layer[2];
+            this.mLayerCount = 0;
+
+            this.mSpanTreeEdges = this.mSpanningTree.InternalEdges;
+
             nodes = this.mSpanningTree.InternalNodes;
             for (i = 0; i < nodes.Length; i++)
             {
@@ -205,6 +212,8 @@ namespace GraphForms.Algorithms.Layout.Tree
             {
                 this.CalculatePosition(nodes[i], null, 0);
             }
+
+            this.mSpanTreeEdges = null;
 
             this.AssignPositions();
         }
@@ -245,15 +254,27 @@ namespace GraphForms.Algorithms.Layout.Tree
         }
 
         private double CalculatePosition(Digraph<Node, Edge>.GNode n,
-            Digraph<Node, Edge>.GNode parent, int l)
+            Digraph<Node, Edge>.GNode parent, int lnum)
         {
             if (n.Color == GraphColor.Gray)
                 return -1; // this node is already laid out
 
-            while (l >= this.mLayers.Count)
-                this.mLayers.Add(new Layer());
+            if (lnum >= this.mLayerCount)
+            {
+                if (lnum >= this.mLayers.Length)
+                {
+                    Layer[] layers = new Layer[2 * this.mLayers.Length];
+                    Array.Copy(this.mLayers, 0, layers, 0, this.mLayerCount);
+                    this.mLayers = layers;
+                }
+                for (int j = this.mLayerCount; j <= lnum; j++)
+                {
+                    this.mLayers[j] = new Layer();
+                }
+                this.mLayerCount = lnum + 1;
+            }
 
-            Layer layer = this.mLayers[l];
+            Layer layer = this.mLayers[lnum];
             Vec2F size = this.mSizes[n.Index];
             NodeData d = new NodeData();
             d.parent = parent;
@@ -261,13 +282,20 @@ namespace GraphForms.Algorithms.Layout.Tree
             n.Color = GraphColor.Gray;
 
             layer.NextPosition += size.X / 2.0;
-            if (l > 0)
+            if (lnum > 0)
             {
-                layer.NextPosition += this.mLayers[l - 1].LastTranslate;
-                this.mLayers[l - 1].LastTranslate = 0;
+                layer.NextPosition += this.mLayers[lnum - 1].LastTranslate;
+                this.mLayers[lnum - 1].LastTranslate = 0;
             }
             layer.Size = Math.Max(layer.Size, size.Y + this.mLayerGap);
-            layer.Nodes.Add(n);
+            if (layer.NodeCount == layer.Nodes.Length)
+            {
+                Digraph<Node, Edge>.GNode[] nodes
+                    = new Digraph<Node, Edge>.GNode[2 * layer.NodeCount];
+                Array.Copy(layer.Nodes, 0, nodes, 0, layer.NodeCount);
+                layer.Nodes = nodes;
+            }
+            layer.Nodes[layer.NodeCount++] = n;
             if (n.DstEdgeCount == 0)
             {
                 d.position = layer.NextPosition;
@@ -278,13 +306,14 @@ namespace GraphForms.Algorithms.Layout.Tree
                 double maxPos = -double.MaxValue;
                 // first put the children
                 Digraph<Node, Edge>.GNode child;
-                Digraph<Node, Edge>.GEdge[] outEdges
-                    = n.InternalDstEdges;
                 double childPos;
-                for (int i = 0; i < outEdges.Length; i++)
+                for (int i = 0; i < this.mSpanTreeEdges.Length; i++)
                 {
-                    child = outEdges[i].DstNode;
-                    childPos = this.CalculatePosition(child, n, l + 1);
+                    child = this.mSpanTreeEdges[i].mSrcNode;
+                    if (child.Index != n.Index)
+                        continue;
+                    child = this.mSpanTreeEdges[i].mDstNode;
+                    childPos = this.CalculatePosition(child, n, lnum + 1);
                     if (childPos >= 0)
                     {
                         minPos = Math.Min(minPos, childPos);
@@ -315,16 +344,17 @@ namespace GraphForms.Algorithms.Layout.Tree
 
             //float[] newXs = this.NewXPositions;
             //float[] newYs = this.NewYPositions;
-            List<Digraph<Node, Edge>.GNode> nodes;
+            Digraph<Node, Edge>.GNode[] nodes;
             Digraph<Node, Edge>.GNode node;
             Vec2F size;
             NodeData d;
             double x, y;
-            int i, j;
-            for (i = 0; i < this.mLayers.Count; i++)
+            int i, j, nodeCount;
+            for (i = 0; i < this.mLayerCount; i++)
             {
                 nodes = this.mLayers[i].Nodes;
-                for (j = 0; j < nodes.Count; j++)
+                nodeCount = this.mLayers[i].NodeCount;
+                for (j = 0; j < nodeCount; j++)
                 {
                     node = nodes[j];
                     size = this.mSizes[node.Index];

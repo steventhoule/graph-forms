@@ -140,18 +140,6 @@ namespace GraphForms.Algorithms
             /// some other manner of data processing.
             /// </summary>
             public GraphColor Color;
-            /*/// <summary>
-            /// Flags whether or not this <see cref="GNode"/> has already
-            /// been visited by a graph traversal algorithm.
-            /// </summary>
-            public bool Visited;/* */
-            /// <summary>
-            /// Temporary storage for this node's theoretical distance from a
-            /// starting root <see cref="GNode"/> of a traversal algorithm
-            /// based on the sum of the <see cref="P:IGraphEdge`1{Node}.Weight"/>s
-            /// along the (usually shortest) path connecting them.
-            /// </summary>
-            public double Distance;
 
             internal List<GEdge> mSrcEdges = new List<GEdge>();
             internal List<GEdge> mDstEdges = new List<GEdge>();
@@ -750,217 +738,6 @@ namespace GraphForms.Algorithms
 
         #endregion
 
-        #region Theoretical Distances
-        /// <summary>
-        /// Returns the diameter of a directional graph based on the given 
-        /// theoretical <paramref name="distances"/> between the connected
-        /// <typeparamref name="Node"/> instances, obtained from the
-        /// <see cref="GetDistances()"/> function.
-        /// </summary>
-        /// <param name="distances">The theoretical distances between connected
-        /// <typeparamref name="Node"/> instances contained in a 
-        /// <see cref="T:Digraph`2{Node,Edge}"/> instance.</param>
-        /// <returns>The maximum value within the given 
-        /// <paramref name="distances"/> which doesn't equal 
-        /// <see cref="float.MaxValue"/>, or <see cref="float.NegativeInfinity"/>
-        /// if all distances given equal <see cref="float.MaxValue"/>.</returns>
-        public static double GetDiameter(double[][] distances)
-        {
-            if (distances.Length == 0)
-                return 0;
-            double[] dists;
-            double diameter = double.NegativeInfinity;
-            int i, j;
-            for (i = 0; i < distances.Length; i++)
-            {
-                dists = distances[i];
-                for (j = 0; j < dists.Length; j++)
-                {
-                    if (dists[j] != double.MaxValue)
-                        diameter = Math.Max(diameter, dists[j]);
-                }
-            }
-            return diameter;
-        }
-
-        /// <summary>
-        /// Returns the theoretical distances between all connected 
-        /// <typeparamref name="Node"/> instances contained in this directional
-        /// graph.
-        /// </summary>
-        /// <returns>A <see cref="NodeCount"/> by <see cref="NodeCount"/>
-        /// two-dimensional array containing the theoretical distances between
-        /// all <typeparamref name="Node"/> instances in this directional graph.
-        /// </returns>
-        /// <remarks>
-        /// The theoretical distance between two different <typeparamref 
-        /// name="Node"/> instances is either the sum of the <see 
-        /// cref="P:IGraphEdge`1.Weight"/>s of the edges along the shortest path
-        /// connecting the two nodes, or <see cref="float.MaxValue"/> if the
-        /// two nodes are not connected by a path.</remarks>
-        /// <seealso cref="GetDistances(int)"/>
-        public double[][] GetDistances()
-        {
-            int count = this.mNodes.Count;
-            if (count == 0)
-            {
-                return new double[0][];
-            }
-            int i, index;
-            double[][] distances = new double[count][];
-            if (this.mEdges.Count == 0)
-            {
-                for (index = 0; index < count; index++)
-                {
-                    distances[index] = new double[count];
-                    for (i = 0; i < count; i++)
-                        distances[index][i] = double.MaxValue;
-                    distances[index][index] = 0;
-                }
-                return distances;
-            }
-            double distance;
-            GNode n, current;
-            Queue<GNode> queue = new Queue<GNode>(count);
-            for (index = 0; index < count; index++)
-            {
-                for (i = 0; i < count; i++)
-                {
-                    current = this.mNodes[i];
-                    current.Color = GraphColor.White;
-                    current.Distance = double.MaxValue;
-                }
-                distances[index] = new double[count];
-                current = this.mNodes[index];
-                current.Distance = 0f;
-                current.Color = GraphColor.Gray;
-                queue.Enqueue(current);
-                while (queue.Count > 0)
-                {
-                    current = queue.Dequeue();
-                    count = current.mDstEdges.Count;
-                    for (i = 0; i < count; i++)
-                    {
-                        n = current.mDstEdges[i].mDstNode;
-                        distance = current.Distance
-                            + current.mDstEdges[i].mData.Weight;
-                        if (n.Color == GraphColor.White)
-                        {
-                            n.Color = GraphColor.Gray;
-                            n.Distance = distance;
-                            queue.Enqueue(n);
-                        }
-                        else if (distance < n.Distance)
-                        {
-                            n.Distance = distance;
-                            if (n.Color == GraphColor.Black)
-                            {
-                                n.Color = GraphColor.Gray;
-                                queue.Enqueue(n);
-                            }
-                        }
-                    }
-                    current.Color = GraphColor.Black;
-                }
-                count = this.mNodes.Count;
-                for (i = 0; i < count; i++)
-                    distances[index][i] = this.mNodes[i].Distance;
-            }
-            for (index = 0; index < count; index++)
-            {
-                for (i = 0; i < count; i++)
-                {
-                    if (i != index && distances[index][i] == 0)
-                        distances[index][i] = distances[i][index];
-                }
-            }
-            return distances;
-        }
-
-        /// <summary>
-        /// Returns the theoretical distances between the <typeparamref 
-        /// name="Node"/> instance at the given <paramref name="nodeIndex"/>
-        /// and all other instances contained in this directional graph.
-        /// </summary>
-        /// <param name="nodeIndex">The index of the <typeparamref 
-        /// name="Node"/> instance in <see cref="Nodes"/> from which to measure
-        /// the theoretical distances to all other nodes.</param>
-        /// <returns>An array of <see cref="NodeCount"/> elements containing
-        /// the theoretical distances between the specified <typeparamref 
-        /// name="Node"/> instance and all others in this directional graph.
-        /// </returns>
-        /// <remarks>
-        /// See the remarks on <see cref="GetDistances()"/> for an explanation
-        /// of the meaning of the theoretical distances returned.
-        /// </remarks>
-        /// <seealso cref="GetDistances()"/>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref 
-        /// name="nodeIndex"/> is less than 0 or <paramref name="nodeIndex"/>
-        /// is greater than or equal to <see cref="NodeCount"/>.</exception>
-        public double[] GetDistances(int nodeIndex)
-        {
-            int count = this.mNodes.Count;
-            if (count == 0)
-                return new double[0];
-            if (nodeIndex < 0 || nodeIndex > count)
-                throw new ArgumentOutOfRangeException("nodeIndex");
-            int i;
-            if (this.mEdges.Count == 0)
-            {
-                double[] dist = new double[count];
-                for (i = 0; i < count; i++)
-                    dist[i] = double.MaxValue;
-                dist[nodeIndex] = 0;
-                return dist;
-            }
-            double distance;
-            GNode n, current;
-            for (i = 0; i < count; i++)
-            {
-                current = this.mNodes[i];
-                current.Color = GraphColor.White;
-                current.Distance = double.MaxValue;
-            }
-            Queue<GNode> queue = new Queue<GNode>(count);
-            current = this.mNodes[nodeIndex];
-            current.Distance = 0f;
-            current.Color = GraphColor.Gray;
-            queue.Enqueue(current);
-            while (queue.Count > 0)
-            {
-                current = queue.Dequeue();
-                count = current.mDstEdges.Count;
-                for (i = 0; i < count; i++)
-                {
-                    n = current.mDstEdges[i].mDstNode;
-                    distance = current.Distance
-                        + current.mDstEdges[i].mData.Weight;
-                    if (n.Color == GraphColor.White)
-                    {
-                        n.Color = GraphColor.Gray;
-                        n.Distance = distance;
-                        queue.Enqueue(n);
-                    }
-                    else if (distance < n.Distance)
-                    {
-                        n.Distance = distance;
-                        if (n.Color == GraphColor.Black)
-                        {
-                            n.Color = GraphColor.Gray;
-                            queue.Enqueue(n);
-                        }
-                    }
-                }
-                current.Color = GraphColor.Black;
-            }
-            count = this.mNodes.Count;
-            double[] distances = new double[count];
-            for (i = 0; i < count; i++)
-                distances[i] = this.mNodes[i].Distance;
-            return distances;
-        }
-        #endregion
-
         /// <summary>
         /// Finds the "center" node of this graph based on a breadth first
         /// "pruning" of edges, starting from its "leaf" nodes (nodes with
@@ -985,7 +762,8 @@ namespace GraphForms.Algorithms
             if (this.mEdges.Count == 0)
                 return null;
 
-            int i, degree;
+            bool rev;
+            int i, j, degree, stop = undirected ? 2 : 1;
             int[] degrees = new int[this.mNodes.Count];
             Queue<Digraph<Node, Edge>.GNode> leaves
                 = new Queue<Digraph<Node, Edge>.GNode>(this.mNodes.Count);
@@ -1024,61 +802,28 @@ namespace GraphForms.Algorithms
                 }
             }
             Digraph<Node, Edge>.GNode u, v = null;
-            Digraph<Node, Edge>.GEdge[] edges;
-            if (reversed)
+            Digraph<Node, Edge>.GEdge edge;
+            Digraph<Node, Edge>.GEdge[] edges
+                = this.mEdges.ToArray();
+            while (leaves.Count > 0)
             {
-                while (leaves.Count > 0)
+                v = leaves.Dequeue();
+                rev = reversed;
+                for (j = 0; j < stop; j++)
                 {
-                    v = leaves.Dequeue();
-                    edges = v.InternalSrcEdges;
                     for (i = 0; i < edges.Length; i++)
                     {
-                        u = edges[i].mSrcNode;
+                        edge = edges[i];
+                        u = rev ? edge.mDstNode : edge.mSrcNode;
+                        if (u.Index != v.Index)
+                            continue;
+                        u = rev ? edge.mSrcNode : edge.mDstNode;
                         degree = degrees[u.Index] - 1;
                         degrees[u.Index] = degree;
                         if (degree == 1)
                             leaves.Enqueue(u);
                     }
-                    if (undirected)
-                    {
-                        edges = v.InternalDstEdges;
-                        for (i = 0; i < edges.Length; i++)
-                        {
-                            u = edges[i].mDstNode;
-                            degree = degrees[u.Index] - 1;
-                            degrees[u.Index] = degree;
-                            if (degree == 1)
-                                leaves.Enqueue(u);
-                        }
-                    }
-                }
-            }
-            else
-            {
-                while (leaves.Count > 0)
-                {
-                    v = leaves.Dequeue();
-                    edges = v.InternalDstEdges;
-                    for (i = 0; i < edges.Length; i++)
-                    {
-                        u = edges[i].mDstNode;
-                        degree = degrees[u.Index] - 1;
-                        degrees[u.Index] = degree;
-                        if (degree == 1)
-                            leaves.Enqueue(u);
-                    }
-                    if (undirected)
-                    {
-                        edges = v.InternalSrcEdges;
-                        for (i = 0; i < edges.Length; i++)
-                        {
-                            u = edges[i].mSrcNode;
-                            degree = degrees[u.Index] - 1;
-                            degrees[u.Index] = degree;
-                            if (degree == 1)
-                                leaves.Enqueue(u);
-                        }
-                    }
+                    rev = !rev;
                 }
             }
             return v;

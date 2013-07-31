@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace GraphForms.Algorithms.Search
 {
@@ -21,6 +19,12 @@ namespace GraphForms.Algorithms.Search
         /// The graph traversed by this algorithm.
         /// </summary>
         protected readonly Digraph<Node, Edge> mGraph;
+        /// <summary>
+        /// A copy of the <see cref="P:Digraph`2.InternalEdges"/> of the 
+        /// <see cref="mGraph"/> made at the beginning of this algorithm's 
+        /// internal computation for traversing the graph with minimal 
+        /// memory usage.</summary>
+        protected Digraph<Node, Edge>.GEdge[] mGraphEdges;
 
         /// <summary>
         /// If true, the graph is traversed from both the source edges and
@@ -43,13 +47,6 @@ namespace GraphForms.Algorithms.Search
         protected bool bExSpecial = false;
 
         private bool bRootOnly;
-
-        /*public AGraphTraversalAlgorithm(Digraph<Node, Edge> graph)
-        {
-            this.mGraph = graph;
-            this.bDirected = true;
-            this.bReversed = false;
-        }/* */
 
         /// <summary>
         /// Initializes a new instance of an algorithm for traversing and
@@ -303,6 +300,8 @@ namespace GraphForms.Algorithms.Search
 
             // put all nodes to white
             this.Initialize();
+
+            this.mGraphEdges = this.mGraph.InternalEdges;
 
             Digraph<Node, Edge>.GNode node;
 

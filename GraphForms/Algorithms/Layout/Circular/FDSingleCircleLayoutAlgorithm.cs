@@ -381,7 +381,8 @@ namespace GraphForms.Algorithms.Layout.Circular
             }
             // Here flags are used to determine which nodes are neighbors 
             // of the current node to be added to the embedding circle.
-            Digraph<Node, Edge>.GEdge[] edges;
+            Digraph<Node, Edge>.GEdge edge;
+            Digraph<Node, Edge>.GEdge[] edges = this.mGraph.InternalEdges;
             Digraph<Node, Edge>.GNode node;
             bool placed;
             int eCount;
@@ -394,27 +395,27 @@ namespace GraphForms.Algorithms.Layout.Circular
                 }
                 // Set which nodes are neighbors to the current node
                 eCount = 0;
-                edges = remNodes[k].InternalDstEdges;
+                node = remNodes[k];
                 for (j = 0; j < edges.Length; j++)
                 {
-                    node = edges[j].mDstNode;
-                    flags[node.Index] = !(node.mData is IPortNode);
+                    edge = edges[j];
+                    if (edge.mSrcNode.Index == node.Index)
+                    {
+                        node = edge.mDstNode;
+                        flags[node.Index] = !(node.mData is IPortNode);
+                        node = remNodes[k];
+                    }
+                    else if (edge.mDstNode.Index == node.Index)
+                    {
+                        node = edge.mSrcNode;
+                        flags[node.Index] = !(node.mData is IPortNode);
+                        node = remNodes[k];
+                    }
                 }
-                if (flags[remNodes[k].Index])
+                if (flags[node.Index])
                 {
-                    flags[remNodes[k].Index] = false;
-                    eCount++;
-                }
-                edges = remNodes[k].InternalSrcEdges;
-                for (j = 0; j < edges.Length; j++)
-                {
-                    node = edges[j].mSrcNode;
-                    flags[node.Index] = !(node.mData is IPortNode);
-                }
-                if (flags[remNodes[k].Index])
-                {
-                    flags[remNodes[k].Index] = false;
-                    eCount++;
+                    flags[node.Index] = false;
+                    eCount = 2;
                 }
                 eCount = remNodes[k].AllEdgeCount - eCount;
                 placed = false;
@@ -451,8 +452,7 @@ namespace GraphForms.Algorithms.Layout.Circular
             }
             this.mEmbedCircle = ecNodes.ToArray();
             this.mPortNodes = pNodes.ToArray();
-            this.Swapping(this.mEmbedCircle, 0, ecNodes.Count, 50);
-            //this.Swapping(this.mEmbedCircle, ecNodes.Count, 50);
+            this.Swapping2(this.mEmbedCircle, 0, ecNodes.Count, 50);
 
             if (this.mPortNodes.Length > 0)
             {
@@ -632,6 +632,153 @@ namespace GraphForms.Algorithms.Layout.Circular
             }
         }
 
+        private void Swapping2(Digraph<Node, Edge>.GNode[] nodes,
+            int start, int length, int maxIterations)
+        {
+            if (length > 3)
+            {
+                int i, j, k, m, posV, posX, posY, offset, improvedCrossings;
+                Digraph<Node, Edge>.GNode u, v, x, y;
+                Digraph<Node, Edge>.GEdge edge;
+                Digraph<Node, Edge>.GEdge[] edges 
+                    = this.mGraph.InternalEdges;
+
+                int n = this.mGraph.NodeCount;
+                int[] pos = new int[n];
+                for (i = 0; i < n; i++)
+                {
+                    pos[i] = -1;
+                }
+                n = start + length;
+                for (i = start; i < n; i++)
+                {
+                    pos[nodes[i].Index] = i;
+                }
+
+                bool improved = true;
+                for (int iter = 0; iter < maxIterations && improved; iter++)
+                {
+                    improved = false;
+                    for (i = start; i < n; i++)
+                    {
+                        u = nodes[i];
+                        // we fake a numbering around the circle
+                        // starting with u at position 0
+                        // using the formula: (pos[t] - offset) % n
+                        // and: pos[u] + offset = n
+                        offset = n - pos[u.Index];
+                        for (j = 0; j < edges.Length; j++)
+                        {
+                            // we try swapping u with a node that comes
+                            // right before one of its neighbors
+                            edge = edges[j];
+                            if (edge.mSrcNode.Index == u.Index)
+                                x = edge.mDstNode;
+                            else if (edge.mDstNode.Index == u.Index)
+                                x = edge.mSrcNode;
+                            else
+                                continue;
+                            if (pos[x.Index] == -1)
+                                continue;
+                            k = (pos[x.Index] + n - 1) % n;
+                            if (k == i)
+                                continue;
+                            v = nodes[k];
+                            posV = (k + offset) % n;
+                            // we count how many crossings we save 
+                            // when swapping u and v
+                            improvedCrossings = 0;
+                            for (k = 0; k < edges.Length; k++)
+                            {
+                                edge = edges[k];
+                                if (edge.mSrcNode.Index == u.Index)
+                                    x = edge.mDstNode;
+                                else if (edge.mDstNode.Index == u.Index)
+                                    x = edge.mSrcNode;
+                                else
+                                    continue;
+                                if (x.Index == v.Index ||
+                                    pos[x.Index] == -1)
+                                    continue;
+                                // posX = (pos[x] - pos[u]) mod n
+                                posX = (pos[x.Index] + offset) % n;
+                                for (m = 0; m < edges.Length; m++)
+                                {
+                                    edge = edges[m];
+                                    if (edge.mSrcNode.Index == v.Index)
+                                        y = edge.mDstNode;
+                                    else if (edge.mDstNode.Index == v.Index)
+                                        y = edge.mSrcNode;
+                                    else
+                                        continue;
+                                    if (y.Index == u.Index ||
+                                        y.Index == x.Index ||
+                                        pos[y.Index] == -1)
+                                        continue;
+                                    // posY = (pos[y] - pos[u]) mod n
+                                    posY = (pos[y.Index] + offset) % n;
+                                    // All possible permutations:
+                                    // ++: u v x y, u y x v
+                                    // --: u v y x, u x y v
+                                    // 00: u x v y, u y v x
+                                    if (posX > posV && posY > posV)
+                                    {
+                                        if (posX > posY)
+                                        {
+                                            //   /-------------\
+                                            //  /     /---\     \
+                                            // u     v     y     x
+                                            improvedCrossings--;
+                                        }
+                                        else
+                                        {
+                                            //   /-------\
+                                            //  /     /---\-----\
+                                            // u     v     x     y
+                                            improvedCrossings++;
+                                        }
+                                    }
+                                    else if (posX < posV && posY < posV)
+                                    {
+                                        if (posX > posY)
+                                        {
+                                            //   /-------\
+                                            //  /     /---\-----\
+                                            // u     y     x     v
+                                            improvedCrossings++;
+                                        }
+                                        else
+                                        {
+                                            //  /---\       /---\
+                                            // u     x     y     v
+                                            improvedCrossings--;
+                                        }
+                                    }
+                                }
+                            }
+                            if (improvedCrossings > 0)
+                            {
+                                improved = true;
+                                // swap the nodes in the list
+                                nodes[i] = v;
+                                edge = edges[j];
+                                if (edge.mSrcNode.Index == u.Index)
+                                    x = edge.mDstNode;
+                                else if (edge.mDstNode.Index == u.Index)
+                                    x = edge.mSrcNode;
+                                nodes[(pos[x.Index] + n - 1) % n] = u;
+                                // swap tracked positions
+                                offset = pos[u.Index];
+                                pos[u.Index] = pos[v.Index];
+                                pos[v.Index] = offset;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         private void SeparateWhiteAndGrayNodes()
         {
             // Isolate the gray nodes and reduce their edge crossings.
@@ -698,10 +845,14 @@ namespace GraphForms.Algorithms.Layout.Circular
         private void ReducePortEdgeCrossings()
         {
             int i, j, count;
-            Digraph<Node, Edge>.GEdge[] edges;
+            Digraph<Node, Edge>.GNode node;
+            Digraph<Node, Edge>.GEdge edge;
+            Digraph<Node, Edge>.GEdge[] edges
+                = this.mGraph.InternalEdges;
             for (i = 0; i < this.mPortNodes.Length; i++)
             {
-                if (this.mPortNodes[i].AllEdgeCount == 0)
+                node = this.mPortNodes[i];
+                if (node.AllEdgeCount == 0)
                     continue;
                 // Reset all embedding circle nodes to white
                 for (j = 0; j < this.mEmbedCircle.Length; j++)
@@ -709,21 +860,18 @@ namespace GraphForms.Algorithms.Layout.Circular
                     this.mEmbedCircle[j].Color = GraphColor.White;
                 }
                 // Mark gray all embedding circle nodes connected to port
-                edges = this.mPortNodes[i].InternalDstEdges;
-                for (j = 0; j < edges.Length; j++)
-                {
-                    edges[j].mDstNode.Color = GraphColor.Gray;
-                }
-                edges = this.mPortNodes[i].InternalSrcEdges;
-                for (j = 0; j < edges.Length; j++)
-                {
-                    edges[j].mSrcNode.Color = GraphColor.Gray;
-                }
                 count = 0;
-                for (j = 0; j < this.mEmbedCircle.Length; j++)
+                for (j = 0; j < edges.Length; j++)
                 {
-                    if (this.mEmbedCircle[j].Color == GraphColor.Gray)
+                    edge = edges[j];
+                    if (edge.mSrcNode.Index == node.Index)
                     {
+                        edge.mDstNode.Color = GraphColor.Gray;
+                        count++;
+                    }
+                    else if (edge.mDstNode.Index == node.Index)
+                    {
+                        edge.mSrcNode.Color = GraphColor.Gray;
                         count++;
                     }
                 }
@@ -738,39 +886,48 @@ namespace GraphForms.Algorithms.Layout.Circular
         {
             if (this.mPortNodes.Length > 0)
             {
-                double a1, a2;
+                double a1, a2, dx, dy;
                 int i, j, count;
                 double[] angs = new double[this.mPortNodes.Length];
-                Digraph<Node, Edge>.GEdge[] edges;
+                Digraph<Node, Edge>.GNode node;
+                Digraph<Node, Edge>.GEdge edge;
+                Digraph<Node, Edge>.GEdge[] edges 
+                    = this.mGraph.InternalEdges;
                 IPortNode pNode;
                 for (i = 0; i < this.mPortNodes.Length; i++)
                 {
-                    a1 = 0;
+                    dx = dy = 0;
                     count = 0;
-                    edges = this.mPortNodes[i].InternalDstEdges;
+                    node = this.mPortNodes[i];
                     for (j = 0; j < edges.Length; j++)
                     {
-                        a1 += this.mAngles[edges[j].mDstNode.Index];
-                        count++;
+                        edge = edges[j];
+                        if (edge.mSrcNode.Index == node.Index)
+                        {
+                            a1 = this.mAngles[edge.mDstNode.Index];
+                            dx += Math.Cos(a1);
+                            dy += Math.Sin(a1);
+                            count++;
+                        }
+                        else if (edge.mDstNode.Index == node.Index)
+                        {
+                            a1 = this.mAngles[edge.mSrcNode.Index];
+                            dx += Math.Cos(a1);
+                            dy += Math.Sin(a1);
+                            count++;
+                        }
                     }
-                    edges = this.mPortNodes[i].InternalSrcEdges;
-                    for (j = 0; i < edges.Length; j++)
-                    {
-                        a1 += this.mAngles[edges[j].mSrcNode.Index];
-                        count++;
-                    }
-                    angs[i] = a1 / count;
+                    angs[i] = Math.Atan2(dy, dx);
                 }
                 // Line tangent to embedding circle at port point
                 // ArcTan(length of this line / this.mRadius)
                 double maxA = Math.Atan(2);
                 if (angs.Length > 1)
                 {
-                    count = angs.Length;
-                    Array.Sort(angs, this.mPortNodes, 0, count, null);
-                    a1 = angs[count - 1];
+                    Array.Sort(angs, this.mPortNodes, 0, angs.Length, null);
+                    a1 = angs[angs.Length - 1];
                     a2 = angs[1];
-                    for (i = 0; i < count; i++)
+                    for (i = 0; i < angs.Length; i++)
                     {
                         pNode = this.mPortNodes[i].mData as IPortNode;
                         pNode.MinAngle
@@ -778,7 +935,7 @@ namespace GraphForms.Algorithms.Layout.Circular
                         pNode.MaxAngle
                             = Math.Min((angs[i] + a2) / 2, angs[i] + maxA);
                         a1 = angs[i];
-                        a2 = angs[(i + 1) % count];
+                        a2 = angs[(i + 1) % angs.Length];
                     }
                 }
                 else

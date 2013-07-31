@@ -3,24 +3,12 @@
 namespace GraphForms.Algorithms.Layout.ForceDirected
 {
     public class ElasticLayoutAlgorithm<Node, Edge>
-        //: ForceDirectedLayoutAlgorithm<Node, Edge, ElasticLayoutParameters>
         : LayoutAlgorithm<Node, Edge>
         where Node : class, ILayoutNode
         where Edge : IGraphEdge<Node>, IUpdateable
     {
         private float mForceMult = 75f;
         private float mWeightMult = 10f;
-
-        /*public ElasticLayoutAlgorithm(Digraph<Node, Edge> graph) 
-            : base(graph, null)
-        { 
-        }
-
-        public ElasticLayoutAlgorithm(Digraph<Node, Edge> graph,
-            ElasticLayoutParameters oldParameters) 
-            : base(graph, oldParameters) 
-        { 
-        }/* */
 
         public ElasticLayoutAlgorithm(Digraph<Node, Edge> graph,
             IClusterNode clusterNode)
@@ -58,39 +46,21 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             }
         }
 
-        /*protected override bool OnBeginIteration(bool paramsDirty, 
-            int lastNodeCount, int lastEdgeCount)
+        protected override void PerformIteration(uint iteration)
         {
-            if (paramsDirty)
-            {
-                this.mForceMult = this.Parameters.ForceMultiplier;
-                this.mWeightMult = this.Parameters.WeightMultiplier;
-            }
-            return base.OnBeginIteration(paramsDirty, 
-                lastNodeCount, lastEdgeCount);
-        }/* */
-
-        protected override void PerformIteration(uint iteration)//, int maxIterations)
-        {
-            //float[] newXs = this.NewXPositions;
-            //float[] newYs = this.NewYPositions;
             Digraph<Node, Edge>.GNode[] nodes
                 = this.mGraph.InternalNodes;
-            Digraph<Node, Edge>.GEdge[] edges;
+            Digraph<Node, Edge>.GEdge[] edges
+                = this.mGraph.InternalEdges;
             Node node, n;
-            //SizeF vec;
             float xvel, yvel, dx, dy, factor;
             int i, j;
             for (i = 0; i < nodes.Length; i++)
             {
-                node = nodes[i].Data;
+                node = nodes[i].mData;
                 if (node.PositionFixed)
                 {
-                    //node.NewX = node.X;
-                    //node.NewY = node.Y;
                     node.SetNewPosition(node.X, node.Y);
-                    //newXs[i] = node.X;
-                    //newYs[i] = node.Y;
                     continue;
                 }
 
@@ -99,13 +69,11 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                 yvel = 0f;
                 for (j = 0; j < nodes.Length; j++)
                 {
-                    n = nodes[j].Data;
-                    //if (n != node)
+                    n = nodes[j].mData;
                     if (i != j)
                     {
-                        //vec = node.ItemTranslate(n);
-                        dx = node.X - n.X;//vec.Width;
-                        dy = node.Y - n.Y;//vec.Height;
+                        dx = node.X - n.X;
+                        dy = node.Y - n.Y;
                         factor = Math.Max(dx * dx + dy * dy, float.Epsilon);
                         xvel += this.mForceMult * dx / factor;
                         yvel += this.mForceMult * dy / factor;
@@ -114,30 +82,28 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
 
                 // Now subtract all forces pulling items together
                 factor = 1;
-                edges = nodes[i].AllInternalEdges(false);
                 for (j = 0; j < edges.Length; j++)
                 {
-                    factor += edges[j].Data.Weight;
+                    if (edges[j].mDstNode.Index == i ||
+                        edges[j].mSrcNode.Index == i)
+                    {
+                        factor += edges[j].mData.Weight;
+                    }
                 }
                 factor *= this.mWeightMult;
                 for (j = 0; j < edges.Length; j++)
                 {
-                    //vec = node.ItemTranslate(edges[j].DstNode.Data);
-                    n = edges[j].DstNode.Data;
-                    if (edges[j].DstNode.Index == i)
-                        n = edges[j].SrcNode.Data;
-                    xvel -= (node.X - n.X) / factor;//vec.Width / factor;
-                    yvel -= (node.Y - n.Y) / factor;//vec.Height / factor;
+                    if (edges[j].mSrcNode.Index == i)
+                        n = edges[j].mDstNode.mData;
+                    else if (edges[j].mDstNode.Index == i)
+                        n = edges[j].mSrcNode.mData;
+                    else
+                        continue;
+                    xvel -= (node.X - n.X) / factor;
+                    yvel -= (node.Y - n.Y) / factor;
                 }
 
-                //if (Math.Abs(xvel) < 0.1 && Math.Abs(yvel) < 0.1)
-                //    xvel = yvel = 0;
-
-                //node.NewX = node.X + xvel;
-                //node.NewY = node.Y + yvel;
                 node.SetNewPosition(node.X + xvel, node.Y + yvel);
-                //newXs[i] = node.X + xvel;
-                //newYs[i] = node.Y + yvel;
             }
         }
     }

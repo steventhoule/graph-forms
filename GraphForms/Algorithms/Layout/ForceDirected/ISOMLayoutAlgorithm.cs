@@ -215,7 +215,8 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             //PointF force;
             double dx, dy, posX, posY, factor;
             Digraph<Node, Edge>.GNode n;
-            Digraph<Node, Edge>.GEdge[] edges;
+            Digraph<Node, Edge>.GEdge[] edges
+                = this.mGraph.InternalEdges;
             while (this.mQueue.Count > 0)
             {
                 ci = this.mQueue.Dequeue();
@@ -243,12 +244,14 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                 if (dist < this.mRadius)
                 {
                     // iterate through all its neighbors
-                    edges = this.mNodes[ci].AllInternalEdges(false);
                     for (i = 0; i < edges.Length; i++)
                     {
-                        n = edges[i].DstNode;
-                        if (n.Index == ci)
-                            n = edges[i].SrcNode;
+                        if (edges[i].mSrcNode.Index == ci)
+                            n = edges[i].mDstNode;
+                        else if (edges[i].mDstNode.Index == ci)
+                            n = edges[i].mSrcNode;
+                        else
+                            continue;
                         if (n.Color == GraphColor.White)
                         {
                             this.mDistances[n.Index] = dist + 1;

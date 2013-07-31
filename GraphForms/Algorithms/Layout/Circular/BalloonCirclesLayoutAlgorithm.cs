@@ -798,6 +798,10 @@ namespace GraphForms.Algorithms.Layout.Circular
                                 }
                                 wedge += ct.LowerWedge + ct.UpperWedge;
                             }
+                            if (i - index == 1)
+                            {
+                                ct.Angle = branchAngles[index];
+                            }
                             if (i - index > 1)
                             {
                                 a = a - wedge / 2.0;
