@@ -4,7 +4,6 @@ using GraphForms.Algorithms.Path;
 namespace GraphForms.Algorithms.Layout.ForceDirected
 {
     public class KKLayoutAlgorithm<Node, Edge>
-        //: ForceDirectedLayoutAlgorithm<Node, Edge, KKLayoutParameters>
         : LayoutAlgorithm<Node, Edge>
         where Node : class, ILayoutNode
         where Edge : IGraphEdge<Node>, IUpdateable
@@ -13,21 +12,22 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         /// <summary>
         /// Minimal distances between the nodes;
         /// </summary>
-        private double[][] mDistances;
-#if KKExtraCache
-        private float[,] mEdgeLengths;
-        private float[,] mSpringConstants;
-#endif
+        private float[][] mDistances;
         // cache for speed-up
-        private Node[] mNodes;
+        //private Digraph<Node, Edge>.GNode[] mNodes;
+        private int mNodeCount;
         /// <summary>
         /// Scene-level X-coordinates of new node positions
         /// </summary>
-        private double[] mXPositions;
+        private double[] mXs;
         /// <summary>
         /// Scene-level Y-coordinates of new node positions
         /// </summary>
-        private double[] mYPositions;
+        private double[] mYs;
+        /// <summary>
+        /// Whether or not each node is currently hidden.
+        /// </summary>
+        private bool[] mHidden;
 
         private float mK = 1;
         private bool bAdjustForGravity;
@@ -39,16 +39,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         private double mIdealEdgeLength;
         private double mMaxDistance;
 
-        /*public KKLayoutAlgorithm(Digraph<Node, Edge> graph)
-            : base(graph, null)
-        {
-        }
-
-        public KKLayoutAlgorithm(Digraph<Node, Edge> graph,
-            KKLayoutParameters oldParameters)
-            : base(graph, oldParameters)
-        {
-        }/* */
+        private bool bDirty = true;
 
         public KKLayoutAlgorithm(Digraph<Node, Edge> graph,
             IClusterNode clusterNode)
@@ -58,6 +49,9 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                 = new BasicAllShortestPaths<Node, Edge>(
                     new DijkstraShortestPath<Node, Edge>(
                         graph, false, false));
+            this.mXs = new double[0];
+            this.mYs = new double[0];
+            this.mHidden = new bool[0];
             this.MaxIterations = 200;
         }
 
@@ -69,6 +63,9 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                 = new BasicAllShortestPaths<Node, Edge>(
                     new DijkstraShortestPath<Node, Edge>(
                         graph, false, false));
+            this.mXs = new double[0];
+            this.mYs = new double[0];
+            this.mHidden = new bool[0];
             this.MaxIterations = 200;
         }
 
@@ -80,9 +77,6 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                 if (this.mK != value)
                 {
                     this.mK = value;
-#if KKExtraCache
-                    this.MarkDirty();
-#endif
                 }
             }
         }
@@ -128,7 +122,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                 if (this.mLengthFactor != value)
                 {
                     this.mLengthFactor = value;
-                    this.MarkDirty();
+                    this.bDirty = true;
                 }
             }
         }
@@ -145,111 +139,122 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                 if (this.mDisconnectedMultiplier != value)
                 {
                     this.mDisconnectedMultiplier = value;
-                    this.MarkDirty();
+                    this.bDirty = true;
                 }
             }
         }
 
-        protected override void OnBeginIteration(uint iteration, bool dirty,//bool paramsDirty,
-            int lastNodeCount, int lastEdgeCount)
+        protected override void PerformPrecalculations(
+            uint lastNodeVersion, uint lastEdgeVersion)
         {
-            bool isDirty = lastNodeCount != this.mGraph.NodeCount;
+            bool isDirty = lastNodeVersion != this.mGraph.NodeVersion;
             if (isDirty)
             {
+                Digraph<Node, Edge>.GNode gNode;
+                this.mNodeCount = this.mGraph.NodeCount;
                 // Cache the nodes for speed-up and in case the graph
                 // is modified during the iteration.
-                this.mNodes = this.mGraph.Nodes;
-                this.mXPositions = new double[this.mNodes.Length];
-                this.mYPositions = new double[this.mNodes.Length];
+                if (this.mHidden.Length < this.mNodeCount)
+                {
+                    this.mXs = new double[this.mNodeCount];
+                    this.mYs = new double[this.mNodeCount];
+                    this.mHidden = new bool[this.mNodeCount];
+                }
+                for (int k = 0; k < this.mNodeCount; k++)
+                {
+                    gNode = this.mGraph.InternalNodeAt(k);
+                    this.mXs[k] = gNode.Data.X;
+                    this.mYs[k] = gNode.Data.Y;
+                    this.mHidden[k] = gNode.Hidden;
+                }
+                this.bDirty = true;
             }
 
-            isDirty = isDirty || lastEdgeCount != this.mGraph.EdgeCount;
+            isDirty = isDirty || lastEdgeVersion != this.mGraph.EdgeVersion;
             if (isDirty)
             {
                 // Calculate the distances and diameter of the graph.
-                //this.mDistances = this.mGraph.GetDistances();
-                //this.mDiameter = Digraph<Node, Edge>.GetDiameter(this.mDistances);
                 this.mShortestPathsAlg.Reset();
                 this.mShortestPathsAlg.Compute();
                 this.mDistances = this.mShortestPathsAlg.Distances;
                 this.mDiameter = this.mShortestPathsAlg.GetDiameter();
+                this.bDirty = true;
             }
 
-            if (dirty)
+            if (this.bDirty)
             {
-                //KKLayoutParameters param = this.Parameters;
-                //this.mK = param.K;
-                //this.bAdjustForGravity = param.AdjustForGravity;
-                //this.bExchangeVertices = param.ExchangeVertices;
                 Box2F bbox = this.mClusterNode == null
                     ? this.BoundingBox : this.mClusterNode.LayoutBBox;
 
                 // L0 is the length of a side of the display area
-                //float L0 = Math.Min(param.Width, param.Height);
                 float L0 = Math.Min(bbox.W, bbox.H);
 
                 // ideal length = L0 / max distance
-                //this.mIdealEdgeLength = L0 * param.LengthFactor / this.mDiameter;
-                this.mIdealEdgeLength = L0 * this.mLengthFactor / this.mDiameter;
+                this.mIdealEdgeLength 
+                    = L0 * this.mLengthFactor / this.mDiameter;
 
-                //this.mMaxDistance = this.mDiameter * param.DisconnectedMultiplier;
-                this.mMaxDistance = this.mDiameter * this.mDisconnectedMultiplier;
+                this.mMaxDistance 
+                    = this.mDiameter * this.mDisconnectedMultiplier;
 
                 // Calculate the ideal distances between the nodes
-                double dist;
-                int i, j, count = this.mNodes.Length;
-                for (i = 0; i < count; i++)
+                /*float dist;
+                int i, j;
+                for (i = 0; i < this.mNodeCount; i++)
                 {
-                    for (j = 0; j < count; j++)
+                    for (j = 0; j < this.mNodeCount; j++)
                     {
                         // distance between non-adjacent nodes
-                        dist = Math.Min(this.mDistances[i][j], this.mMaxDistance);
-
+                        dist = (float)Math.Min(this.mDistances[i][j], 
+                                               this.mMaxDistance);
                         // calculate the minimal distance between the vertices
                         this.mDistances[i][j] = dist;
-#if KKExtraCache
-                    this.mEdgeLengths[i, j] = this.mIdealEdgeLength * dist;
-                    this.mSpringConstants[i, j] = (float)(this.mK / (dist * dist));
-#endif
                     }
-                }
+                }/* */
             }
-            base.OnBeginIteration(iteration, dirty, lastNodeCount, lastEdgeCount);
+            this.bDirty = false;
         }
 
         // TODO: Can the position copying from mXPositions and mYPositions
         // be reduced to the barycenter node that changes position and any nodes
         // which have been swapped on each iteration?
-        protected override void PerformIteration(uint iteration)//, int maxIterations)
+        protected override void PerformIteration(uint iteration)
         {
-            int i, j, count = this.mNodes.Length;
+            int i, j;
+            Node node;
 
             // copy positions into array
             // necessary each time because node positions can change outside
             // this algorithm, by constraining to bbox and by user code.
-            //SizeF pos;
-            for (i = 0; i < count; i++)
+            for (i = 0; i < this.mNodeCount; i++)
             {
-                //pos = this.mNodes[i].SceneTranslate();
-                //this.mXPositions[i] = pos.Width;
-                //this.mYPositions[i] = pos.Height;
-                this.mXPositions[i] = this.mNodes[i].X;
-                this.mYPositions[i] = this.mNodes[i].Y;
+                if (!this.mHidden[i])
+                {
+                    node = this.mGraph.NodeAt(i);
+                    if (node.PositionFixed)
+                    {
+                        this.mXs[i] = node.X;
+                        this.mYs[i] = node.Y;
+                    }
+                }
             }
 
-            double deltaM, maxDeltaM = double.NegativeInfinity;
+            double nx, ny, deltaM, maxDeltaM = double.NegativeInfinity;
             int pm = -1;
 
             // get the 'p' with max delta_m
-            for (i = 0; i < count; i++)
+            for (i = 0; i < this.mNodeCount; i++)
             {
-                if (!this.mNodes[i].PositionFixed)
+                if (!this.mHidden[i])
                 {
-                    deltaM = this.CalculateEnergyGradient(i);
-                    if (maxDeltaM < deltaM)
+                    node = this.mGraph.NodeAt(i);
+                    if (!node.PositionFixed)
                     {
-                        maxDeltaM = deltaM;
-                        pm = i;
+                        deltaM = this.CalculateEnergyGradient(i);
+                        if (maxDeltaM < deltaM)
+                        {
+                            maxDeltaM = deltaM;
+                            pm = i;
+                        }
                     }
                 }
             }
@@ -272,48 +277,75 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                     break;
             }
 
+            // Perform the bounding constraints normally done by base layout
+            // algorithm. It needs to be done here so cached positions don't
+            // need to be copied over on every single iteration, but still
+            // allow the energy calculations to compensate for it.
+            node = this.mGraph.NodeAt(pm);
+            Box2F nbox = node.LayoutBBox;
+            if (this.mClusterNode == null)
+            {
+                double d;
+                Box2F bbox = this.BoundingBox;
+                d = nbox.W;
+                this.mXs[pm] = Math.Min(Math.Max(this.mXs[pm] + nbox.X, bbox.X) + d, bbox.Right) - nbox.X - d;
+                d = nbox.H;
+                this.mYs[pm] = Math.Min(Math.Max(this.mYs[pm] + nbox.Y, bbox.Y) + d, bbox.Bottom) - nbox.Y - d;
+            }
+            else
+            {
+                this.mClusterNode.LearnNodePos(
+                    (float)this.mXs[pm], (float)this.mYs[pm], nbox);
+                Vec2F pos = this.mClusterNode.AugmentNodePos(
+                    (float)this.mXs[pm], (float)this.mYs[pm]);
+                this.mXs[pm] = pos.X;
+                this.mYs[pm] = pos.Y;
+            }
+
             // What if two of the nodes were exchanged?
             if (this.bExchangeVertices && maxDeltaM < double.Epsilon)
             {
                 double xenergy, energy = CalcEnergy();
                 bool noSwaps = true;
-                for (i = 0; i < count && noSwaps; i++)
+                for (i = 0; i < this.mNodeCount && noSwaps; i++)
                 {
-                    for (j = 0; j < count && noSwaps; j++)
+                    if (!this.mHidden[i])
                     {
-                        if (i == j)
-                            continue;
-                        xenergy = CalcEnergyIfExchanged(i, j);
-                        if (energy > xenergy)
+                        for (j = 0; j < this.mNodeCount && noSwaps; j++)
                         {
-                            deltaM = this.mXPositions[i];
-                            this.mXPositions[i] = this.mXPositions[j];
-                            this.mXPositions[j] = deltaM;
-                            deltaM = this.mYPositions[i];
-                            this.mYPositions[i] = this.mYPositions[j];
-                            this.mYPositions[j] = deltaM;
-                            noSwaps = false;
+                            if (i == j || this.mHidden[i])
+                                continue;
+                            xenergy = CalcEnergyIfExchanged(i, j);
+                            if (energy > xenergy)
+                            {
+                                deltaM = this.mXs[i];
+                                this.mXs[i] = this.mXs[j];
+                                this.mXs[j] = deltaM;
+                                deltaM = this.mYs[i];
+                                this.mYs[i] = this.mYs[j];
+                                this.mYs[j] = deltaM;
+                                noSwaps = false;
+                            }
                         }
                     }
                 }
             }
-            //float[] newXs = this.NewXPositions;
-            //float[] newYs = this.NewYPositions;
-            Node node;
-            //SizeF sPos;
-            for (i = 0; i < count; i++)
+            // Use a linear transition to make the animation smooth
+            // pos = pos + 0.1 * (newPos - pos) = 0.9 * pos + 0.1 * newPos
+            for (i = 0; i < this.mNodeCount; i++)
             {
-                node = this.mNodes[i];
-                //sPos = node.SceneTranslate();
-                //node.SetNewPosition(
-                //    node.X + (float)this.mXPositions[i] - sPos.Width,
-                //    node.Y + (float)this.mYPositions[i] - sPos.Height);             
-                //node.NewX = node.X + (float)this.mXPositions[i] - sPos.Width;
-                //node.NewY = node.Y + (float)this.mYPositions[i] - sPos.Height;
-                node.SetNewPosition((float)this.mXPositions[i], 
-                                    (float)this.mYPositions[i]);
-                //newXs[i] = node.X + (float)this.mXPositions[i] - sPos.Width;
-                //newYs[i] = node.Y + (float)this.mYPositions[i] - sPos.Height;
+                if (!this.mHidden[i])
+                {
+                    node = this.mGraph.NodeAt(i);
+                    if (!node.PositionFixed)
+                    {
+                        //node.SetPosition((float)this.mXPositions[i], 
+                        //                 (float)this.mYPositions[i]);
+                        nx = 0.9 * node.X + 0.1 * this.mXs[i];
+                        ny = 0.9 * node.Y + 0.1 * this.mYs[i];
+                        node.SetPosition((float)nx, (float)ny);
+                    }
+                }
             }
         }
 
@@ -331,28 +363,25 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         private double CalcEnergyIfExchanged(int p, int q)
         {
             double l_ij, k_ij, dx, dy, energy = 0;
-            int i, j, ii, jj, count = this.mNodes.Length;
-            for (i = 0; i < count; i++)
+            int i, j, ii, jj;
+            for (i = 0; i < this.mNodeCount; i++)
             {
-                for (j = 0; j < count; j++)
+                if (this.mHidden[i])
+                    continue;
+                for (j = 0; j < this.mNodeCount; j++)
                 {
-                    if (i == j)
+                    if (i == j || this.mHidden[j])
                         continue;
                     ii = (i == p) ? q : i;
                     jj = (j == q) ? p : j;
-#if KKExtraCache
-                    l_ij = this.mEdgeLengths[i, j];
-                    k_ij = this.mSpringConstants[i, j];
-#else
                     k_ij = Math.Min(this.mDistances[i][j], this.mMaxDistance);
                     l_ij = this.mIdealEdgeLength * k_ij;
                     k_ij = this.mK / (k_ij * k_ij);
-#endif
-                    dx = this.mXPositions[ii] - this.mXPositions[jj];
-                    dy = this.mYPositions[ii] - this.mYPositions[jj];
+                    dx = this.mXs[ii] - this.mXs[jj];
+                    dy = this.mYs[ii] - this.mYs[jj];
 
-                    energy += k_ij / 2 * (dx * dx + dy * dy + l_ij * l_ij -
-                                           2 * l_ij * Math.Sqrt(dx * dx + dy * dy));
+                    energy += k_ij / 2 * (dx * dx + dy * dy + l_ij * l_ij
+                        - 2 * l_ij * Math.Sqrt(dx * dx + dy * dy));
                 }
             }
             return energy;
@@ -365,26 +394,23 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         private double CalcEnergy()
         {
             double energy = 0, dist, l_ij, k_ij, dx, dy;
-            int i, j, count = this.mNodes.Length;
-            for (i = 0; i < count; i++)
+            int i, j;
+            for (i = 0; i < this.mNodeCount; i++)
             {
-                for (j = 0; j < count; j++)
+                if (this.mHidden[i])
+                    continue;
+                for (j = 0; j < this.mNodeCount; j++)
                 {
-                    if (i == j)
+                    if (i == j || this.mHidden[j])
                         continue;
                     dist = Math.Min(this.mDistances[i][j], this.mMaxDistance);
-#if KKExtraCache
-                    l_ij = this.mEdgeLengths[i, j];
-                    k_ij = this.mSpringConstants[i, j];
-#else
                     l_ij = this.mIdealEdgeLength * dist;
                     k_ij = this.mK / (dist * dist);
-#endif
-                    dx = this.mXPositions[i] - this.mXPositions[j];
-                    dy = this.mYPositions[i] - this.mYPositions[j];
+                    dx = this.mXs[i] - this.mXs[j];
+                    dy = this.mYs[i] - this.mYs[j];
 
-                    energy += k_ij / 2 * (dx * dx + dy * dy + l_ij * l_ij -
-                                           2 * l_ij * Math.Sqrt(dx * dx + dy * dy));
+                    energy += k_ij / 2 * (dx * dx + dy * dy + l_ij * l_ij 
+                        - 2 * l_ij * Math.Sqrt(dx * dx + dy * dy));
                 }
             }
             return energy;
@@ -401,22 +427,16 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         {
             double dxm = 0, dym = 0, d2xm = 0, dxmdym = 0, dymdxm = 0, d2ym = 0;
             double l, k, dx, dy, d, ddd;
-            Node node = this.mNodes[m];
-            for (int i = 0; i < this.mNodes.Length; i++)
+            for (int i = 0; i < this.mNodeCount; i++)
             {
-                if (i != m)
+                if (i != m && !this.mHidden[i])
                 {
                     //common things
-#if KKExtraCache
-                    l = this.mEdgeLengths[m, i];
-                    k = this.mSpringConstants[m, i];
-#else
                     k = Math.Min(this.mDistances[m][i], this.mMaxDistance);
                     l = this.mIdealEdgeLength * k;
                     k = this.mK / (k * k);
-#endif
-                    dx = this.mXPositions[m] - this.mXPositions[i];
-                    dy = this.mYPositions[m] - this.mYPositions[i];
+                    dx = this.mXs[m] - this.mXs[i];
+                    dy = this.mYs[m] - this.mYs[i];
 
                     //distance between the points
                     d = Math.Max(Math.Sqrt(dx * dx + dy * dy), 0.000001);
@@ -426,9 +446,9 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                     dym += k * (1 - l / d) * dy;
                     // TODO: isn't it wrong?
                     d2xm += k * (1 - l * dy * dy / ddd);
-                    // d2E_d2xm += k_mi * ( 1 - l_mi / d + l_mi * dx * dx / ddd );
+                    //d2E_d2xm += k_mi * (1 - l_mi / d + l_mi * dx * dx / ddd);
                     dxmdym += k * l * dx * dy / ddd;
-                    // d2E_d2ym += k_mi * ( 1 - l_mi / d + l_mi * dy * dy / ddd );
+                    //d2E_d2ym += k_mi * (1 - l_mi / d + l_mi * dy * dy / ddd);
                     // TODO: isn't it wrong?
                     d2ym += k * (1 - l * dx * dx / ddd);
                 }
@@ -437,8 +457,10 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             dymdxm = dxmdym;
 
             double denomi = d2xm * d2ym - dxmdym * dymdxm;
-            this.mXPositions[m] = this.mXPositions[m] + (dxmdym * dym - d2ym * dxm) / denomi;
-            this.mYPositions[m] = this.mYPositions[m] + (dymdxm * dxm - d2xm * dym) / denomi;
+            this.mXs[m] = this.mXs[m] 
+                + (dxmdym * dym - d2ym * dxm) / denomi;
+            this.mYs[m] = this.mYs[m] 
+                + (dymdxm * dxm - d2xm * dym) / denomi;
         }
 
         /// <summary>
@@ -453,24 +475,20 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             //        {  1, if m < i
             // sign = { 
             //        { -1, if m > i
-            for (int i = 0; i < this.mNodes.Length; i++)
+            for (int i = 0; i < this.mNodeCount; i++)
             {
-                if (i == m)
+                if (i == m || this.mHidden[i])
                     continue;
 
                 //differences of the positions
-                dx = this.mXPositions[m] - this.mXPositions[i];
-                dy = this.mYPositions[m] - this.mYPositions[i];
+                dx = this.mXs[m] - this.mXs[i];
+                dy = this.mYs[m] - this.mYs[i];
 
                 //distances of the two vertex (by positions)
                 d = Math.Max(Math.Sqrt(dx * dx + dy * dy), 0.000001);
-#if KKExtraCache
-                factor = this.mSpringConstants[m, i] * (1 - this.mEdgeLengths[m, i] / d);
-#else
                 factor = Math.Min(this.mDistances[m][i], this.mMaxDistance);
                 factor = (this.mK / (factor * factor)) *
                     (1 - this.mIdealEdgeLength * factor / d);
-#endif
                 dxm += factor * dx;
                 dym += factor * dy;
             }

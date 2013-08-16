@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Text;
 
 namespace GraphForms.Algorithms.Layout
 {
@@ -18,14 +15,14 @@ namespace GraphForms.Algorithms.Layout
     /// <typeparamref name="Node"/> instances that this algorithm 
     /// rearranges.</typeparam>
     public abstract class LayoutAlgorithm<Node, Edge>
-        : ARootedAlgorithm<Node>
+        : AGraphAlgorithm<Node, Edge>
         where Node : class, ILayoutNode
         where Edge : IGraphEdge<Node>, IUpdateable
     {
-        /// <summary>
+        /*/// <summary>
         /// The graph which this layout algorithm operates on.
         /// </summary>
-        protected readonly Digraph<Node, Edge> mGraph;
+        protected readonly Digraph<Node, Edge> mGraph;/* */
         /// <summary>
         /// If <see cref="mGraph"/> is actually a sub-graph, then
         /// this is the node in the graph superstructure that encloses it.
@@ -37,19 +34,19 @@ namespace GraphForms.Algorithms.Layout
         /// </summary>
         private Box2F mBBox;
 
-        /// <summary>
+        /*/// <summary>
         /// Flags whether the fields of this algorithm have changed 
         /// and need to be refreshed on the next iteration.
         /// </summary>
-        private bool bDirty = true;
+        private bool bDirty = true;/* */
         /// <summary>
-        /// The number of nodes in the graph during the last iteration.
+        /// The node version of the graph after the last precalculation.
         /// </summary>
-        private int mLastNodeCount = 0;
+        private uint mLastNVers;
         /// <summary>
-        /// The number of edges in the graph during the last iteration.
+        /// The edge version of the graph after the last precalculation.
         /// </summary>
-        private int mLastEdgeCount = 0;
+        private uint mLastEVers;
 
         /// <summary>
         /// Whether the algorithm should reset back to its starting point
@@ -62,11 +59,11 @@ namespace GraphForms.Algorithms.Layout
         /// equilibrium and finished.
         /// </summary>
         private bool bItemMoved;
-        /// <summary>
+        /*/// <summary>
         /// Whether this layout algorithm is currently in an iteration and 
         /// executing code between <see cref="BeginIteration(uint)"/> and
         /// <see cref="EndIteration(uint)"/>.</summary>
-        private bool bInIteration = false;
+        private bool bInIteration = false;/* */
 
         /// <summary>
         /// The X-coordinates of the positions of all the nodes 
@@ -99,17 +96,20 @@ namespace GraphForms.Algorithms.Layout
         /// <seealso cref="Graph"/><seealso cref="ClusterNode"/>
         public LayoutAlgorithm(Digraph<Node, Edge> graph, 
             IClusterNode clusterNode)
+            : base(graph)
         {
-            if (graph == null)
-                throw new ArgumentNullException("graph");
             if (clusterNode == null)
                 throw new ArgumentNullException("clusterNode");
-            this.mGraph = graph;
             this.mClusterNode = clusterNode;
             this.mBBox = new Box2F(0, 0, 0, 0);
 
-            this.mLastXs = new float[graph.NodeCount];
-            this.mLastYs = new float[graph.NodeCount];
+            uint vers = graph.NodeVersion;
+            this.mLastNVers = vers == 0 ? uint.MaxValue : vers - 1;
+            vers = graph.EdgeVersion;
+            this.mLastEVers = vers == 0 ? uint.MaxValue : vers - 1;
+
+            this.mLastXs = new float[0];
+            this.mLastYs = new float[0];
         }
 
         /// <summary>
@@ -125,15 +125,20 @@ namespace GraphForms.Algorithms.Layout
         /// <paramref name="graph"/> to within its boundaries.</param>
         public LayoutAlgorithm(Digraph<Node, Edge> graph,
             Box2F boundingBox)
+            : base(graph)
         {
-            if (graph == null)
-                throw new ArgumentNullException("graph");
-            this.mGraph = graph;
+            if (boundingBox == null)
+                throw new ArgumentNullException("boundingBox");
             this.mClusterNode = null;
             this.mBBox = boundingBox;
 
-            this.mLastXs = new float[graph.NodeCount];
-            this.mLastYs = new float[graph.NodeCount];
+            uint vers = graph.NodeVersion;
+            this.mLastNVers = vers == 0 ? uint.MaxValue : vers - 1;
+            vers = graph.EdgeVersion;
+            this.mLastEVers = vers == 0 ? uint.MaxValue : vers - 1;
+
+            this.mLastXs = new float[0];
+            this.mLastYs = new float[0];
         }
 
         /// <summary>
@@ -183,21 +188,22 @@ namespace GraphForms.Algorithms.Layout
             set
             {
                 if (this.State != ComputeState.Running &&
-                    this.mAsyncState != ComputeState.Running)
+                    this.mAsyncState != ComputeState.Running &&
+                    value != null)
                 {
                     this.mBBox = new Box2F(value);
                 }
             }
         }
 
-        /// <summary>
+        /*/// <summary>
         /// Notifies this algorithm that it needs to be refreshed at the 
         /// beginning of the next iteration of its layout computation.
         /// </summary>
         protected void MarkDirty()
         {
             this.bDirty = true;
-        }
+        }/* */
 
         /// <summary>
         /// Resets this algorithm back to its starting point, which causes it
@@ -222,13 +228,13 @@ namespace GraphForms.Algorithms.Layout
             get { return this.bItemMoved; }
         }
 
-        /// <summary>
+        /*/// <summary>
         /// Whether this layout algorithm is currently in an iteration.
         /// </summary>
         public bool InIteration
         {
             get { return this.bInIteration; }
-        }
+        }/* */
 
         /// <summary>
         /// The current state of the asynchronous computation 
@@ -299,7 +305,7 @@ namespace GraphForms.Algorithms.Layout
             }
         }
 
-        /// <summary>
+        /*/// <summary>
         /// Tries to get the internal node in this layout algorithm's
         /// <see cref="Graph"/> that corresponds to the root node set with
         /// the <see cref="M:ARootedAlgorithm`1{Node}.SetRoot(Node)"/>
@@ -321,9 +327,9 @@ namespace GraphForms.Algorithms.Layout
                 index = 0;
             Digraph<Node, Edge>.GNode root 
                 = this.mGraph.InternalNodeAt(index);
-            root.Index = index;
+            //root.Index = index;
             return root;
-        }
+        }/* */
 
         /// <summary>
         /// Shuffles all layout nodes (but not port nodes) in this layout
@@ -386,10 +392,10 @@ namespace GraphForms.Algorithms.Layout
             Vec2F pos;
             Box2F bboxI, bboxJ;
             Random rnd = new Random(DateTime.Now.Millisecond);
-            Digraph<Node, Edge>.GNode[] nodes = this.mGraph.InternalNodes;
-            for (i = 0; i < nodes.Length; i++)
+            int count = this.mGraph.NodeCount;
+            for (i = 0; i < count; i++)
             {
-                node = nodes[i].mData;
+                node = this.mGraph.NodeAt(i);
                 if (!node.PositionFixed)
                 {
                     x = y = 0;
@@ -422,12 +428,12 @@ namespace GraphForms.Algorithms.Layout
                         }
                         for (j = 0; j < i && !intersection; j++)
                         {
-                            node = nodes[j].mData;
+                            node = this.mGraph.NodeAt(j);
                             //if (!(node is IPortNode))
                             {
                                 bboxJ = new Box2F(node.LayoutBBox);
-                                bboxJ.X += node.NewX;
-                                bboxJ.Y += node.NewY;
+                                bboxJ.X += node.X;//node.NewX;
+                                bboxJ.Y += node.Y;//node.NewY;
                                 intersection = bboxI.IntersectsWith(bboxJ);
                                 //intersection =
                                 //    bboxJ.X < (bboxI.X + bboxI.Width) &&
@@ -443,14 +449,19 @@ namespace GraphForms.Algorithms.Layout
                     bbw += bboxI.W;
                     bbh += bboxI.H;
                     // Set the node's new randomized position
-                    nodes[i].mData.SetNewPosition(x, y);
+                    node = this.mGraph.NodeAt(i);
+                    node.SetPosition(x, y);//SetNewPosition(x, y);
                 }
             }
-            if (immediate)
+            for (i = this.mGraph.EdgeCount - 1; i >= 0; i--)
+            {
+                this.mGraph.EdgeAt(i).Update();
+            }
+            /*if (immediate)
             {
                 for (i = 0; i < nodes.Length; i++)
                 {
-                    node = nodes[i].mData;
+                    node = nodes[i].Data;
                     if (!node.PositionFixed)
                         node.SetPosition(node.NewX, node.NewY);
                 }
@@ -458,9 +469,9 @@ namespace GraphForms.Algorithms.Layout
                     = this.mGraph.InternalEdges;
                 for (i = 0; i < edges.Length; i++)
                 {
-                    edges[i].mData.Update();
+                    edges[i].Data.Update();
                 }
-            }
+            }/* */
         }
 
         /// <summary>
@@ -497,10 +508,9 @@ namespace GraphForms.Algorithms.Layout
         /// their angles.</param>
         protected void SetPortNodePositions(bool immediate)
         {
-            Digraph<Node, Edge>.GNode[] nodes
-                = this.mGraph.InternalNodes;
-            int i;
             IPortNode pNode;
+            Digraph<Node, Edge>.GNode node;
+            int i, count = this.mGraph.NodeCount;
             if (this.mClusterNode == null)
             {
                 double cx = this.mBBox.X + this.mBBox.W / 2.0;
@@ -508,46 +518,48 @@ namespace GraphForms.Algorithms.Layout
                 // x = dx * t + cx = 2 * cx; y = dy * t + cy = 2 * cy;
                 // t = cx / dx; t = cy / dy;
                 double t, dx, dy;
-                for (i = 0; i < nodes.Length; i++)
+                for (i = 0; i < count; i++)
                 {
-                    if (nodes[i].mData is IPortNode)
+                    node = this.mGraph.InternalNodeAt(i);
+                    if (node.Data is IPortNode)
                     {
-                        pNode = nodes[i].mData as IPortNode;
+                        pNode = node.Data as IPortNode;
                         t = (pNode.MinAngle + pNode.MaxAngle) / 2;
                         dx = Math.Cos(t);
                         dy = Math.Sin(t);
                         t = Math.Min(Math.Abs(cx / dx), Math.Abs(cy / dy));
                         dx = dx * t + cx;
                         dy = dy * t + cy;
-                        pNode.SetNewPosition((float)dx, (float)dy);
+                        pNode.SetPosition((float)dx, (float)dy);//SetNewPosition((float)dx, (float)dy);
                     }
                 }
             }
             else
             {
                 Vec2F pos;
-                for (i = 0; i < nodes.Length; i++)
+                for (i = 0; i < count; i++)
                 {
-                    if (nodes[i].mData is IPortNode)
+                    node = this.mGraph.InternalNodeAt(i);
+                    if (node.Data is IPortNode)
                     {
-                        pNode = nodes[i].mData as IPortNode;
+                        pNode = node.Data as IPortNode;
                         pos = this.mClusterNode.GetPortNodePos(
                             (pNode.MinAngle + pNode.MaxAngle) / 2);
-                        pNode.SetNewPosition(pos.X, pos.Y);
+                        pNode.SetPosition(pos.X, pos.Y);//SetNewPosition(pos.X, pos.Y);
                     }
                 }
             }
-            if (immediate)
+            /*if (immediate)
             {
                 for (i = 0; i < nodes.Length; i++)
                 {
-                    if (nodes[i].mData is IPortNode)
+                    if (nodes[i].Data is IPortNode)
                     {
-                        pNode = nodes[i].mData as IPortNode;
+                        pNode = nodes[i].Data as IPortNode;
                         pNode.SetPosition(pNode.NewX, pNode.NewY);
                     }
                 }
-            }
+            }/* */
         }
 
         /// <summary>
@@ -571,7 +583,7 @@ namespace GraphForms.Algorithms.Layout
             return true;
         }
 
-        /// <summary>
+        /*/// <summary>
         /// Performs all the necessary actions needed to start a single
         /// iteration calculation of this layout algorithm and then calls
         /// <see cref="OnBeginIteration(uint,bool,int,int)"/> to run any
@@ -583,12 +595,12 @@ namespace GraphForms.Algorithms.Layout
         /// <see cref="EndIteration(uint)"/> function.</exception>
         protected void BeginIteration(uint iteration)
         {
-            /*if (this.bInIteration)
+            if (this.bInIteration)
             {
                 throw new InvalidOperationException(
                     "Iteration already started.");
             }
-            this.bInIteration = true;/* */
+            this.bInIteration = true;
             Digraph<Node, Edge>.GNode[] nodes
                 = this.mGraph.InternalNodes;
             // Expand the last position logs if necessary
@@ -600,9 +612,9 @@ namespace GraphForms.Algorithms.Layout
             // Log the previous positions of all the nodes
             for (int i = 0; i < nodes.Length; i++)
             {
-                nodes[i].Index = i;
-                this.mLastXs[i] = nodes[i].mData.X;
-                this.mLastYs[i] = nodes[i].mData.Y;
+                //nodes[i].Index = i;
+                this.mLastXs[i] = nodes[i].Data.X;
+                this.mLastYs[i] = nodes[i].Data.Y;
             }
             // Run any code unique to the specific layout algorithm.
             this.OnBeginIteration(iteration, this.bDirty,
@@ -631,6 +643,34 @@ namespace GraphForms.Algorithms.Layout
         protected virtual void OnBeginIteration(uint iteration, 
             bool dirty, int lastNodeCount, int lastEdgeCount)
         {
+        }/* */
+
+        private void SetLastPositions()
+        {
+            if (this.mLastXs.Length < this.mGraph.NodeCount)
+            {
+                this.mLastXs = new float[this.mGraph.NodeCount];
+                this.mLastYs = new float[this.mGraph.NodeCount];
+            }
+            Node node;
+            for (int i = this.mGraph.NodeCount - 1; i >= 0; i--)
+            {
+                node = this.mGraph.NodeAt(i);
+                this.mLastXs[i] = node.X;
+                this.mLastYs[i] = node.Y;
+            }
+        }
+
+        protected void PerformPrecalculations()
+        {
+            this.PerformPrecalculations(this.mLastNVers, this.mLastEVers);
+            this.mLastNVers = this.mGraph.NodeVersion;
+            this.mLastEVers = this.mGraph.EdgeVersion;
+        }
+
+        protected virtual void PerformPrecalculations(
+            uint lastNodeVersion, uint lastEdgeVersion)
+        {
         }
 
         /// <summary>
@@ -641,9 +681,7 @@ namespace GraphForms.Algorithms.Layout
         /// </summary>
         /// <param name="iteration">The current number of iterations that
         /// have already occurred in this algorithm's computation.</param>
-        protected virtual void PerformIteration(uint iteration)
-        {
-        }
+        protected abstract void PerformIteration(uint iteration);
 
         /// <summary>
         /// Performs all the necessary actions needed to finish a single
@@ -655,85 +693,92 @@ namespace GraphForms.Algorithms.Layout
         /// <exception cref="InvalidOperationException">This layout algorithm
         /// hasn't started started an iteration yet with the
         /// <see cref="BeginIteration(uint)"/> function.</exception>
-        protected virtual void EndIteration(uint iteration)
+        private void EndIteration(uint iteration)
         {
             /*if (!this.bInIteration)
             {
                 throw new InvalidOperationException(
                     "Iteration already finished.");
             }/* */
-            int i;
+            int i, count = this.mGraph.NodeCount;
             float dx, dy;
             Node node;
-            Digraph<Node, Edge>.GNode[] nodes
-                = this.mGraph.InternalNodes;
             // Step 1: Let the cluster node react to and change
             // the new positions of any or all of the layout nodes,
             // such as restricting them to within its bounds/shape or 
             // expanding its bounds/shape to fit their new positions.
             if (this.mClusterNode == null)
             {
+                float d;
+                Box2F nbox;
+                // Calculate the bounding box of all the nodes
                 float minX = float.MaxValue;
                 float minY = float.MaxValue;
                 float maxX = -float.MaxValue;
                 float maxY = -float.MaxValue;
-                /*for (i = 0; i < nodes.Length; i++)
+                /*for (i = 0; i < count; i++)
                 {
-                    node = nodes[i].mData;
-                    dx = node.NewX;
-                    dy = node.NewY;
+                    node = this.mGraph.NodeAt(i);
+                    nbox = node.LayoutBBox;
+                    dx = node.X + nbox.X;
+                    dy = node.Y + nbox.Y;
                     if (dx < minX)
                         minX = dx;
                     if (dy < minY)
                         minY = dy;
+                    dx += nbox.W;
+                    dy += nbox.H;
                     if (dx > maxX)
                         maxX = dx;
                     if (dy > maxY)
                         maxY = dy;
-                }
-                if (minX < this.mBBox.X ||
-                    maxX > this.mBBox.Right)
-                {
                 }/* */
                 minX = this.mBBox.X;
                 minY = this.mBBox.Y;
-                maxX = this.mBBox.Right;//minX + this.mBBox.W;
-                maxY = this.mBBox.Bottom;//minY + this.mBBox.H;
-                for (i = 0; i < nodes.Length; i++)
+                maxX = minX + this.mBBox.W;
+                maxY = minY + this.mBBox.H;
+                for (i = 0; i < count; i++)
                 {
-                    node = nodes[i].mData;
-                    dx = Math.Min(Math.Max(node.NewX, minX), maxX);
-                    dy = Math.Min(Math.Max(node.NewY, minY), maxY);
-                    node.SetNewPosition(dx, dy);
+                    node = this.mGraph.NodeAt(i);
+                    nbox = node.LayoutBBox;
+                    //dx = Math.Min(Math.Max(node.NewX, minX), maxX);
+                    //dy = Math.Min(Math.Max(node.NewY, minY), maxY);
+                    //node.SetNewPosition(dx, dy);
+                    d = nbox.W;
+                    dx = Math.Min(Math.Max(node.X + nbox.X, minX) + d, maxX) - nbox.X - d;
+                    d = nbox.H;
+                    dy = Math.Min(Math.Max(node.Y + nbox.Y, minY) + d, maxY) - nbox.Y - d;
+                    node.SetPosition(dx, dy);
                 }
             }
             else
             {
-                for (i = 0; i < nodes.Length; i++)
+                for (i = 0; i < count; i++)
                 {
-                    node = nodes[i].mData;
+                    node = this.mGraph.NodeAt(i);
                     this.mClusterNode.LearnNodePos(
-                        node.NewX, node.NewY, node.LayoutBBox);
+                        //node.NewX, node.NewY, node.LayoutBBox);
+                        node.X, node.Y, node.LayoutBBox);
                 }
                 Vec2F pos;
-                for (i = 0; i < nodes.Length; i++)
+                for (i = 0; i < count; i++)
                 {
-                    node = nodes[i].mData;
+                    node = this.mGraph.NodeAt(i);
                     pos = this.mClusterNode.AugmentNodePos(
-                        node.NewX, node.NewY);
-                    node.SetNewPosition(pos.X, pos.Y);
+                        node.X, node.Y);//node.NewX, node.NewY);
+                    node.SetPosition(pos.X, pos.Y);//SetNewPosition(pos.X, pos.Y);
                 }
             }
             // Step 2: If there is an ILayoutSpring instance, use it to
             // perform a "twaining" animation; otherwise, directly set 
             // the position of each layout node to their new position.
-            if (this.mSpring != null)
+            /*if (this.mSpring != null)
             {
                 float x, y;
                 Vec2F force;
-                for (i = 0; i < nodes.Length; i++)
+                for (i = 0; i < count; i++)
                 {
-                    node = nodes[i].mData;
+                    node = this.mGraph.NodeAt(i);
                     if (!node.PositionFixed)
                     {
                         x = node.X;
@@ -747,48 +792,51 @@ namespace GraphForms.Algorithms.Layout
             }
             else
             {
-                for (i = 0; i < nodes.Length; i++)
+                for (i = 0; i < count; i++)
                 {
-                    node = nodes[i].mData;
+                    node = this.mGraph.NodeAt(i);
                     if (!node.PositionFixed)
                     {
                         node.SetPosition(node.NewX, node.NewY);
                     }
                 }
-            }
+            }/* */
             // Step 3: Check each layout node for a change in position
             // since the last iteration and tally the total change in
             // the positions of all the layout nodes to determine whether
             // the layout algorithm should continue iterating.
             double dist, totalDist = 0;
+            Digraph<Node, Edge>.GNode gNode;
             this.bItemMoved = false;
-            for (i = 0; i < nodes.Length; i++)
+            for (i = 0; i < count; i++)
             {
-                dx = this.mLastXs[i] - nodes[i].mData.X;
-                dy = this.mLastYs[i] - nodes[i].mData.Y;
+                gNode = this.mGraph.InternalNodeAt(i);
+                dx = this.mLastXs[i] - gNode.Data.X;
+                dy = this.mLastYs[i] - gNode.Data.Y;
                 dist = dx * dx + dy * dy;
                 if (dist < this.mMovementTolerance)
                 {
-                    nodes[i].Color = GraphColor.White;
+                    gNode.Color = GraphColor.White;
                 }
                 else
                 {
                     this.bItemMoved = true;
-                    nodes[i].Color = GraphColor.Gray;
+                    gNode.Color = GraphColor.Gray;
                 }
                 totalDist += dist;
             }
             // Step 4: Update edges connected to nodes which have moved.
             if (this.bItemMoved)
             {
-                Digraph<Node, Edge>.GEdge[] edges
-                    = this.mGraph.InternalEdges;
-                for (i = 0; i < edges.Length; i++)
+                Digraph<Node, Edge>.GEdge edge;
+                count = this.mGraph.EdgeCount;
+                for (i = 0; i < count; i++)
                 {
-                    if (edges[i].mSrcNode.Color == GraphColor.Gray ||
-                        edges[i].mDstNode.Color == GraphColor.Gray)
+                    edge = this.mGraph.InternalEdgeAt(i);
+                    if (edge.SrcNode.Color == GraphColor.Gray ||
+                        edge.DstNode.Color == GraphColor.Gray)
                     {
-                        edges[i].mData.Update();
+                        edge.Data.Update();
                     }
                 }
             }
@@ -835,8 +883,9 @@ namespace GraphForms.Algorithms.Layout
                     i = 0;
                     this.bResetting = false;
                 }
-                this.BeginIteration(i);
-                if (this.mLastNodeCount > 0 && this.mLastEdgeCount > 0)
+                this.SetLastPositions();
+                this.PerformPrecalculations();
+                if (this.mGraph.NodeCount > 0)
                 {
                     this.PerformIteration(i);
                 }
@@ -897,8 +946,9 @@ namespace GraphForms.Algorithms.Layout
                     this.mIter = 0;
                     this.bResetting = false;
                 }
-                this.BeginIteration(this.mIter);
-                if (this.mLastNodeCount > 0 && this.mLastEdgeCount > 0)
+                this.SetLastPositions();
+                this.PerformPrecalculations();
+                if (this.mGraph.NodeCount > 0)
                 {
                     this.PerformIteration(this.mIter);
                 }

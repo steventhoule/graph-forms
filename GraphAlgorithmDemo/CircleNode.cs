@@ -271,17 +271,15 @@ namespace GraphAlgorithmDemo
         {
             if (this.bMouseGrabbed && this.mScene != null)
             {
-                int i;
-                Digraph<CircleNode, ArrowEdge>.GEdge[] edges
-                    = this.mGraphNode.InternalDstEdges;
-                for (i = 0; i < edges.Length; i++)
+                int i, index = this.mGraphNode.Index;
+                Digraph<CircleNode, ArrowEdge>.GEdge edge;
+                int edgeCount = this.mScene.Graph.EdgeCount;
+                for (i = 0; i < edgeCount; i++)
                 {
-                    edges[i].Data.Update();
-                }
-                edges = this.mGraphNode.InternalSrcEdges;
-                for (i = 0; i < edges.Length; i++)
-                {
-                    edges[i].Data.Update();
+                    edge = this.mScene.Graph.InternalEdgeAt(i);
+                    if (edge.SrcNode.Index == index ||
+                        edge.DstNode.Index == index)
+                        edge.Data.Update();
                 }
                 this.mScene.OnNodeMovedByMouse(this);
             }

@@ -22,6 +22,10 @@ namespace GraphForms.Algorithms.Layout.Circular
         {
         }
 
+        protected override void PerformIteration(uint iteration)
+        {
+        }
+
         private class PortNode : IPortNode
         {
             private readonly Node mNode;
@@ -251,7 +255,7 @@ namespace GraphForms.Algorithms.Layout.Circular
                 get { return false; }
             }
 
-            private float mNewX;
+            /*private float mNewX;
             private float mNewY;
 
             public float NewX
@@ -274,10 +278,10 @@ namespace GraphForms.Algorithms.Layout.Circular
                     = this.Subgraph.InternalNodes;
                 for (int i = 0; i < nodes.Length; i++)
                 {
-                    node = nodes[i].mData;
+                    node = nodes[i].Data;
                     node.SetNewPosition(node.NewX + newX, node.NewY + newY);
                 }
-            }
+            }/* */
 
             #endregion
         }
@@ -398,7 +402,7 @@ namespace GraphForms.Algorithms.Layout.Circular
                 = graph.InternalEdges;
 
             BCCAlgorithm<Node, Edge> bccAlg 
-                = new BCCAlgorithm<Node, Edge>(graph);
+                = new BCCAlgorithm<Node, Edge>(graph, false);
             bccAlg.Compute();
             bccAlg.ArticulateToLargerCompactGroups();
             Node[][] bccGroups = bccAlg.CompactGroups;
@@ -434,13 +438,13 @@ namespace GraphForms.Algorithms.Layout.Circular
             for (i = 0; i < edges.Length; i++)
             {
                 edge = edges[i];
-                si = bccGroupIds[edge.mSrcNode.Index];
-                di = bccGroupIds[edge.mDstNode.Index];
+                si = bccGroupIds[edge.SrcNode.Index];
+                di = bccGroupIds[edge.DstNode.Index];
                 if (si == di)
                 {
                     bccNodes[si].Subgraph.AddEdge(new SubEdge(
-                        edge.mSrcNode.mData, edge.mDstNode.mData, 
-                        edge.mData));
+                        edge.SrcNode.Data, edge.DstNode.Data, 
+                        edge.Data));
                 }
                 else
                 {
@@ -452,30 +456,30 @@ namespace GraphForms.Algorithms.Layout.Circular
                         bccEdges[si][di] = bccEdge;
                     }
                     //spn = bccNodes[di].PortNodes[dEdge.mSrcNode.Index];
-                    spn = portNodes[di][edge.mSrcNode.Index];
+                    spn = portNodes[di][edge.SrcNode.Index];
                     if (spn == null)
                     {
-                        spn = new PortNode(edge.mSrcNode.mData, si);
+                        spn = new PortNode(edge.SrcNode.Data, si);
                         bccNodes[di].Subgraph.AddNode(spn);
                         //bccNodes[di].PortNodes[dEdge.mSrcNode.Index] = spn;
-                        portNodes[di][edge.mSrcNode.Index] = spn;
+                        portNodes[di][edge.SrcNode.Index] = spn;
                         bccEdge.AddDstPort(spn);
                     }
                     bccNodes[di].Subgraph.AddEdge(new SubEdge(
-                        spn, edge.mDstNode.mData, edge.mData));
+                        spn, edge.DstNode.Data, edge.Data));
 
                     //dpn = bccNodes[si].PortNodes[edge.mDstNode.Index];
-                    dpn = portNodes[si][edge.mDstNode.Index];
+                    dpn = portNodes[si][edge.DstNode.Index];
                     if (dpn == null)
                     {
-                        dpn = new PortNode(edge.mDstNode.mData, di);
+                        dpn = new PortNode(edge.DstNode.Data, di);
                         bccNodes[si].Subgraph.AddNode(dpn);
                         //bccNodes[si].PortNodes[dEdge.mDstNode.Index] = dpn;
-                        portNodes[si][edge.mDstNode.Index] = dpn;
+                        portNodes[si][edge.DstNode.Index] = dpn;
                         bccEdge.AddSrcPort(dpn);
                     }
                     bccNodes[si].Subgraph.AddEdge(new SubEdge(
-                        edge.mSrcNode.mData, dpn, edge.mData));
+                        edge.SrcNode.Data, dpn, edge.Data));
                 }
             }
             return bccGraph;

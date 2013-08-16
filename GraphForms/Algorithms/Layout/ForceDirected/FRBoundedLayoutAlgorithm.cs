@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace GraphForms.Algorithms.Layout.ForceDirected
 {
@@ -67,13 +65,10 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             base.InitializeAlgorithm();
         }
 
-        protected override void OnBeginIteration(uint iteration, bool dirty, 
-            int lastNodeCount, int lastEdgeCount)
+        protected override void PerformPrecalculations(
+            uint lastNodeVersion, uint lastEdgeVersion)
         {
             this.CalcParameters();
-
-            base.OnBeginIteration(iteration, dirty, 
-                lastNodeCount, lastEdgeCount);
         }
     }
 }

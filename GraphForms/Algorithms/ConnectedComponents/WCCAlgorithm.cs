@@ -1,54 +1,59 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using GraphForms.Algorithms.Search;
 
 namespace GraphForms.Algorithms.ConnectedComponents
 {
     public class WCCAlgorithm<Node, Edge>
-        : DepthFirstSearch<Node, Edge>, ICCAlgorithm<Node>
+        : DepthFirstSearch<Node, Edge>, ICCAlgorithm<Node, Edge>
         where Edge : IGraphEdge<Node>
     {
-        private int[] mComponents;
+        private int[] mComps;
         private int[] mRoots;
-        private List<int> mComponentEquivalences = new List<int>();
-        private int mComponentCount = 0;
-        private int mCurrentComponent = 0;
+        private int[] mCompEquivalences;
+        private int mCompEquivCount = 0;
+        private int mCompCount = 0;
+        private int mCurrentComp = 0;
 
-        private Node[] mWeakRoots;
-        private Node[][] mWeakComponents;
+        private Digraph<Node, Edge>.GNode[] mWeakRoots;
+        private Digraph<Node, Edge>.GNode[][] mWeakComponents;
 
-        public WCCAlgorithm(Digraph<Node, Edge> graph)
-            : base(graph, true, false)
-        {
-        }
-
-        public WCCAlgorithm(Digraph<Node, Edge> graph,
-            bool reversed)
+        public WCCAlgorithm(Digraph<Node, Edge> graph, bool reversed)
             : base(graph, true, reversed)
         {
+            this.mCompEquivalences = new int[0];
         }
 
-        public Node[][] Components
+        public int ComponentCount
+        {
+            get { return this.mCompCount; }
+        }
+
+        public int[] ComponentIds
+        {
+            get { return this.mComps; }
+        }
+
+        public Digraph<Node, Edge>.GNode[][] Components
         {
             get { return this.mWeakComponents; }
         }
 
-        public Node[] Roots
+        public Digraph<Node, Edge>.GNode[] Roots
         {
             get { return this.mWeakRoots; }
         }
 
         public override void Initialize()
         {
-            this.mComponentCount = 0;
-            this.mCurrentComponent = 0;
-            this.mComponentEquivalences.Clear();
+            this.mCompCount = 0;
+            this.mCurrentComp = 0;
+            //this.mCompEquivalences.Clear();
+            this.mCompEquivCount = 0;
             this.mRoots = new int[1];
-            this.mComponents = new int[this.mGraph.NodeCount];
-            for (int i = 0; i < this.mComponents.Length; i++)
+            this.mComps = new int[this.mGraph.NodeCount];
+            for (int i = 0; i < this.mComps.Length; i++)
             {
-                this.mComponents[i] = -1;
+                this.mComps[i] = -1;
             }
             base.Initialize();
         }
@@ -56,23 +61,23 @@ namespace GraphForms.Algorithms.ConnectedComponents
         private int GetComponentEquivalence(int comp)
         {
             int equivalent = comp;
-            int temp = this.mComponentEquivalences[equivalent];
+            int temp = this.mCompEquivalences[equivalent];
             bool compress = false;
             while (temp != equivalent)
             {
                 equivalent = temp;
-                temp = this.mComponentEquivalences[equivalent];
+                temp = this.mCompEquivalences[equivalent];
                 compress = true;
             }
 
             // path compression
             if (compress)
             {
-                temp = this.mComponentEquivalences[comp];
+                temp = this.mCompEquivalences[comp];
                 while (temp != equivalent)
                 {
-                    temp = this.mComponentEquivalences[comp];
-                    this.mComponentEquivalences[comp] = equivalent;
+                    temp = this.mCompEquivalences[comp];
+                    this.mCompEquivalences[comp] = equivalent;
                 }
             }
 
@@ -83,35 +88,54 @@ namespace GraphForms.Algorithms.ConnectedComponents
         {
             // updating component numbers
             int i, component, equivalent;
-            for (i = 0; i < this.mComponents.Length; i++)
+            for (i = 0; i < this.mComps.Length; i++)
             {
-                component = this.mComponents[i];
+                component = this.mComps[i];
                 equivalent = this.GetComponentEquivalence(component);
                 if (component != equivalent)
-                    this.mComponents[i] = equivalent;
+                    this.mComps[i] = equivalent;
             }
 
-            List<Node>[] comps = new List<Node>[this.mComponentCount];
-            for (i = 0; i < this.mComponentCount; i++)
+            /*List<Node>[] comps = new List<Node>[this.mCompCount];
+            for (i = 0; i < this.mCompCount; i++)
             {
                 comps[i] = new List<Node>();
             }
 
-            for (i = 0; i < this.mComponents.Length; i++)
+            for (i = 0; i < this.mComps.Length; i++)
             {
-                comps[this.mComponents[i]].Add(this.mGraph.NodeAt(i));
+                comps[this.mComps[i]].Add(this.mGraph.NodeAt(i));
+            }/* */
+
+            int j, count;
+            Digraph<Node, Edge>.GNode[] comps 
+                = new Digraph<Node, Edge>.GNode[this.mComps.Length];
+            this.mWeakComponents 
+                = new Digraph<Node, Edge>.GNode[this.mCompCount][];
+            for (i = 0; i < this.mCompCount; i++)
+            {
+                count = 0;
+                for (j = 0; j < this.mComps.Length; j++)
+                {
+                    if (this.mComps[j] == i)
+                    {
+                        comps[count++] = this.mGraph.InternalNodeAt(j);
+                    }
+                }
+                this.mWeakComponents[i] 
+                    = new Digraph<Node, Edge>.GNode[count];
+                if (count > 0)
+                {
+                    Array.Copy(comps, 0, this.mWeakComponents[i], 0, count);
+                }
             }
 
-            this.mWeakComponents = new Node[this.mComponentCount][];
-            for (i = 0; i < this.mComponentCount; i++)
-            {
-                this.mWeakComponents[i] = comps[i].ToArray();
-            }
-
-            this.mWeakRoots = new Node[this.mRoots.Length];
+            this.mWeakRoots 
+                = new Digraph<Node, Edge>.GNode[this.mRoots.Length];
             for (i = 0; i < this.mRoots.Length; i++)
             {
-                this.mWeakRoots[i] = this.mGraph.NodeAt(this.mRoots[i]);
+                this.mWeakRoots[i] 
+                    = this.mGraph.InternalNodeAt(this.mRoots[i]);
             }
         }
 
@@ -121,54 +145,69 @@ namespace GraphForms.Algorithms.ConnectedComponents
             base.OnFinished();
         }
 
-        protected override void OnStartNode(Node n, int index)
+        protected override void OnStartNode(Digraph<Node, Edge>.GNode n)
         {
             // we are looking on a new tree
-            this.mCurrentComponent = this.mComponentEquivalences.Count;
-            this.mComponentEquivalences.Add(this.mCurrentComponent);
-            if (this.mComponentCount == this.mRoots.Length)
+            //this.mCurrentComp = this.mCompEquivalences.Count;
+            //this.mCompEquivalences.Add(this.mCurrentComp);
+            this.mCurrentComp = this.mCompEquivCount;
+            if (this.mCompEquivCount == this.mCompEquivalences.Length)
             {
-                int[] roots = new int[this.mComponentCount + 1];
-                Array.Copy(this.mRoots, 0, roots, 0, this.mComponentCount);
+                int[] compEquivs;
+                if (this.mCompEquivCount == 0)
+                {
+                    compEquivs = new int[4];
+                }
+                else
+                {
+                    compEquivs = new int[2 * this.mCompEquivCount];
+                    Array.Copy(this.mCompEquivalences, 0, 
+                        compEquivs, 0, this.mCompEquivCount);
+                }
+                this.mCompEquivalences = compEquivs;
+            }
+            this.mCompEquivalences[this.mCompEquivCount++] 
+                = this.mCurrentComp;
+            if (this.mCompCount == this.mRoots.Length)
+            {
+                int[] roots = new int[this.mCompCount + 1];
+                Array.Copy(this.mRoots, 0, roots, 0, this.mCompCount);
                 this.mRoots = roots;
             }
-            this.mRoots[this.mComponentCount++] = index;
-            this.mComponents[index] = this.mCurrentComponent;
-            base.OnStartNode(n, index);
+            this.mRoots[this.mCompCount++] = n.Index;
+            this.mComps[n.Index] = this.mCurrentComp;
         }
 
-        protected override void OnTreeEdge(Edge e, 
-            int srcIndex, int dstIndex, bool reversed)
+        protected override void OnTreeEdge(Digraph<Node, Edge>.GEdge e, 
+            bool reversed, uint depth)
         {
             // new edge, we store with the current component number
-            this.mComponents[reversed ? srcIndex : dstIndex] 
-                = this.mCurrentComponent;
-            base.OnTreeEdge(e, srcIndex, dstIndex, reversed);
+            this.mComps[reversed ? e.SrcNode.Index : e.DstNode.Index]//srcIndex : dstIndex] 
+                = this.mCurrentComp;
         }
 
-        protected override void OnBlackEdge(Edge e, 
-            int srcIndex, int dstIndex, bool reversed)
+        protected override void OnBlackEdge(Digraph<Node, Edge>.GEdge e, 
+            bool reversed, uint depth)
         {
             // we have touched another tree, 
             // updating count and current component
             int otherComponent = this.GetComponentEquivalence(
-                this.mComponents[reversed ? srcIndex : dstIndex]);
-            if (otherComponent != this.mCurrentComponent)
+                this.mComps[reversed ? e.SrcNode.Index : e.DstNode.Index]);//srcIndex : dstIndex]);
+            if (otherComponent != this.mCurrentComp)
             {
-                this.mComponentCount--;
-                if (this.mCurrentComponent > otherComponent)
+                this.mCompCount--;
+                if (this.mCurrentComp > otherComponent)
                 {
-                    this.mComponentEquivalences[this.mCurrentComponent]
+                    this.mCompEquivalences[this.mCurrentComp]
                         = otherComponent;
-                    this.mCurrentComponent = otherComponent;
+                    this.mCurrentComp = otherComponent;
                 }
                 else
                 {
-                    this.mComponentEquivalences[otherComponent] 
-                        = this.mCurrentComponent;
+                    this.mCompEquivalences[otherComponent] 
+                        = this.mCurrentComp;
                 }
             }
-            base.OnBlackEdge(e, srcIndex, dstIndex, reversed);
         }
     }
 }

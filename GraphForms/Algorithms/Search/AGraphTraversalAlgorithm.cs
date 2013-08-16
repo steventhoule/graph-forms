@@ -12,20 +12,23 @@ namespace GraphForms.Algorithms.Search
     /// <typeparam name="Edge">The type of edges in the graph traversed
     /// and explored by this algorithm.</typeparam>
     public abstract class AGraphTraversalAlgorithm<Node, Edge>
-        : ARootedAlgorithm<Node>
+        : AGraphAlgorithm<Node, Edge>
         where Edge : IGraphEdge<Node>
     {
+        private static readonly uint[] sEmptyDepths = new uint[0];
         /// <summary>
-        /// The graph traversed by this algorithm.
+        /// This array holds the depths at which nodes were encountered
+        /// during the traversal of the graph, which is number of nodes in
+        /// traversal path from the corresponding node to the root node
+        /// where the traversal started.
         /// </summary>
-        protected readonly Digraph<Node, Edge> mGraph;
-        /// <summary>
+        protected uint[] mDepths;
+        /*/// <summary>
         /// A copy of the <see cref="P:Digraph`2.InternalEdges"/> of the 
         /// <see cref="mGraph"/> made at the beginning of this algorithm's 
         /// internal computation for traversing the graph with minimal 
         /// memory usage.</summary>
-        protected Digraph<Node, Edge>.GEdge[] mGraphEdges;
-
+        protected Digraph<Node, Edge>.GEdge[] mGraphEdges;/* */
         /// <summary>
         /// If true, the graph is traversed from both the source edges and
         /// destination edges of each node instead of just one or the other,
@@ -38,15 +41,9 @@ namespace GraphForms.Algorithms.Search
         /// nodes instead of from source nodes to destination nodes.
         /// </summary>
         protected readonly bool bReversed;
-        /// <summary>
-        /// If true, all nodes in the graph that implement the
-        /// <see cref="ISpecialNode"/> interface, along with the edges 
-        /// connecting them to the rest of the graph are skipped over 
-        /// in the traversal and left unexplored.
-        /// </summary>
-        protected bool bExSpecial = false;
 
         private bool bRootOnly;
+        private uint mMaxDepth = uint.MaxValue;
 
         /// <summary>
         /// Initializes a new instance of an algorithm for traversing and
@@ -61,19 +58,12 @@ namespace GraphForms.Algorithms.Search
         /// than from edge source to destination.</param>
         public AGraphTraversalAlgorithm(Digraph<Node, Edge> graph,
             bool directed, bool reversed)
+            : base(graph)
         {
-            this.mGraph = graph;
+            this.mDepths = sEmptyDepths;
             this.bUndirected = !directed;
             this.bReversed = reversed;
             this.bRootOnly = false;
-        }
-
-        /// <summary>
-        /// The graph traversed by this algorithm.
-        /// </summary>
-        public Digraph<Node, Edge> Graph
-        {
-            get { return this.mGraph; }
         }
 
         /// <summary>
@@ -97,22 +87,6 @@ namespace GraphForms.Algorithms.Search
         }
 
         /// <summary>
-        /// If true, all nodes in the graph that implement the
-        /// <see cref="ISpecialNode"/> interface, along with the edges 
-        /// connecting them to the rest of the graph are skipped over 
-        /// in the traversal and left unexplored.
-        /// </summary>
-        public bool ExcludeSpecialNodes
-        {
-            get { return this.bExSpecial; }
-            set
-            {
-                if (this.State != ComputeState.Running)
-                    this.bExSpecial = value;
-            }
-        }
-
-        /// <summary>
         /// If false (the default value), this algorithm continues to 
         /// traverse its graph after the root node and all nodes reachable 
         /// from it have been explored, restarting the traversal from the 
@@ -129,57 +103,76 @@ namespace GraphForms.Algorithms.Search
             }
         }
 
+        /// <summary><para>
+        /// Gets or sets the maximum exploration depth from the root nodes
+        /// at which the exploration starts.</para><para>
+        /// Default is <see cref="uint.MaxValue"/>.</para></summary><value>
+        /// Maximum exploration depth.</value>
+        public uint MaxDepth
+        {
+            get { return this.mMaxDepth; }
+            set
+            {
+                if (this.State != ComputeState.Running)
+                    this.mMaxDepth = value;
+            }
+        }
+
         #region Events
-        /// <summary>
+        /// <summary><para>
         /// Called just after the given node has finished being initialized,
-        /// before this algorithm begins
-        /// </summary>
+        /// before this algorithm begins its traversal of the graph.
+        /// </para><para>
+        /// DO NOT CHANGE THE COLOR OF <paramref name="n"/> UNLESS NECESSARY.
+        /// </para></summary>
         /// <param name="n">The <typeparamref name="Node"/> instance that  
-        /// has just finished initializing.</param>
-        /// <param name="index">The index of the node that has just 
-        /// finished initializing.</param>
-        protected virtual void OnInitializeNode(Node n, int index)
+        /// has just finished initializing.</param><remarks>
+        /// The <see cref="F:Digraph`2.GNode.Color"/> of <paramref name="n"/>
+        /// will be <see cref="GraphColor.White"/> when this function is
+        /// called. If it is set to any other color, it won't be explored by
+        /// this algorithm unless it was set as a root. Other nodes
+        /// connected to it might not be explored as well, depending on the
+        /// structure of the graph being traversed by this algorithm.
+        /// </remarks>
+        protected virtual void OnInitializeNode(Digraph<Node, Edge>.GNode n)
         {
         }
 
-        /// <summary>
+        /// <summary><para>
         /// Called right before the traversal starts at the given root node,
-        /// <paramref name="n"/>.
-        /// </summary>
-        /// <param name="n">The root <typeparamref name="Node"/> instance
-        /// at which the algorithm starts exploring the graph.</param>
-        /// <param name="index">The index of the root node at which the 
-        /// algorithm starts exploring the graph.</param>
-        protected virtual void OnStartNode(Node n, int index)
+        /// <paramref name="n"/>.</para><para>
+        /// DO NOT CHANGE THE COLOR OF <paramref name="n"/> UNLESS NECESSARY.
+        /// </para></summary>
+        /// <param name="n">The root node at which the algorithm starts 
+        /// exploring the graph.</param>
+        protected virtual void OnStartNode(Digraph<Node, Edge>.GNode n)
         {
         }
 
-        /// <summary>
+        /// <summary><para>
         /// Called when an unexplored node is first encountered during the
         /// traversal of the graph, before this algorithm begins to explore
-        /// its neighbors.
-        /// </summary>
-        /// <param name="n">The unexplored <typeparamref name="Node"/>
-        /// instance that has just been discovered in the graph traversal.
-        /// </param>
-        /// <param name="index">The index of the unexplored node that has
-        /// just been discovered in the graph traversal.</param>
-        protected virtual void OnDiscoverNode(Node n, int index)
+        /// its neighbors.</para><para>
+        /// DO NOT CHANGE THE COLOR OF <paramref name="n"/> UNLESS NECESSARY.
+        /// </para></summary>
+        /// <param name="n">The unexplored node that has just been 
+        /// discovered in the graph traversal.</param>
+        protected virtual void OnDiscoverNode(
+            Digraph<Node, Edge>.GNode n, uint depth)
         {
         }
 
-        /// <summary>
+        /// <summary><para>
         /// Called after the algorithm has finished exploring all of the
         /// neighbors of the given node <paramref name="n"/> and returns
-        /// to it.
-        /// </summary>
-        /// <param name="n">The <typeparamref name="Node"/> instance that 
+        /// to it.</para><para>
+        /// DO NOT CHANGE THE COLOR OF <paramref name="n"/> UNLESS NECESSARY.
+        /// </para></summary>
+        /// <param name="n">The node that 
         /// this graph traversal algorithm has just finished with and 
         /// won't be visiting again.</param>
-        /// <param name="index">The index of the node instance that this
-        /// graph traversal algorithm has just finished with and won't be
-        /// visiting again.</param>
-        protected virtual void OnFinishNode(Node n, int index)
+        protected virtual void OnFinishNode(
+            Digraph<Node, Edge>.GNode n, uint depth)
         {
         }
 
@@ -189,19 +182,13 @@ namespace GraphForms.Algorithms.Search
         /// the edge's target is unexplored, being explored, or already
         /// has been explored.
         /// </summary>
-        /// <param name="e">The <typeparamref name="Edge"/> instance being
-        /// explored by this graph traversal algorithm.</param>
-        /// <param name="srcIndex">The index of the <see 
-        /// cref="P:IGraphEdge`1{Node}.SrcNode"/> of the edge <paramref 
-        /// name="e"/>.</param>
-        /// <param name="dstIndex">The index of the <see 
-        /// cref="P:IGraphEdge`1{Node}.DstNode"/> of the edge <paramref 
-        /// name="e"/>.</param>
+        /// <param name="e">The edge being explored by this graph traversal 
+        /// algorithm.</param>
         /// <param name="reversed">True if the edge is being explored from 
         /// destination to source instead of from source to destination.
         /// </param>
-        protected virtual void OnExamineEdge(Edge e, 
-            int srcIndex, int dstIndex, bool reversed)
+        protected virtual void OnExamineEdge(Digraph<Node, Edge>.GEdge e,
+            bool reversed, uint depth)
         {
         }
 
@@ -209,19 +196,13 @@ namespace GraphForms.Algorithms.Search
         /// Called whenever the algorithm explores an edge in the graph
         /// connected to an unexplored node.
         /// </summary>
-        /// <param name="e">The <typeparamref name="Edge"/> instance being
-        /// explored by this graph traversal algorithm.</param>
-        /// <param name="srcIndex">The index of the <see 
-        /// cref="P:IGraphEdge`1{Node}.SrcNode"/> of the edge <paramref 
-        /// name="e"/>.</param>
-        /// <param name="dstIndex">The index of the <see 
-        /// cref="P:IGraphEdge`1{Node}.DstNode"/> of the edge <paramref 
-        /// name="e"/>.</param>
+        /// <param name="e">The edge being explored by this graph traversal 
+        /// algorithm.</param>
         /// <param name="reversed">True if the edge is being explored from 
         /// destination to source instead of from source to destination.
         /// </param>
-        protected virtual void OnTreeEdge(Edge e, 
-            int srcIndex, int dstIndex, bool reversed)
+        protected virtual void OnTreeEdge(Digraph<Node, Edge>.GEdge e, 
+            bool reversed, uint depth)
         {
         }
 
@@ -229,19 +210,13 @@ namespace GraphForms.Algorithms.Search
         /// Called whenever the algorithm explores an edge in the graph
         /// connected to a node that is currently being explored.
         /// </summary>
-        /// <param name="e">The <typeparamref name="Edge"/> instance being
-        /// explored by this graph traversal algorithm.</param>
-        /// <param name="srcIndex">The index of the <see 
-        /// cref="P:IGraphEdge`1{Node}.SrcNode"/> of the edge <paramref 
-        /// name="e"/>.</param>
-        /// <param name="dstIndex">The index of the <see 
-        /// cref="P:IGraphEdge`1{Node}.DstNode"/> of the edge <paramref 
-        /// name="e"/>.</param>
+        /// <param name="e">The edge being explored by this graph traversal 
+        /// algorithm.</param>
         /// <param name="reversed">True if the edge is being explored from 
         /// destination to source instead of from source to destination.
         /// </param>
-        protected virtual void OnGrayEdge(Edge e,
-            int srcIndex, int dstIndex, bool reversed)
+        protected virtual void OnGrayEdge(Digraph<Node, Edge>.GEdge e,
+            bool reversed, uint depth)
         {
         }
 
@@ -249,19 +224,13 @@ namespace GraphForms.Algorithms.Search
         /// Called whenever the algorithm explores an edge in the graph
         /// connected to a node that has already been explored.
         /// </summary>
-        /// <param name="e">The <typeparamref name="Edge"/> instance being
-        /// explored by this graph traversal algorithm.</param>
-        /// <param name="srcIndex">The index of the <see 
-        /// cref="P:IGraphEdge`1{Node}.SrcNode"/> of the edge <paramref 
-        /// name="e"/>.</param>
-        /// <param name="dstIndex">The index of the <see 
-        /// cref="P:IGraphEdge`1{Node}.DstNode"/> of the edge <paramref 
-        /// name="e"/>.</param>
+        /// <param name="e">The edge being explored by this graph traversal 
+        /// algorithm.</param>
         /// <param name="reversed">True if the edge is being explored from 
         /// destination to source instead of from source to destination.
         /// </param>
-        protected virtual void OnBlackEdge(Edge e,
-            int srcIndex, int dstIndex, bool reversed)
+        protected virtual void OnBlackEdge(Digraph<Node, Edge>.GEdge e,
+            bool reversed, uint depth)
         {
         }
         #endregion
@@ -274,15 +243,24 @@ namespace GraphForms.Algorithms.Search
         /// </summary>
         public virtual void Initialize()
         {
-            Digraph<Node, Edge>.GNode[] nodes
-                = this.mGraph.InternalNodes;
-            for (int i = 0; i < nodes.Length; i++)
+            Digraph<Node, Edge>.GNode node;
+            int count = this.mGraph.NodeCount;
+            if (this.mDepths.Length < count)
+            {
+                this.mDepths = new uint[count];
+            }
+            for (int i = 0; i < count; i++)
             {
                 if (this.State == ComputeState.Aborting)
                     return;
-                nodes[i].Color = GraphColor.White;
-                nodes[i].Index = i;
-                this.OnInitializeNode(nodes[i].mData, i);
+                node = this.mGraph.InternalNodeAt(i);
+                node.Color = GraphColor.White;
+                this.mDepths[node.Index] = 0;
+                //nodes[i].Index = i;
+                if (!node.Hidden)
+                {
+                    this.OnInitializeNode(node);
+                }
             }
         }
 
@@ -296,67 +274,69 @@ namespace GraphForms.Algorithms.Search
         protected override void InternalCompute()
         {
             if (this.mGraph.NodeCount == 0 || this.mGraph.EdgeCount == 0)
+            {
                 return;
+            }
 
             // put all nodes to white
             this.Initialize();
 
-            this.mGraphEdges = this.mGraph.InternalEdges;
+            //this.mGraphEdges = this.mGraph.InternalEdges;
 
+            int i, count;
             Digraph<Node, Edge>.GNode node;
 
             // if there is a starting node, start with it
-            if (this.HasRoot || this.bRootOnly)
+            if (this.RootCount > 0 || this.bRootOnly)
             {
-                int index;
-                if (!this.HasRoot)
+                if (this.RootCount == 0)
                 {
-                    index = 0;
+                    node = null;
+                    count = this.mGraph.NodeCount;
+                    for (i = 0; i < count; i++)
+                    {
+                        node = this.mGraph.InternalNodeAt(i);
+                        if (!node.Hidden)
+                            break;
+                    }
+                    if (i < count)
+                    {
+                        this.OnStartNode(node);
+                        this.ComputeFromRoot(node);
+                    }
                 }
                 else
                 {
-                    index = this.mGraph.IndexOfNode(this.TryGetRoot());
-                    if (index < 0 && this.bRootOnly)
+                    count = this.RootCount;
+                    for (i = 0; i < count; i++)
                     {
-                        index = 0;
-                    }
-                }
-                if (index >= 0)
-                {
-                    node = this.mGraph.InternalNodeAt(index);
-                    if (this.bExSpecial && node.mData is ISpecialNode)
-                    {
-                        int count = this.mGraph.NodeCount;
-                        for (index = 0; index < count && 
-                            node.mData is ISpecialNode; index++)
-                        {
-                            node = this.mGraph.InternalNodeAt(index);
-                        }
-                        if (index == count)
+                        if (this.State == ComputeState.Aborting)
                             return;
-                        else
-                            index--;
+                        node = this.RootAt(i);
+                        if (node.Color == GraphColor.White && !node.Hidden)
+                        {
+                            this.OnStartNode(node);
+                            this.ComputeFromRoot(node);
+                        }
                     }
-                    this.OnStartNode(node.mData, index);//node.Index);
-                    this.ComputeFromRoot(node);
                 }
+                this.ComputeFromRoots();
             }
 
             // process each node
             if (!this.bRootOnly)
             {
-                Digraph<Node, Edge>.GNode[] nodes
-                    = this.mGraph.InternalNodes;
-                for (int i = 0; i < nodes.Length; i++)
+                count = this.mGraph.NodeCount;
+                for (i = 0; i < count; i++)
                 {
                     if (this.State == ComputeState.Aborting)
                         return;
-                    node = nodes[i];
-                    if (node.Color == GraphColor.White &&
-                        !(this.bExSpecial && node.mData is ISpecialNode))
+                    node = this.mGraph.InternalNodeAt(i);
+                    if (node.Color == GraphColor.White && !node.Hidden)
                     {
-                        this.OnStartNode(node.mData, i);//node.Index);
+                        this.OnStartNode(node);
                         this.ComputeFromRoot(node);
+                        this.ComputeFromRoots();
                     }
                 }
             }
@@ -376,5 +356,9 @@ namespace GraphForms.Algorithms.Search
         /// </param>
         protected abstract void ComputeFromRoot(
             Digraph<Node, Edge>.GNode root);
+
+        protected virtual void ComputeFromRoots()
+        {
+        }
     }
 }

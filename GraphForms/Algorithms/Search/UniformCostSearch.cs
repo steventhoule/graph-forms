@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace GraphForms.Algorithms.Search
 {
@@ -8,7 +6,7 @@ namespace GraphForms.Algorithms.Search
         : AstarSearch<Node, Edge>
         where Edge : IGraphEdge<Node>
     {
-        private readonly double mCost;
+        private double mCost;
 
         public UniformCostSearch(Digraph<Node, Edge> graph,
             double cost, bool directed, bool reversed)
@@ -20,9 +18,14 @@ namespace GraphForms.Algorithms.Search
         public double Cost
         {
             get { return this.mCost; }
+            set
+            {
+                if (this.State != ComputeState.Running)
+                    this.mCost = value;
+            }
         }
 
-        protected override double HeuristicCost(Node n, int index)
+        protected override double HeuristicCost(Digraph<Node, Edge>.GNode n)
         {
             return this.mCost;
         }

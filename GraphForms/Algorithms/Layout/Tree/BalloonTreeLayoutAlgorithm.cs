@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using GraphForms.Algorithms.Collections;
 using GraphForms.Algorithms.Layout.Circular;
 using GraphForms.Algorithms.SpanningTree;
@@ -37,12 +36,15 @@ namespace GraphForms.Algorithms.Layout.Tree
         private double mRootAngle = 0;
 
         // Flags and Calculated Values
-        private Digraph<Node, Edge> mSpanTree;
-        private Digraph<Node, Edge>.GEdge[] mSpanTreeEdges;
-        private CircleTree<Node, Edge> mCircleTree;
+
         private bool bSpanTreeDirty = true;
+        private Digraph<Node, Edge> mSpanTree;
+        
         private bool bCircleTreeDirty = true;
-        private bool bCenterDirty = true;
+        private int mTreeSize;
+        private CircleTree<Node, Edge> mCircleTree;
+
+        private bool bPositionsDirty = true;
         private double mCX;
         private double mCY;
 
@@ -65,7 +67,29 @@ namespace GraphForms.Algorithms.Layout.Tree
         /// generated yet).</summary>
         protected CircleTree<Node, Edge> BalloonTree
         {
-            get { return this.mCircleTree; }
+            get 
+            {
+                this.PerformPrecalculations();
+                return this.mCircleTree; 
+            }
+        }
+
+        public double CentroidX
+        {
+            get
+            {
+                this.PerformPrecalculations();
+                return this.mCX;
+            }
+        }
+
+        public double CentroidY
+        {
+            get
+            {
+                this.PerformPrecalculations();
+                return this.mCY;
+            }
         }
 
         #region Parameters
@@ -84,8 +108,6 @@ namespace GraphForms.Algorithms.Layout.Tree
                 {
                     this.mSpanTreeGen = value;
                     this.bSpanTreeDirty = true;
-                    this.bCircleTreeDirty = true;
-                    this.MarkDirty();
                 }
             }
         }
@@ -102,7 +124,6 @@ namespace GraphForms.Algorithms.Layout.Tree
                 {
                     this.mRootFindingMethod = value;
                     this.bCircleTreeDirty = true;
-                    this.MarkDirty();
                 }
             }
         }
@@ -124,10 +145,12 @@ namespace GraphForms.Algorithms.Layout.Tree
             get { return this.bInSketchMode; }
             set
             {
-                if (this.bInSketchMode != value)
+                if (this.bInSketchMode != value &&
+                    this.State != ComputeState.Running &&
+                    this.AsyncState != ComputeState.Running)
                 {
                     this.bInSketchMode = value;
-                    this.MarkDirty();
+                    this.bPositionsDirty = true;
                 }
             }
         }
@@ -146,7 +169,7 @@ namespace GraphForms.Algorithms.Layout.Tree
                 if (this.mBranchSorter != value)
                 {
                     this.mBranchSorter = value;
-                    this.MarkDirty();
+                    this.bPositionsDirty = true;
                 }
             }
         }
@@ -171,7 +194,7 @@ namespace GraphForms.Algorithms.Layout.Tree
                 if (this.mBranchSpacing != value)
                 {
                     this.mBranchSpacing = value;
-                    this.MarkDirty();
+                    this.bPositionsDirty = true;
                 }
             }
         }
@@ -192,7 +215,6 @@ namespace GraphForms.Algorithms.Layout.Tree
                 if (this.mRootCentering != value)
                 {
                     this.mRootCentering = value;
-                    this.bCenterDirty = true;
                 }
             }
         }
@@ -208,7 +230,7 @@ namespace GraphForms.Algorithms.Layout.Tree
                 if (this.mMinEdgeLen != value)
                 {
                     this.mMinEdgeLen = value;
-                    this.MarkDirty();
+                    this.bPositionsDirty = true;
                 }
             }
         }
@@ -224,7 +246,7 @@ namespace GraphForms.Algorithms.Layout.Tree
                 if (this.bEqualizeBranches != value)
                 {
                     this.bEqualizeBranches = value;
-                    this.MarkDirty();
+                    this.bPositionsDirty = true;
                 }
             }
         }
@@ -249,7 +271,7 @@ namespace GraphForms.Algorithms.Layout.Tree
                 if (this.mMaxRootWedge != value)
                 {
                     this.mMaxRootWedge = value;
-                    this.MarkDirty();
+                    this.bPositionsDirty = true;
                 }
             }
         }
@@ -274,9 +296,14 @@ namespace GraphForms.Algorithms.Layout.Tree
                 if (this.mMaxTreeWedge != value)
                 {
                     this.mMaxTreeWedge = value;
-                    this.MarkDirty();
+                    this.bPositionsDirty = true;
                 }
             }
+        }
+
+        protected void ForceRecalculateBranchPositions()
+        {
+            this.bPositionsDirty = true;
         }
         #endregion
 
@@ -382,7 +409,7 @@ namespace GraphForms.Algorithms.Layout.Tree
                 if (this.mMaxRootWedge != value)
                 {
                     this.mMaxRootWedge = value;
-                    this.MarkDirty();
+                    this.bPositionsDirty = true;
                 }
             }
         }
@@ -399,7 +426,7 @@ namespace GraphForms.Algorithms.Layout.Tree
                 if (this.mMaxTreeWedge != value)
                 {
                     this.mMaxTreeWedge = value;
-                    this.MarkDirty();
+                    this.bPositionsDirty = true;
                 }
             }
         }
@@ -423,70 +450,83 @@ namespace GraphForms.Algorithms.Layout.Tree
 
         #endregion
 
-        protected override void OnRootChanged(Node oldRoot)
+        protected override void OnRootInserted(int index, 
+            Digraph<Node, Edge>.GNode root)
         {
             if (this.RootFindingMethod == TreeRootFinding.UserDefined)
             {
                 this.bCircleTreeDirty = true;
-                this.MarkDirty();
             }
-            base.OnRootChanged(oldRoot);
+            base.OnRootInserted(index, root);
         }
 
-        protected override void OnBeginIteration(uint iteration, 
-            bool dirty, int lastNodeCount, int lastEdgeCount)
+        protected override void OnRootRemoved(Digraph<Node, Edge>.GNode root)
         {
-            bool graphDirty = 
-                this.mGraph.NodeCount != lastNodeCount ||
-                this.mGraph.EdgeCount != lastEdgeCount;
-            if (this.bSpanTreeDirty || graphDirty)
+            if (this.RootFindingMethod == TreeRootFinding.UserDefined)
+            {
+                this.bCircleTreeDirty = true;
+            }
+            base.OnRootRemoved(root);
+        }
+
+        protected override void OnRootsCleared()
+        {
+            if (this.RootFindingMethod == TreeRootFinding.UserDefined)
+            {
+                this.bCircleTreeDirty = true;
+            }
+            base.OnRootsCleared();
+        }
+
+        protected override void PerformPrecalculations(
+            uint lastNodeVersion, uint lastEdgeVersion)
+        {
+            bool nDirty = this.mGraph.NodeVersion != lastNodeVersion;
+            if (this.bSpanTreeDirty || nDirty ||
+                this.mGraph.EdgeVersion != lastEdgeVersion)
             {
                 this.GenerateSpanningTree();
-                this.bSpanTreeDirty = false;
+                this.bCircleTreeDirty = true;
+                this.bPositionsDirty = true;
             }
-            if (this.bCircleTreeDirty || graphDirty)
+            if (this.bCircleTreeDirty)
             {
-                this.BuildBalloonTree();
-                this.bCircleTreeDirty = false;
+                this.mCircleTree = this.BuildBalloonTree();
+                this.bPositionsDirty = true;
             }
-            if (dirty || graphDirty)
+            if (this.mCircleTree != null && !this.bCircleTreeDirty)
+            {
+                this.RefreshRadius(this.mCircleTree);
+                this.bPositionsDirty |= this.mCircleTree.ConvexHullDirty;
+            }
+            if (this.mCircleTree != null && this.bPositionsDirty)
             {
                 this.CalculatePositions(this.mCircleTree);
             }
-            if (this.bCenterDirty ||
-                this.mGraph.NodeCount != lastNodeCount)
+            if (this.mCircleTree != null && nDirty)
             {
-                // Calculate the initial position of
-                // the center of the entire balloon tree
-                switch (this.mRootCentering)
+                Digraph<Node, Edge>.GNode gNode;
+                // The centroid should not be recalculated on every iteration
+                // of the computation, because doing so might cause a "drift"
+                // phenomenon in which the graph continuously applies a large
+                // force to itself in the direction of the change in position
+                // from the old centroid to the new one.
+                this.mCX = this.mCY = 0.0;
+                for (int i = this.mGraph.NodeCount - 1; i >= 0; i--)
                 {
-                    case CircleCentering.BBoxCenter:
-                        Box2F bbox = this.mClusterNode == null
-                            ? this.BoundingBox 
-                            : this.mClusterNode.LayoutBBox;
-                        this.mCX = bbox.X + bbox.W / 2.0;
-                        this.mCY = bbox.Y + bbox.H / 2.0;
-                        break;
-                    case CircleCentering.Centroid:
-                        Node node;
-                        Digraph<Node, Edge>.GNode[] nodes
-                            = this.mGraph.InternalNodes;
-                        // Initialize the center as the centroid of the nodes
-                        this.mCX = this.mCY = 0;
-                        for (int i = 0; i < nodes.Length; i++)
-                        {
-                            node = nodes[i].mData;
-                            //pos = nodes[i].SceneTranslate();
-                            this.mCX += node.X;//pos.Width;
-                            this.mCY += node.Y;//pos.Height;
-                        }
-                        this.mCX /= nodes.Length;
-                        this.mCY /= nodes.Length;
-                        break;
+                    gNode = this.mGraph.InternalNodeAt(i);
+                    if (!gNode.Hidden)
+                    {
+                        this.mCX += gNode.Data.X;
+                        this.mCY += gNode.Data.Y;
+                    }
                 }
+                this.mCX /= this.mTreeSize;
+                this.mCY /= this.mTreeSize;
             }
-            base.OnBeginIteration(iteration, dirty, 
-                lastNodeCount, lastEdgeCount);
+            this.bSpanTreeDirty = false;
+            this.bCircleTreeDirty = false;
+            this.bPositionsDirty = false;
         }
 
         private void PullOnRoots(CircleTree<Node, Edge> tree)
@@ -508,8 +548,8 @@ namespace GraphForms.Algorithms.Layout.Tree
                 while (root != null)
                 {
                     // Calculate force on root
-                    cx = root.NodeData.NewX;
-                    cy = root.NodeData.NewY;
+                    cx = root.NodeData.X;
+                    cy = root.NodeData.Y;
                     if (root.Root == null)
                     {
                         ang = this.mRootAngle;
@@ -517,12 +557,12 @@ namespace GraphForms.Algorithms.Layout.Tree
                     else
                     {
                         node = root.Root.NodeData;
-                        ang = Math.Atan2(cy - node.NewY, cx - node.NewX);
+                        ang = Math.Atan2(cy - node.Y, cx - node.X);
                     }
                     node = ct.NodeData;
                     // TODO: make sure all the signs (+/-) are right
-                    dx = cx - node.NewX;
-                    dy = cy - node.NewY;
+                    dx = cx - node.X;
+                    dy = cy - node.Y;
                     if (dx == 0 && dy == 0)
                     {
                         fx = fy = ct.Distance / 10;
@@ -568,8 +608,8 @@ namespace GraphForms.Algorithms.Layout.Tree
                     }
                     // Apply force to root position
                     node = root.NodeData;
-                    node.SetNewPosition(node.NewX - (float)fx, 
-                                        node.NewY - (float)fy);
+                    node.SetPosition(node.X - (float)fx, 
+                                     node.Y - (float)fy);
                     // Progress up the ancestry chain
                     ct = root;
                     root = ct.Root;
@@ -585,25 +625,26 @@ namespace GraphForms.Algorithms.Layout.Tree
             }
         }
 
-        private Stack<CircleTree<Node, Edge>> mStack;
-        private Queue<CircleTree<Node, Edge>> mQueue;
+        private CircleTree<Node, Edge>[] mStackQueue
+            = new CircleTree<Node, Edge>[0];
+        //private Stack<CircleTree<Node, Edge>> mStack;
+        //private Queue<CircleTree<Node, Edge>> mQueue;
 
         protected override void PerformIteration(uint iteration)
         {
-            int i;
+            int i, sqIndex, sqCount;
             Node node;
             CircleTree<Node, Edge> ct, root;
             CircleTree<Node, Edge>[] branches;
             double ang, cx, cy, dx, dy, r, force, fx, fy;
-            Digraph<Node, Edge>.GNode[] nodes = this.mGraph.InternalNodes;
 
             // Initially set new positions to current positions, since
             // some of them might be adjusted instead of directly set
-            for (i = 0; i < nodes.Length; i++)
+            /*for (i = this.mGraph.NodeCount - 1; i >= 0; i--)
             {
-                node = nodes[i].mData;
+                node = this.mGraph.NodeAt(i);
                 node.SetNewPosition(node.X, node.Y);
-            }
+            }/* */
 
             node = this.mCircleTree.NodeData;
             if (!node.PositionFixed)
@@ -611,38 +652,49 @@ namespace GraphForms.Algorithms.Layout.Tree
                 // Pull the root of the entire balloon tree
                 // towards its calculated center.
                 Box2F bbox = null;
+                double cw, ch;
+                cx = cy = cw = ch = 0.0;
                 switch (this.mRootCentering)
                 {
                     case CircleCentering.BBoxCenter:
                         bbox = this.mClusterNode == null
                             ? this.BoundingBox
                             : this.mClusterNode.LayoutBBox;
+                        if (bbox != null)
+                        {
+                            cx = bbox.X;
+                            cy = bbox.Y;
+                            cw = bbox.W;
+                            ch = bbox.H;
+                        }
                         break;
                     case CircleCentering.Centroid:
                         bbox = this.mClusterNode == null
                             ? this.BoundingBox
                             : this.mClusterNode.LayoutBBox;
-                        // TODO: What if the centroid is outside the bbox?
-                        dx = this.mCX - bbox.X;
-                        dy = this.mCY - bbox.Y;
-                        if (bbox.Right - this.mCX < dx)
-                            dx = bbox.Right - this.mCX;
-                        if (bbox.Bottom - this.mCY < dy)
-                            dy = bbox.Bottom - this.mCY;
-                        bbox = new Box2F(
-                            (float)(this.mCX - dx), (float)(this.mCY - dy),
-                            (float)(2.0 * dx), (float)(2.0 * dy));
+                        if (bbox != null)
+                        {
+                            // TODO: What if centroid is outside the bbox?
+                            dx = Math.Min(Math.Abs(this.mCX - bbox.X), 
+                                          Math.Abs(bbox.Right - this.mCX));
+                            dy = Math.Min(Math.Abs(this.mCY - bbox.Y), 
+                                          Math.Abs(bbox.Bottom - this.mCY));
+                            cx = this.mCX - dx;
+                            cy = this.mCY - dy;
+                            cw = 2.0 * dx;
+                            ch = 2.0 * dy;
+                        }
                         break;
                     // No need to calculate for Predefined, as the center 
                     // is the current position of the root node
                 }
                 if (bbox != null)
                 {
-                    ang = Math.Sqrt(bbox.W * bbox.W + bbox.H * bbox.H) / 2;
+                    ang = Math.Sqrt(cw * cw + ch * ch) / 2;
                     fx = fy = 0.0;
                     // Spring Force from Top Left Corner
-                    dx = bbox.X - node.X;
-                    dy = bbox.Y - node.Y;
+                    dx = cx - node.X;
+                    dy = cy - node.Y;
                     r = Math.Sqrt(dx * dx + dy * dy);
                     if (r > 0.0)
                     {
@@ -651,7 +703,7 @@ namespace GraphForms.Algorithms.Layout.Tree
                         fy += force * dy / r;
                     }
                     // Spring Force from Top Right Corner
-                    dx += bbox.W;
+                    dx += cw;
                     r = Math.Sqrt(dx * dx + dy * dy);
                     if (r > 0.0)
                     {
@@ -660,7 +712,7 @@ namespace GraphForms.Algorithms.Layout.Tree
                         fy += force * dy / r;
                     }
                     // Spring Force from Bottom Right Corner
-                    dy += bbox.H;
+                    dy += ch;
                     r = Math.Sqrt(dx * dx + dy * dy);
                     if (r > 0.0)
                     {
@@ -669,7 +721,7 @@ namespace GraphForms.Algorithms.Layout.Tree
                         fy += force * dy / r;
                     }
                     // Spring Force from Bottom Left Corner
-                    dx -= bbox.W;
+                    dx -= cw;
                     r = Math.Sqrt(dx * dx + dy * dy);
                     if (r > 0.0)
                     {
@@ -678,23 +730,30 @@ namespace GraphForms.Algorithms.Layout.Tree
                         fy += force * dy / r;
                     }
                     // Apply force to root position
-                    node.SetNewPosition(node.X + (float)fx, 
-                                        node.Y + (float)fy);
+                    node.SetPosition(node.X + (float)fx, 
+                                     node.Y + (float)fy);
                 }
+            }
+            if (this.mStackQueue.Length < this.mTreeSize)
+            {
+                this.mStackQueue 
+                    = new CircleTree<Node, Edge>[this.mTreeSize];
             }
             if (this.bAdjustRoots)
             {
                 // Pull roots towards their fixed branches
                 //this.PullOnRoots(this.mCircleTree);
-                if (this.mStack == null)
+                /*if (this.mStack == null)
                 {
                     this.mStack = new Stack<CircleTree<Node, Edge>>(
-                        nodes.Length);
+                        this.mGraph.NodeCount);
                 }
-                this.mStack.Push(this.mCircleTree);
-                while (this.mStack.Count > 0)
+                this.mStack.Push(this.mCircleTree);/* */
+                sqCount = 1;
+                this.mStackQueue[0] = this.mCircleTree;
+                while (sqCount > 0)//this.mStack.Count > 0)
                 {
-                    root = this.mStack.Pop();
+                    root = this.mStackQueue[--sqCount];//this.mStack.Pop();
                     if (root.NodeData.PositionFixed)
                     {
                         ct = root;
@@ -702,8 +761,8 @@ namespace GraphForms.Algorithms.Layout.Tree
                         while (root != null)
                         {
                             // Calculate force on root
-                            cx = root.NodeData.NewX;
-                            cy = root.NodeData.NewY;
+                            cx = root.NodeData.X;
+                            cy = root.NodeData.Y;
                             if (root.Root == null)
                             {
                                 ang = this.mRootAngle;
@@ -711,13 +770,13 @@ namespace GraphForms.Algorithms.Layout.Tree
                             else
                             {
                                 node = root.Root.NodeData;
-                                ang = Math.Atan2(cy - node.NewY,
-                                                 cx - node.NewX);
+                                ang = Math.Atan2(cy - node.Y,
+                                                 cx - node.X);
                             }
                             node = ct.NodeData;
                             // TODO: make sure all the signs (+/-) are right
-                            dx = cx - node.NewX;
-                            dy = cy - node.NewY;
+                            dx = cx - node.X;
+                            dy = cy - node.Y;
                             if (dx == 0 && dy == 0)
                             {
                                 fx = fy = ct.Distance / 10;
@@ -762,8 +821,8 @@ namespace GraphForms.Algorithms.Layout.Tree
                             }
                             // Apply force to root position
                             node = root.NodeData;
-                            node.SetNewPosition(node.NewX - (float)fx,
-                                                node.NewY - (float)fy);
+                            node.SetPosition(node.X - (float)fx,
+                                             node.Y - (float)fy);
                             // Progress up the ancestry chain
                             ct = root;
                             root = ct.Root;
@@ -774,23 +833,27 @@ namespace GraphForms.Algorithms.Layout.Tree
                         branches = root.Branches;
                         for (i = branches.Length - 1; i >= 0; i--)
                         {
-                            this.mStack.Push(branches[i]);
+                            //this.mStack.Push(branches[i]);
+                            this.mStackQueue[sqCount++] = branches[i];
                         }
                     }
                 }/* */
             }
             // Pull movable branches towards their roots
-            if (this.mQueue == null)
+            /*if (this.mQueue == null)
             {
                 this.mQueue = new Queue<CircleTree<Node, Edge>>(
-                    nodes.Length);
+                    this.mGraph.NodeCount);
             }
-            this.mQueue.Enqueue(this.mCircleTree);
-            while (this.mQueue.Count > 0)
+            this.mQueue.Enqueue(this.mCircleTree);/* */
+            sqIndex = 0;
+            sqCount = 1;
+            this.mStackQueue[0] = this.mCircleTree;
+            while (sqIndex < sqCount)//this.mQueue.Count > 0)
             {
-                ct = this.mQueue.Dequeue();
-                cx = ct.NodeData.NewX;
-                cy = ct.NodeData.NewY;
+                ct = this.mStackQueue[sqIndex++];//this.mQueue.Dequeue();
+                cx = ct.NodeData.X;
+                cy = ct.NodeData.Y;
                 if (ct.Root == null)
                 {
                     ang = this.mRootAngle;
@@ -798,7 +861,7 @@ namespace GraphForms.Algorithms.Layout.Tree
                 else
                 {
                     node = ct.Root.NodeData;
-                    ang = Math.Atan2(cy - node.NewY, cx - node.NewX);
+                    ang = Math.Atan2(cy - node.Y, cx - node.X);
                 }
                 branches = ct.Branches;
                 for (i = 0; i < branches.Length; i++)
@@ -808,11 +871,15 @@ namespace GraphForms.Algorithms.Layout.Tree
                     if (!node.PositionFixed)
                     {
                         // TODO: make sure all the signs (+/-) are right
-                        dx = cx - node.NewX;
-                        dy = cy - node.NewY;
+                        fx = node.X;
+                        fy = node.Y;
+                        dx = cx - fx;
+                        dy = cy - fy;
                         if (dx == 0 && dy == 0)
                         {
-                            fx = fy = ct.Distance / 10;
+                            force = ct.Distance / 10;
+                            fx += force;
+                            fy += force;
                         }
                         else
                         {
@@ -829,8 +896,8 @@ namespace GraphForms.Algorithms.Layout.Tree
                                 force -= 2 * Math.PI;
                             force = this.mMagnetMult * 
                                 Math.Pow(force, this.mMagnetExp) / r;
-                            fx = force * -dy;
-                            fy = force * dx;
+                            fx += force * -dy;
+                            fy += force * dx;
                             // Spring Force
                             r = Math.Sqrt(r);
                             force = this.mSpringMult * 
@@ -839,14 +906,14 @@ namespace GraphForms.Algorithms.Layout.Tree
                             fy += force * dy / r;
                         }
                         // Add force to position
-                        node.SetNewPosition((float)(node.NewX + fx),
-                                            (float)(node.NewY + fy));/* */
+                        node.SetPosition((float)fx, (float)fy);/* */
 
                         /*dx = cx + ct.Distance * Math.Cos(ct.Angle + ang);
                         dy = cy + ct.Distance * Math.Sin(ct.Angle + ang);
                         node.SetNewPosition((float)dx, (float)dy);/* */
                     }
-                    this.mQueue.Enqueue(ct);
+                    //this.mQueue.Enqueue(ct);
+                    this.mStackQueue[sqCount++] = ct;
                 }
             }
         }
@@ -860,16 +927,26 @@ namespace GraphForms.Algorithms.Layout.Tree
                     BFSpanningTree<Node, Edge> bfst
                         = new BFSpanningTree<Node, Edge>(
                             this.mGraph, false, false);
-                    Digraph<Node, Edge>.GNode r1 = this.TryGetGraphRoot();
-                    bfst.SetRoot(r1.mData);
+                    bfst.RootCapacity = this.RootCount;
+                    Digraph<Node, Edge>.GNode r1;
+                    for (int i = this.RootCount - 1; i >= 0; i--)
+                    {
+                        r1 = this.RootAt(i);
+                        bfst.AddRoot(r1.Index);
+                    }
                     alg = bfst;
                     break;
                 case SpanningTreeGen.DFS:
                     DFSpanningTree<Node, Edge> dfst
                         = new DFSpanningTree<Node, Edge>(
                             this.mGraph, false, false);
-                    Digraph<Node, Edge>.GNode r2 = this.TryGetGraphRoot();
-                    dfst.SetRoot(r2.mData);
+                    dfst.RootCapacity = this.RootCount;
+                    Digraph<Node, Edge>.GNode r2;
+                    for (int j = this.RootCount - 1; j >= 0; j--)
+                    {
+                        r2 = this.RootAt(j);
+                        dfst.AddRoot(r2.Index);
+                    }
                     alg = dfst;
                     break;
                 case SpanningTreeGen.Boruvka:
@@ -886,33 +963,55 @@ namespace GraphForms.Algorithms.Layout.Tree
             this.mSpanTree = alg.SpanningTree;
         }
 
-        private void BuildBalloonTree()
+        private CircleTree<Node, Edge> BuildBalloonTree()
         {
+            this.mTreeSize = 0;
+            if (this.mSpanTree.NodeCount == 0 ||
+                this.mSpanTree.EdgeCount == 0)
+            {
+                return null;
+            }
             int i, rootIndex;
             Digraph<Node, Edge>.GNode root = null;
-            Digraph<Node, Edge>.GNode[] nodes
-                = this.mSpanTree.InternalNodes;
-            for (i = 0; i < nodes.Length; i++)
+            int count = this.mGraph.NodeCount;
+            for (i = 0; i < count; i++)
             {
-                root = nodes[i];
-                root.Index = i;
+                root = this.mGraph.InternalNodeAt(i);
+                //root.Index = i;
                 root.Color = GraphColor.White;
             }
             switch (this.mRootFindingMethod)
             {
                 case TreeRootFinding.UserDefined:
-                    rootIndex = this.HasRoot
-                        ? this.mSpanTree.IndexOfNode(this.TryGetRoot())
-                        : 0;
-                    if (rootIndex < 0)
+                    if (this.RootCount == 0)
+                    {
                         rootIndex = 0;
-                    root = nodes[rootIndex];
+                        root = this.mSpanTree.InternalNodeAt(0);
+                    }
+                    else
+                    {
+                        root = this.RootAt(0);
+                        rootIndex = root.Index;
+                        root = this.mSpanTree.InternalNodeAt(rootIndex);
+                    }
                     break;
                 case TreeRootFinding.Center:
-                    root = this.mSpanTree.FindCenter(false, false);
+                    root = this.mSpanTree.FindCenter(true, false);
                     if (root == null)
                     {
-                        root = nodes[0];
+                        root = this.mSpanTree.InternalNodeAt(0);
+                        rootIndex = 0;
+                    }
+                    else
+                    {
+                        rootIndex = root.Index;
+                    }
+                    break;
+                case TreeRootFinding.PathCenter:
+                    root = this.mSpanTree.FindPathCenter();
+                    if (root == null)
+                    {
+                        root = this.mSpanTree.InternalNodeAt(0);
                         rootIndex = 0;
                     }
                     else
@@ -921,43 +1020,43 @@ namespace GraphForms.Algorithms.Layout.Tree
                     }
                     break;
             }
-            this.mSpanTreeEdges = this.mSpanTree.InternalEdges;
-            this.mCircleTree = this.BuildBranch(root, default(Edge));
-            this.mSpanTreeEdges = null;
+            return this.BuildBranch(root, default(Edge));
         }
 
         private CircleTree<Node, Edge> BuildBranch(
             Digraph<Node, Edge>.GNode root, Edge edge)
         {
+            this.mTreeSize++;
             root.Color = GraphColor.Gray;
 
             CircleTree<Node, Edge> child, parent 
-                = new CircleTree<Node, Edge>(root.mData, edge, 
-                    this.GetBoundingRadius(root.mData), root.AllEdgeCount);
+                = new CircleTree<Node, Edge>(root.Data, edge, 
+                    this.GetBoundingRadius(root.Data), 
+                    root.TotalEdgeCount(false));
 
             // Recursively add child branches.
-            int i;
-            Digraph<Node, Edge>.GEdge e;
-            Digraph<Node, Edge>.GNode node;
+            int i, eCount = this.mSpanTree.EdgeCount;
+            Digraph<Node, Edge>.GEdge gEdge;
+            Digraph<Node, Edge>.GNode gNode;
 
-            for (i = 0; i < this.mSpanTreeEdges.Length; i++)
+            for (i = 0; i < eCount; i++)
             {
-                e = this.mSpanTreeEdges[i];
-                if (e.mSrcNode.Index == root.Index)
+                gEdge = this.mSpanTree.InternalEdgeAt(i);
+                if (gEdge.SrcNode.Index == root.Index)
                 {
-                    node = e.mDstNode;
-                    if (node.Color == GraphColor.White)
+                    gNode = gEdge.DstNode;
+                    if (gNode.Color == GraphColor.White)
                     {
-                        child = this.BuildBranch(node, e.mData);
+                        child = this.BuildBranch(gNode, gEdge.Data);
                         child.SetRoot(parent);
                     }
                 }
-                else if (e.mDstNode.Index == root.Index)
+                else if (gEdge.DstNode.Index == root.Index)
                 {
-                    node = e.mSrcNode;
-                    if (node.Color == GraphColor.White)
+                    gNode = gEdge.SrcNode;
+                    if (gNode.Color == GraphColor.White)
                     {
-                        child = this.BuildBranch(node, e.mData);
+                        child = this.BuildBranch(gNode, gEdge.Data);
                         child.SetRoot(parent);
                     }
                 }
@@ -965,6 +1064,19 @@ namespace GraphForms.Algorithms.Layout.Tree
             root.Color = GraphColor.Black;
 
             return parent;
+        }
+
+        private void RefreshRadius(CircleTree<Node, Edge> root)
+        {
+            if (root.BranchCount > 0)
+            {
+                CircleTree<Node, Edge>[] branches = root.Branches;
+                for (int i = branches.Length - 1; i >= 0; i--)
+                {
+                    this.RefreshRadius(branches[i]);
+                }
+            }
+            root.Radius = this.GetBoundingRadius(root.NodeData);
         }
 
         /// <summary>
@@ -1228,11 +1340,11 @@ namespace GraphForms.Algorithms.Layout.Tree
             /// <summary>
             /// The X-coordinate of the center of the shared root of x and y.
             /// </summary>
-            public float CX = 0;
+            public double CX = 0;
             /// <summary>
             /// The Y-coordinate of the center of the shared root of x and y.
             /// </summary>
-            public float CY = 0;
+            public double CY = 0;
             /// <summary><para>
             /// The angle in radians measured counterclockwise from the 
             /// +X-axis of the ray from the center of the shared root of 

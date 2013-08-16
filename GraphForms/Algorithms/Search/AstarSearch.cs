@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using GraphForms.Algorithms.Collections;
 
 namespace GraphForms.Algorithms.Search
@@ -9,8 +7,8 @@ namespace GraphForms.Algorithms.Search
         : AGraphTraversalAlgorithm<Node, Edge>
         where Edge : IGraphEdge<Node>
     {
-        private FibonacciNode<double, int>.Heap mQueue;
-        private FibonacciNode<double, int>[] mQueueNodes;
+        private FibonacciNode<double, Digraph<Node, Edge>.GNode>.Heap mQueue;
+        private FibonacciNode<double, Digraph<Node, Edge>.GNode>[] mQNodes;
         private double[] mDists;
         private int[] mPredecessors;
 
@@ -18,17 +16,22 @@ namespace GraphForms.Algorithms.Search
             bool directed, bool reversed)
             : base(graph, directed, reversed)
         {
-            this.mQueue = new FibonacciNode<double, int>.Heap();
+            this.mQueue = new FibonacciNode<double, 
+                Digraph<Node, Edge>.GNode>.Heap();
+            this.mQNodes = new FibonacciNode<double, 
+                Digraph<Node, Edge>.GNode>[0];
+            this.mDists = new double[0];
+            this.mPredecessors = new int[0];
         }
 
         public double[] TotalCosts
         {
             get
             {
-                double[] totalCosts = new double[this.mQueueNodes.Length];
+                double[] totalCosts = new double[this.mQNodes.Length];
                 for (int i = 0; i < totalCosts.Length; i++)
                 {
-                    totalCosts[i] = this.mQueueNodes[i].Priority;
+                    totalCosts[i] = this.mQNodes[i].Priority;
                 }
                 return totalCosts;
             }
@@ -45,12 +48,13 @@ namespace GraphForms.Algorithms.Search
         }
 
         #region Events
-        protected virtual void OnExamineNode(Node n, int index)
+        protected virtual void OnExamineNode(
+            Digraph<Node, Edge>.GNode n, uint depth)
         {
         }
 
-        protected virtual void OnRelaxEdge(Edge e,
-            int srcIndex, int dstIndex, bool reversed)
+        protected virtual void OnRelaxEdge(Digraph<Node, Edge>.GEdge e,
+            bool reversed, uint depth)
         {
         }
         #endregion
@@ -60,9 +64,13 @@ namespace GraphForms.Algorithms.Search
             base.Initialize();
 
             int count = this.mGraph.NodeCount;
-            this.mQueueNodes = new FibonacciNode<double, int>[count];
-            this.mDists = new double[count];
-            this.mPredecessors = new int[count];
+            if (this.mQNodes.Length < count)
+            {
+                this.mQNodes = new FibonacciNode<double, 
+                    Digraph<Node, Edge>.GNode>[count];
+                this.mDists = new double[count];
+                this.mPredecessors = new int[count];
+            }
             for (int i = 0; i < count; i++)
             {
                 this.mPredecessors[i] = -1;
@@ -73,119 +81,121 @@ namespace GraphForms.Algorithms.Search
             Digraph<Node, Edge>.GNode root)
         {
             this.EnqueueRoot(root);
+            //this.FlushVisitQueue();
+        }
+
+        protected override void ComputeFromRoots()
+        {
             this.FlushVisitQueue();
         }
 
-        protected virtual double Distance(Edge e,
-            int srcIndex, int dstIndex, bool reversed)
+        protected virtual double Distance(Digraph<Node, Edge>.GEdge e,
+            bool reversed, uint depth)
         {
-            return e.Weight;
+            return e.Data.Weight;
         }
 
-        protected abstract double HeuristicCost(Node n, int index);
+        protected abstract double HeuristicCost(Digraph<Node, Edge>.GNode n);
 
-        private void EnqueueRoot(Digraph<Node, Edge>.GNode s)
+        private void EnqueueRoot(Digraph<Node, Edge>.GNode root)
         {
             //this.OnStartNode(s.mData, s.Index);
 
-            s.Color = GraphColor.Gray;
-
-            this.mDists[s.Index] = 0;
-            double cost = this.HeuristicCost(s.mData, s.Index);
-
-            this.OnDiscoverNode(s.mData, s.Index);
-            this.mQueueNodes[s.Index] 
-                = this.mQueue.Enqueue(cost, s.Index);
+            root.Color = GraphColor.Gray;
+            this.mDepths[root.Index] = 0;
+            this.mDists[root.Index] = 0;
+            double cost = this.HeuristicCost(root);
+            this.OnDiscoverNode(root, 0);
+            this.mQNodes[root.Index] 
+                = this.mQueue.Enqueue(cost, root);
         }
 
         private void FlushVisitQueue()
         {
-            bool reversed;
+            bool rev;
             double dist, cost;
+            uint depth, maxDepth = this.MaxDepth;
+            int edgeCount = this.mGraph.EdgeCount;
             int i, j, stop = this.bUndirected ? 2 : 1;
             Digraph<Node, Edge>.GEdge e;
             Digraph<Node, Edge>.GNode u, v;
-            Digraph<Node, Edge>.GNode[] nodes
-                = this.mGraph.InternalNodes;
 
             while (this.mQueue.Count > 0 &&
                    this.State != ComputeState.Aborting)
             {
-                u = nodes[this.mQueue.Dequeue().Value];
-                this.OnExamineNode(u.mData, u.Index);
+                u = this.mQueue.Dequeue().Value;
+                depth = this.mDepths[u.Index];
+                this.OnExamineNode(u, depth);
 
-                reversed = this.bReversed;
+                rev = this.bReversed;
                 for (j = 0; j < stop; j++)
                 {
-                    for (i = 0; i < this.mGraphEdges.Length; i++)
+                    for (i = 0; i < edgeCount; i++)
                     {
-                        e = this.mGraphEdges[i];
-
-                        v = reversed ? e.mDstNode : e.mSrcNode;
+                        e = this.mGraph.InternalEdgeAt(i);
+                        if (e.Hidden)
+                            continue;
+                        v = rev ? e.DstNode : e.SrcNode;
                         if (v.Index != u.Index)
                             continue;
-                        v = reversed ? e.mSrcNode : e.mDstNode;
-
-                        if (this.bExSpecial && v.mData is ISpecialNode)
+                        v = rev ? e.SrcNode : e.DstNode;
+                        if (v.Hidden)
                             continue;
-                        this.OnExamineEdge(e.mData,
-                            e.mSrcNode.Index, e.mDstNode.Index, reversed);
+                        this.OnExamineEdge(e, rev, depth);
 
-                        dist = this.mDists[u.Index] + this.Distance(e.mData,
-                            e.mSrcNode.Index, e.mDstNode.Index, reversed);
+                        dist = this.mDists[u.Index] 
+                             + this.Distance(e, rev, depth);
                         switch (v.Color)
                         {
                             case GraphColor.White:
-                                this.OnTreeEdge(e.mData, e.mSrcNode.Index,
-                                    e.mDstNode.Index, reversed);
-                                v.Color = GraphColor.Gray;
-                                this.mDists[v.Index] = dist;
-                                cost = dist + this.HeuristicCost(v.mData, v.Index);
-                                this.mPredecessors[v.Index] = u.Index;
-                                this.OnDiscoverNode(v.mData, v.Index);
-                                this.mQueueNodes[v.Index] =
-                                    this.mQueue.Enqueue(cost, v.Index);
+                                this.OnTreeEdge(e, rev, depth);
+                                if (depth < maxDepth)
+                                {
+                                    v.Color = GraphColor.Gray;
+                                    this.mDepths[v.Index] = depth + 1;
+                                    this.mDists[v.Index] = dist;
+                                    cost = dist + this.HeuristicCost(v);
+                                    this.mPredecessors[v.Index] = u.Index;
+                                    this.OnDiscoverNode(v, depth + 1);
+                                    this.mQNodes[v.Index]
+                                        = this.mQueue.Enqueue(cost, v);
+                                }
                                 break;
                             case GraphColor.Gray:
                                 // OnNonTreeEdge
                                 // OnBackEdge
-                                this.OnGrayEdge(e.mData,
-                                    e.mSrcNode.Index,
-                                    e.mDstNode.Index, reversed);
+                                this.OnGrayEdge(e, rev, depth);
                                 if (dist < this.mDists[v.Index])
                                 {
                                     this.mDists[v.Index] = dist;
-                                    cost = dist + this.HeuristicCost(v.mData, v.Index);
+                                    cost = dist + this.HeuristicCost(v);
                                     this.mPredecessors[v.Index] = u.Index;
-                                    this.OnRelaxEdge(e.mData, e.mSrcNode.Index,
-                                        e.mDstNode.Index, reversed);
+                                    this.OnRelaxEdge(e, rev, depth);
                                     this.mQueue.ChangePriority(
-                                        this.mQueueNodes[v.Index], cost);
+                                        this.mQNodes[v.Index], cost);
                                 }
                                 break;
                             case GraphColor.Black:
                                 // OnNonTreeEdge
                                 // OnForwardOrCrossEdge
-                                this.OnBlackEdge(e.mData, e.mSrcNode.Index,
-                                    e.mDstNode.Index, reversed);
+                                this.OnBlackEdge(e, rev, depth);
                                 if (dist < this.mDists[v.Index])
                                 {
                                     // TODO: Will this ever happen?
                                     this.mDists[v.Index] = dist;
-                                    cost = dist + this.HeuristicCost(v.mData, v.Index);
+                                    cost = dist + this.HeuristicCost(v);
                                     this.mPredecessors[v.Index] = u.Index;
-                                    this.OnRelaxEdge(e.mData, e.mSrcNode.Index,
-                                        e.mDstNode.Index, reversed);
-                                    this.mQueueNodes[v.Index]
-                                        = this.mQueue.Enqueue(cost, v.Index);
+                                    this.OnRelaxEdge(e, rev, depth);
+                                    this.mQNodes[v.Index]
+                                        = this.mQueue.Enqueue(cost, v);
                                 }
                                 break;
                         }
                     }
-                    reversed = !reversed;
+                    rev = !rev;
                 }
                 u.Color = GraphColor.Black;
-                this.OnFinishNode(u.mData, u.Index);
+                this.OnFinishNode(u, depth);
             }
         }
     }

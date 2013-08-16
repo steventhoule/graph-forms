@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace GraphForms.Algorithms.Layout.ForceDirected
 {
@@ -13,7 +12,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         private class LinLogNode
         {
             public int Index;
-            public Node OriginalNode;
+            public Digraph<Node, Edge>.GNode OriginalNode;
             public LinLogEdge[] Attractions;
             public float RepulsionWeight;
             public Vec2F Position;
@@ -37,6 +36,8 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         // These change every iteration as graph cools down
         private double mRepuExponent;
         private double mAttrExponent;
+
+        private bool bDirty = true;
 
         public LinLogLayoutAlgorithm(Digraph<Node, Edge> graph,
             IClusterNode clusterNode)
@@ -84,7 +85,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                 if (this.mGravMult != value)
                 {
                     this.mGravMult = value;
-                    this.MarkDirty();
+                    this.bDirty = true;
                 }
             }
         }
@@ -96,17 +97,17 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             this.mAttrExponent = this.mFinalAttrExponent;
         }
 
-        protected override void OnBeginIteration(uint iteration, bool dirty, 
-            int lastNodeCount, int lastEdgeCount)
+        protected override void PerformPrecalculations(
+            uint lastNodeVersion, uint lastEdgeVersion)
         {
             bool nodesDirty = false;
-            if (this.mGraph.NodeCount != lastNodeCount ||
-                this.mGraph.EdgeCount != lastEdgeCount)
+            if (this.mGraph.NodeVersion != lastNodeVersion ||
+                this.mGraph.EdgeVersion != lastEdgeVersion)
             {
                 this.InitAlgorithm();
                 nodesDirty = true;
             }
-            if (dirty || nodesDirty)
+            if (this.bDirty || nodesDirty)
             {
                 LinLogNode n;
                 for (int i = 0; i < this.mNodes.Length; i++)
@@ -116,7 +117,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                 }
                 this.mRepulsionMultiplier = this.ComputeRepulsionMultiplier();
             }
-            base.OnBeginIteration(iteration, dirty, lastNodeCount, lastEdgeCount);
+            this.bDirty = false;
         }
 
         protected override void PerformIteration(uint iteration)//, int maxIterations)
@@ -126,8 +127,11 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             for (i = 0; i < this.mNodes.Length; i++)
             {
                 n = this.mNodes[i];
-                //n.Position = n.OriginalNode.Position;
-                n.Position = new Vec2F(n.OriginalNode.X, n.OriginalNode.Y);
+                if (n != null)
+                {
+                    //n.Position = n.OriginalNode.Position;
+                    n.Position = new Vec2F(n.OriginalNode.Data.X, n.OriginalNode.Data.Y);
+                }
             }
 
             this.ComputeBarycenter();
@@ -161,7 +165,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             for (i = 0; i < this.mNodes.Length; i++)
             {
                 n = this.mNodes[i];
-                if (n.OriginalNode.PositionFixed)
+                if (n == null || n.OriginalNode.Data.PositionFixed)
                     continue;
                 oldEnergy = this.GetEnergy(i, quadTree);
 
@@ -214,18 +218,15 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             }
 
             // copy positions
-            //float[] newXs = this.NewXPositions;
-            //float[] newYs = this.NewYPositions;
             for (i = 0; i < this.mNodes.Length; i++)
             {
                 n = this.mNodes[i];
-                //n.OriginalNode.NewX = n.Position.X;
-                //n.OriginalNode.NewY = n.Position.Y;
-                n.OriginalNode.SetNewPosition(n.Position.X, n.Position.Y);
-                //newXs[i] = n.Position.X;
-                //newYs[i] = n.Position.Y;
-                if (float.IsNaN(n.Position.X))
-                    throw new Exception();
+                if (n != null)
+                {
+                    n.OriginalNode.Data.SetPosition(n.Position.X, n.Position.Y);//SetNewPosition(n.Position.X, n.Position.Y);
+                    if (float.IsNaN(n.Position.X))
+                        throw new Exception();
+                }
             }
         }
 
@@ -338,7 +339,8 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         {
             double sum = 0;
             for (int i = 0; i < this.mNodes.Length; i++)
-                sum += GetEnergy(i, q);
+                if (this.mNodes[i] != null)
+                    sum += GetEnergy(i, q);
             return sum;
         }
 
@@ -408,62 +410,78 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         private void InitAlgorithm()
         {
             Digraph<Node, Edge>.GEdge edge;
-            Digraph<Node, Edge>.GEdge[] edges
-                = this.mGraph.InternalEdges;
+            int eCount = this.mGraph.EdgeCount;
 
             Digraph<Node, Edge>.GNode node;
-            Digraph<Node, Edge>.GNode[] nodes 
-                = this.mGraph.InternalNodes;
+            int nCount = this.mGraph.NodeCount;
 
-            this.mNodes = new LinLogNode[nodes.Length];
+            this.mNodes = new LinLogNode[nCount];
 
             LinLogEdge e;
             LinLogNode n;
             float weight;
             int i, j, attrIndex;
             // nodes indexed
-            for (i = 0; i < nodes.Length; i++)
+            for (i = 0; i < nCount; i++)
             {
-                n = new LinLogNode();
-                n.Index = i;
-                n.OriginalNode = nodes[i].Data;
-                n.Attractions = new LinLogEdge[nodes[i].AllEdgeCount];
-                n.RepulsionWeight = 0;
-                //n.Position = n.OriginalNode.Position;
-                this.mNodes[i] = n;
+                node = this.mGraph.InternalNodeAt(i);
+                if (!node.Hidden)
+                {
+                    n = new LinLogNode();
+                    n.Index = i;
+                    n.OriginalNode = node;
+                    n.Attractions = new LinLogEdge[node.TotalEdgeCount(true)];
+                    n.RepulsionWeight = 0;
+                    //n.Position = n.OriginalNode.Position;
+                    this.mNodes[i] = n;
+                }
             }
             for (i = 0; i < this.mNodes.Length; i++)
             {
+                node = this.mGraph.InternalNodeAt(i);
+                if (node.Hidden)
+                    continue;
                 n = this.mNodes[i];
-                node = nodes[i];
                 // each node builds an attractionWeights, attractionIndexes,
                 // and repulsionWeights structure 
                 // and copies the position of the node
                 attrIndex = 0;
-                for (j = 0; j < edges.Length; j++)
+                for (j = 0; j < eCount; j++)
                 {
+                    edge = this.mGraph.InternalEdgeAt(j);
+                    if (edge.Hidden)
+                        continue;
                     e = null;
-                    edge = edges[j];
-                    if (edge.mSrcNode.Index == node.Index)
+                    if (edge.SrcNode.Index == node.Index)
                     {
                         e = new LinLogEdge();
-                        e.Target = this.mNodes[edge.mDstNode.Index];
+                        e.Target = this.mNodes[edge.DstNode.Index];
+                        if (e.Target == null)
+                            e = null;
                     }
-                    else if (edge.mDstNode.Index == node.Index)
+                    else if (edge.DstNode.Index == node.Index)
                     {
                         e = new LinLogEdge();
-                        e.Target = this.mNodes[edge.mSrcNode.Index];
+                        e.Target = this.mNodes[edge.SrcNode.Index];
+                        if (e.Target == null)
+                            e = null;
                     }
                     if (e != null)
                     {
-                        weight = edge.mData.Weight;
+                        weight = edge.Data.Weight;
                         e.AttractionWeight = weight;
-                        n.Attractions[attrIndex] = e;
+                        n.Attractions[attrIndex++] = e;
                         // TODO: look at this line below
                         //n.RepulsionWeight += weight;
                         n.RepulsionWeight += 1;
-                        attrIndex++;
                     }
+                }
+                if (attrIndex < n.Attractions.Length)
+                {
+                    LinLogEdge[] attrs = new LinLogEdge[attrIndex];
+                    if (attrIndex > 0)
+                        Array.Copy(n.Attractions, 0, attrs, 0, attrIndex);
+                    n.Attractions = attrs;
                 }
             }
         }
@@ -477,9 +495,12 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             for (int i = 0; i < this.mNodes.Length; i++)
             {
                 n = this.mNodes[i];
-                repWeightSum += n.RepulsionWeight;
-                baryX += n.Position.X * n.RepulsionWeight;
-                baryY += n.Position.Y * n.RepulsionWeight;
+                if (n != null)
+                {
+                    repWeightSum += n.RepulsionWeight;
+                    baryX += n.Position.X * n.RepulsionWeight;
+                    baryY += n.Position.Y * n.RepulsionWeight;
+                }
             }
             if (repWeightSum > 0.0)
             {
@@ -501,12 +522,15 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             int i, j;
             for (i = 0; i < this.mNodes.Length; i++)
             {
-                attractions = this.mNodes[i].Attractions;
-                for (j = 0; j < attractions.Length; j++)
+                if (this.mNodes[i] != null)
                 {
-                    attractionSum += attractions[j].AttractionWeight;
+                    attractions = this.mNodes[i].Attractions;
+                    for (j = 0; j < attractions.Length; j++)
+                    {
+                        attractionSum += attractions[j].AttractionWeight;
+                    }
+                    repulsionSum += this.mNodes[i].RepulsionWeight;
                 }
-                repulsionSum += this.mNodes[i].RepulsionWeight;
             }
 
             if (repulsionSum > 0 && attractionSum > 0)
@@ -530,7 +554,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             for (i = 0; i < count; i++)
             {
                 n = this.mNodes[i];
-                if (n.RepulsionWeight > 0)
+                if (n != null && n.RepulsionWeight > 0)
                 {
                     minPos.X = Math.Min(minPos.X, n.Position.X);
                     minPos.Y = Math.Min(minPos.Y, n.Position.Y);
@@ -544,7 +568,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             for (i = 0; i < count; i++)
             {
                 n = this.mNodes[i];
-                if (n.RepulsionWeight > 0)
+                if (n != null && n.RepulsionWeight > 0)
                 {
                     if (result == null)
                         result = new QuadTree(n.Index, n.Position, n.RepulsionWeight, minPos, maxPos);

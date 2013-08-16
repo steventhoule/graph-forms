@@ -212,7 +212,7 @@ namespace GraphForms.Algorithms.Collections
         /// For more information on Fibonacci Heaps, see the Wikipedia 
         /// article: http://en.wikipedia.org/wiki/Fibonacci_heap
         /// </remarks>
-        public class Heap : IEnumerable<KeyValuePair<P, V>>
+        public class Heap : IEnumerable<FibonacciNode<P, V>>
         {
             private readonly HeapDirection mOrder;
             private readonly IComparer<P> mComparer;
@@ -496,12 +496,11 @@ namespace GraphForms.Algorithms.Collections
             /// Fibonacci Heaps maintain a pointer to the next element 
             /// to be removed.
             /// </remarks>
-            public KeyValuePair<P, V> Peek()
+            public FibonacciNode<P, V> Peek()
             {
                 if (this.mCount == 0)
                     throw new InvalidOperationException();
-                return new KeyValuePair<P, V>(
-                    this.mNext.mPriority, this.mNext.mValue);
+                return this.mNext;
             }
             /// <summary>
             /// Removes the element currently at the front of this Fibonacci 
@@ -528,13 +527,12 @@ namespace GraphForms.Algorithms.Collections
             /// </para></remarks><seealso cref="M:Delete(FibonacciNode`2)"/>
             /// <exception cref="InvalidOperationException">This Fibonacci
             /// Heap is empty and has no elements to remove.</exception>
-            public KeyValuePair<P, V> Dequeue()
+            public FibonacciNode<P, V> Dequeue()
             {
                 if (this.mCount == 0)
                     throw new InvalidOperationException();
 
-                KeyValuePair<P, V> result = new KeyValuePair<P, V>(
-                    this.mNext.mPriority, this.mNext.mValue);
+                FibonacciNode<P, V> result = this.mNext;
 
                 this.mNodes.Remove(this.mNext);
                 this.mNext.Parent = null;
@@ -679,23 +677,24 @@ namespace GraphForms.Algorithms.Collections
                     node.mPriority = nk;
                     if (node.Children != null)
                     {
-                        List<FibonacciNode<P, V>> toUpdate 
-                            = new List<FibonacciNode<P, V>>(this.mCount);
+                        int count = 0;
+                        FibonacciNode<P, V>[] toUpdate 
+                            = new FibonacciNode<P, V>[this.mCount];
                         FibonacciNode<P, V> child = node.Children.First;
                         while (child != null)
                         {
                             if (this.mComparer.Compare(node.mPriority, 
                                 child.mPriority) * this.mMult > 0)
                             {
-                                toUpdate.Add(child);
+                                toUpdate[count++] = child;
                             }
                             child = child.Next;
                         }
 
-                        if (toUpdate.Count > 0)
+                        if (count > 0)
                         {
                             node.Marked = true;
-                            for (int i = 0; i < toUpdate.Count; i++)
+                            for (int i = 0; i < count; i++)
                             {
                                 child = toUpdate[i];
                                 //node.Marked = true;
@@ -753,24 +752,27 @@ namespace GraphForms.Algorithms.Collections
             #region Iteration and Enumeration
             private Heap CreateClone()
             {
+                int stackCount = 0;
                 Heap clone = new Heap(this.mOrder, this.mComparer);
-                Stack<FibonacciNode<P, V>> nodeStack 
-                    = new Stack<FibonacciNode<P, V>>(this.mCount);
+                FibonacciNode<P, V>[] nodeStack 
+                    = new FibonacciNode<P, V>[this.mCount];
                 FibonacciNode<P, V> node = this.mNodes.First;
                 while (node != null)
                 {
-                    nodeStack.Push(node);
+                    //nodeStack.Push(node);
+                    nodeStack[stackCount++] = node;
                     node = node.Next;
                 }
                 FibonacciNode<P, V> topNode;
-                while (nodeStack.Count > 0)
+                while (stackCount > 0)//nodeStack.Count > 0)
                 {
-                    topNode = nodeStack.Pop();
+                    topNode = nodeStack[--stackCount];//nodeStack.Pop();
                     clone.Enqueue(topNode.mPriority, topNode.mValue);
                     node = topNode.Children.First;
                     while (node != null)
                     {
-                        nodeStack.Push(node);
+                        //nodeStack.Push(node);
+                        nodeStack[stackCount++] = node;
                         node = node.Next;
                     }
                 }
@@ -791,11 +793,11 @@ namespace GraphForms.Algorithms.Collections
             /// processor and memory intensive.
             /// </remarks><seealso cref="DestroyToArray(bool)"/>
             /// <seealso cref="ToUnsortedArray()"/>
-            public KeyValuePair<P, V>[] ToArray()
+            public FibonacciNode<P, V>[] ToArray()
             {
                 Heap clone = this.CreateClone();
-                KeyValuePair<P, V>[] nodes 
-                    = new KeyValuePair<P, V>[this.mCount];
+                FibonacciNode<P, V>[] nodes 
+                    = new FibonacciNode<P, V>[this.mCount];
                 for (int i = 0; i < nodes.Length; i++)
                 {
                     nodes[i] = clone.Dequeue();
@@ -819,11 +821,11 @@ namespace GraphForms.Algorithms.Collections
             /// this Fibonacci Heap in the process.</remarks>
             /// <seealso cref="ToArray()"/>
             /// <seealso cref="ToUnsortedArray()"/>
-            public KeyValuePair<P, V>[] DestroyToArray(bool restore)
+            public FibonacciNode<P, V>[] DestroyToArray(bool restore)
             {
                 int i;
-                KeyValuePair<P, V>[] nodes 
-                    = new KeyValuePair<P, V>[this.mCount];
+                FibonacciNode<P, V>[] nodes 
+                    = new FibonacciNode<P, V>[this.mCount];
                 for (i = 0; i < nodes.Length; i++)
                 {
                     nodes[i] = this.Dequeue();
@@ -832,7 +834,7 @@ namespace GraphForms.Algorithms.Collections
                 {
                     for (i = 0; i < nodes.Length; i++)
                     {
-                        this.Enqueue(nodes[i].Key, nodes[i].Value);
+                        this.Enqueue(nodes[i].Priority, nodes[i].Value);
                     }
                 }
                 return nodes;
@@ -859,29 +861,31 @@ namespace GraphForms.Algorithms.Collections
             /// <see cref="HeapDirection.Increasing"/>.</para></remarks>
             /// <seealso cref="ToArray()"/>
             /// <seealso cref="DestroyToArray(bool)"/>
-            public KeyValuePair<P, V>[] ToUnsortedArray()
+            public FibonacciNode<P, V>[] ToUnsortedArray()
             {
                 int i = 0;
-                KeyValuePair<P, V>[] nodes
-                    = new KeyValuePair<P, V>[this.mCount];
-                Stack<FibonacciNode<P, V>> nodeStack
-                    = new Stack<FibonacciNode<P, V>>(this.mCount);
+                int stackCount = 0;
+                FibonacciNode<P, V>[] nodes
+                    = new FibonacciNode<P, V>[this.mCount];
+                FibonacciNode<P, V>[] nodeStack
+                    = new FibonacciNode<P, V>[this.mCount];
                 FibonacciNode<P, V> node = this.mNodes.First;
                 while (node != null)
                 {
-                    nodeStack.Push(node);
+                    //nodeStack.Push(node);
+                    nodeStack[stackCount++] = node;
                     node = node.Next;
                 }
                 FibonacciNode<P, V> topNode;
-                while (nodeStack.Count > 0)
+                while (stackCount > 0)//nodeStack.Count > 0)
                 {
-                    topNode = nodeStack.Pop();
-                    nodes[i++] = new KeyValuePair<P, V>(
-                        topNode.mPriority, topNode.mValue);
+                    topNode = nodeStack[--stackCount];//nodeStack.Pop();
+                    nodes[i++] = topNode;
                     node = topNode.Children.First;
                     while (node != null)
                     {
-                        nodeStack.Push(node);
+                        //nodeStack.Push(node);
+                        nodeStack[stackCount++] = node;
                         node = node.Next;
                     }
                 }
@@ -896,18 +900,18 @@ namespace GraphForms.Algorithms.Collections
             /// of that heap instance, which can make it both processor and
             /// memory intensive.
             /// </remarks>
-            public class Enumerator : IEnumerator<KeyValuePair<P, V>>
+            public class Enumerator : IEnumerator<FibonacciNode<P, V>>
             {
                 private readonly Heap mHeap;
                 private readonly bool bIsDestructive;
-                private KeyValuePair<P, V> mCurrent;
+                private FibonacciNode<P, V> mCurrent;
 
                 private Enumerator(Heap heap,
                     bool isDestructive)
                 {
                     this.mHeap = heap;
                     this.bIsDestructive = isDestructive;
-                    this.mCurrent = default(KeyValuePair<P, V>);
+                    this.mCurrent = null;
                 }
                 /// <summary>
                 /// Creates a new "non-destructive" <see cref="Enumerator"/>
@@ -956,7 +960,7 @@ namespace GraphForms.Algorithms.Collections
                 /// Gets the element at the current position of this
                 /// enumerator.
                 /// </summary>
-                public KeyValuePair<P, V> Current
+                public FibonacciNode<P, V> Current
                 {
                     get { return this.mCurrent; }
                 }
@@ -966,7 +970,7 @@ namespace GraphForms.Algorithms.Collections
                 /// </summary>
                 public P Priority
                 {
-                    get { return this.mCurrent.Key; }
+                    get { return this.mCurrent.mPriority; }
                 }
                 /// <summary>
                 /// Gets the <see cref="P:FibonacciNode`2.Value"/> of the
@@ -974,7 +978,7 @@ namespace GraphForms.Algorithms.Collections
                 /// </summary>
                 public V Value
                 {
-                    get { return this.mCurrent.Value; }
+                    get { return this.mCurrent.mValue; }
                 }
                 /// <summary>
                 /// Releases all resources used by this enumerator, which
@@ -992,7 +996,7 @@ namespace GraphForms.Algorithms.Collections
                         {
                             this.mHeap.Dequeue();
                         }
-                        this.mCurrent = default(KeyValuePair<P, V>);
+                        this.mCurrent = null;
                     }
                 }
                 /// <summary>
@@ -1008,7 +1012,7 @@ namespace GraphForms.Algorithms.Collections
                         this.mCurrent = this.mHeap.Dequeue();
                         return true;
                     }
-                    this.mCurrent = default(KeyValuePair<P, V>);
+                    this.mCurrent = null;
                     return false;
                 }
 
@@ -1057,8 +1061,8 @@ namespace GraphForms.Algorithms.Collections
                 return Enumerator.CreateDestructive(this);
             }
 
-            IEnumerator<KeyValuePair<P, V>> 
-                IEnumerable<KeyValuePair<P, V>>.GetEnumerator()
+            IEnumerator<FibonacciNode<P, V>> 
+                IEnumerable<FibonacciNode<P, V>>.GetEnumerator()
             {
                 return Enumerator.Create(this);
             }
@@ -1094,37 +1098,42 @@ namespace GraphForms.Algorithms.Collections
             /// </returns>
             public string DrawHeap()
             {
-                List<string> lines = new List<string>();
+                int lineCount = 0;
+                string[] lines = new string[this.mCount];
                 int lineNum = 0;
                 int columnPosition = 0;
-                Stack<NodeLevel> stack = new Stack<NodeLevel>();
+                int stackCount = 0;
+                NodeLevel[] stack = new NodeLevel[this.mCount];
                 FibonacciNode<P, V> node = this.mNodes.Last;
                 while (node != null)
                 {
-                    stack.Push(new NodeLevel(node, 0));
+                    //stack.Push(new NodeLevel(node, 0));
+                    stack[stackCount++] = new NodeLevel(node, 0);
                     node = node.Prev;
                 }
-                NodeLevel currentCell;
-                string currentLine, nodeString;
-                while (stack.Count > 0)
+                NodeLevel currCell;
+                string currLine, nodeString;
+                while (stackCount > 0)
                 {
-                    currentCell = stack.Pop();
-                    lineNum = currentCell.Level;
-                    if (lines.Count <= lineNum)
-                        lines.Add(string.Empty);
-                    currentLine = lines[lineNum];
-                    currentLine = currentLine.PadRight(columnPosition, ' ');
-                    nodeString = currentCell.Node.mPriority.ToString()
-                        + (currentCell.Node.Marked ? "*" : "") + " ";
-                    currentLine += nodeString;
-                    if (currentCell.Node.Children != null &&
-                        currentCell.Node.Children.Last != null)
+                    currCell = stack[--stackCount];//stack.Pop();
+                    lineNum = currCell.Level;
+                    if (lineCount <= lineNum)
+                        lines[lineCount++] = string.Empty;
+                    currLine = lines[lineNum];
+                    currLine = currLine.PadRight(columnPosition, ' ');
+                    nodeString = currCell.Node.mPriority.ToString()
+                        + (currCell.Node.Marked ? "*" : "") + " ";
+                    currLine += nodeString;
+                    if (currCell.Node.Children != null &&
+                        currCell.Node.Children.Last != null)
                     {
-                        node = currentCell.Node.Children.Last;
+                        node = currCell.Node.Children.Last;
                         while (node != null)
                         {
-                            stack.Push(new NodeLevel(node, 
-                                currentCell.Level + 1));
+                            //stack.Push(new NodeLevel(node, 
+                            //    currentCell.Level + 1));
+                            stack[stackCount++] 
+                                = new NodeLevel(node, currCell.Level + 1);
                             node = node.Prev;
                         }
                     }
@@ -1132,10 +1141,10 @@ namespace GraphForms.Algorithms.Collections
                     {
                         columnPosition += nodeString.Length;
                     }
-                    lines[lineNum] = currentLine;
+                    lines[lineNum] = currLine;
                 }
                 StringBuilder builder = new StringBuilder();
-                for (int i = 0; i < lines.Count; i++)
+                for (int i = 0; i < lineCount; i++)
                     builder.AppendLine(lines[i]);
                 return builder.ToString();
             }

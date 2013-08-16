@@ -316,10 +316,11 @@ namespace GraphForms.Algorithms.Collections
 
         private void InvalidateParent()
         {
-            if (this.mRoot != null)
+            CircleTree<Node, Edge> p = this.mRoot;
+            while (p != null && !p.bCHDirty)
             {
-                this.mRoot.bCHDirty = true;
-                this.mRoot.InvalidateParent();
+                p.bCHDirty = true;
+                p = p.mRoot;
             }
         }
 
@@ -460,11 +461,17 @@ namespace GraphForms.Algorithms.Collections
             {
                 if (value < this.mBCount)
                     throw new ArgumentOutOfRangeException("Capacity");
-                CircleTree<Node, Edge>[] branches
-                    = new CircleTree<Node, Edge>[value];
-                if (this.mBCount > 0)
-                    Array.Copy(this.mBranches, 0, branches, 0, this.mBCount);
-                this.mBranches = branches;
+                if (value != this.mBranches.Length)
+                {
+                    CircleTree<Node, Edge>[] branches
+                        = new CircleTree<Node, Edge>[value];
+                    if (this.mBCount > 0)
+                    {
+                        Array.Copy(this.mBranches, 0, 
+                            branches, 0, this.mBCount);
+                    }
+                    this.mBranches = branches;
+                }
             }
         }
         #endregion
@@ -561,6 +568,16 @@ namespace GraphForms.Algorithms.Collections
         #endregion
 
         #region Convex Hull
+        /// <summary>
+        /// Gets whether this circle tree's <see cref="ConvexHull"/> will be
+        /// recalculated the next time it is retrieved because either its
+        /// <see cref="Radius"/> or <see cref="Branches"/> have been changed
+        /// since the last time its convex hull was calculated.
+        /// </summary>
+        public bool ConvexHullDirty
+        {
+            get { return this.bCHDirty; }
+        }
         /// <summary>
         /// The convex hull that encloses the circle at the center of this
         /// circle tree and all the circles on all the branches of this
@@ -1424,10 +1441,29 @@ namespace GraphForms.Algorithms.Collections
                         while (a1 > Math.PI)
                             a1 -= 2 * Math.PI;
                         // Test if ch2's shadow on ch3 is inside CH
-                        if (ch3.LowerWedge <= a1)
+                        /*if (ch3.LowerWedge <= a1)
                             continue;
                         else
+                            ch3LoW = a1;/* */
+                        if (ch3.LowerWedge > a1)
+                        {
                             ch3LoW = a1;
+                        }
+                        else if (ch3.LowerWedge == a1)
+                        {
+                            // Are ch2 and ch3 on opposite sides of ch1?
+                            a2 = Math.Abs(ch3.Ang - ch2.Ang);
+                            if (a2 > Math.PI)
+                                a2 = 2 * Math.PI - a2;
+                            if (a2 > Math.PI / 2)
+                                ch3LoW = a1;
+                            else
+                                continue;
+                        }
+                        else
+                        {
+                            continue;
+                        }
                     }
                     else
                     {
@@ -1513,10 +1549,29 @@ namespace GraphForms.Algorithms.Collections
                                 throw new Exception();
 #endif
                             // Test if ch2's shadow on ch3 is inside CH
-                            if (ch3.LowerWedge <= a1)
+                            /*if (ch3.LowerWedge <= a1)
                                 continue;
                             else
+                                ch3LoW = a1;/* */
+                            if (ch3.LowerWedge > a1)
+                            {
                                 ch3LoW = a1;
+                            }
+                            else if (ch3.LowerWedge == a1)
+                            {
+                                // Are ch2 and ch3 on opposite sides of ch1?
+                                a2 = Math.Abs(ch3.Ang - ch2.Ang);
+                                if (a2 > Math.PI)
+                                    a2 = 2 * Math.PI - a2;
+                                if (a2 > Math.PI / 2)
+                                    ch3LoW = a1;
+                                else
+                                    continue;
+                            }
+                            else
+                            {
+                                continue;
+                            }
                         }
                     }
                 }
@@ -1544,10 +1599,29 @@ namespace GraphForms.Algorithms.Collections
                         while (a1 > Math.PI)
                             a1 -= 2 * Math.PI;
                         // Test if ch2's shadow on ch1 is inside CH
-                        if (ch1.UpperWedge <= a1)
+                        /*if (ch1.UpperWedge <= a1)
                             continue;
                         else
+                            ch1UpW = a1;/* */
+                        if (ch1.UpperWedge > a1)
+                        {
                             ch1UpW = a1;
+                        }
+                        else if (ch1.UpperWedge == a1)
+                        {
+                            // Are ch2 and ch1 on opposite sides of ch3?
+                            a2 = Math.Abs(ch2.Ang - ch1.Ang);
+                            if (a2 > Math.PI)
+                                a2 = 2 * Math.PI - a2;
+                            if (a2 > Math.PI / 2)
+                                ch1UpW = a1;
+                            else
+                                continue;
+                        }
+                        else
+                        {
+                            continue;
+                        }
                     }
                     else
                     {
@@ -1634,10 +1708,29 @@ namespace GraphForms.Algorithms.Collections
                                 throw new Exception();
 #endif
                             // Test if ch2's shadow on ch1 is inside CH
-                            if (ch1.UpperWedge <= a1)
+                            /*if (ch1.UpperWedge <= a1)
                                 continue;
                             else
+                                ch1UpW = a1;/* */
+                            if (ch1.UpperWedge > a1)
+                            {
                                 ch1UpW = a1;
+                            }
+                            else if (ch1.UpperWedge == a1)
+                            {
+                                // Are ch2 and ch1 on opposite sides of ch3?
+                                a2 = Math.Abs(ch2.Ang - ch1.Ang);
+                                if (a2 > Math.PI)
+                                    a2 = 2 * Math.PI - a2;
+                                if (a2 > Math.PI / 2)
+                                    ch1UpW = a1;
+                                else
+                                    continue;
+                            }
+                            else
+                            {
+                                continue;
+                            }
                         }
                     }
                 }

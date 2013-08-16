@@ -952,7 +952,11 @@ namespace GraphForms
         /// </summary>
         public Cache[] CacheList
         {
-            get { return this.mCacheList.ToArray(); }
+            get 
+            { 
+                return this.mCacheList == null 
+                    ? null : this.mCacheList.ToArray(); 
+            }
         }
 
         /// <summary>

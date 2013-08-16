@@ -12,9 +12,13 @@ namespace GraphForms
     /// </summary>
     public abstract partial class GraphElement
     {
+        private static readonly GraphElement[] emptyChildren
+            = new GraphElement[0];
+
         private GraphElement parent;
         private int siblingIndex;
-        private List<GraphElement> children = new List<GraphElement>();
+        private GraphElement[] children = emptyChildren;
+        private int childCount = 0;
 
         private bool bStacksBehindParent = false;
         private bool bNegativeZStacksBehindParent = false;
@@ -52,7 +56,7 @@ namespace GraphForms
                 return;
 
             itemDepth = -1;
-            for (int i = 0; i < children.Count; ++i)
+            for (int i = 0; i < childCount; ++i)
                 children[i].InvalidateDepthRecursively();
         }
 
@@ -248,10 +252,10 @@ namespace GraphForms
             {
                 this.needSortChildren = false;
                 this.sequentialOrdering = true;
-                if (children.Count == 0)
+                if (childCount == 0)
                     return;
-                this.children.Sort(sChildSorter);
-                for (int i = 0; i < this.children.Count; ++i)
+                Array.Sort(this.children, 0, this.childCount, sChildSorter);
+                for (int i = 0; i < this.childCount; ++i)
                 {
                     if (this.children[i].siblingIndex != i)
                     {
@@ -279,14 +283,14 @@ namespace GraphForms
         {
             if (!this.sequentialOrdering)
             {
-                this.children.Sort(sInsertOrder);
+                Array.Sort(this.children, 0, this.childCount, sInsertOrder);
                 this.sequentialOrdering = true;
                 this.needSortChildren = true;
             }
             if (this.holesInSiblingIndex)
             {
                 this.holesInSiblingIndex = false;
-                for (int i = 0; i < this.children.Count; ++i)
+                for (int i = 0; i < this.childCount; ++i)
                     this.children[i].siblingIndex = i;
             }
         }
@@ -315,9 +319,11 @@ namespace GraphForms
                 Debug.WriteLine("Warning: Cannot stack under given object, which must be a sibling");
                 return false;
             }
-            List<GraphElement> siblings = this.parent != null
-                ? this.parent.children
-                : null;//(this.scene != null ? this.scene.TopLevelItems : null);
+            int siblingCount = this.parent != null 
+                ? this.parent.childCount : -1;
+            GraphElement[] siblings = this.parent != null
+                ? this.parent.children : null;
+            //(this.scene != null ? this.scene.TopLevelItems : null);
             if (siblings == null)
             {
                 Debug.WriteLine("Warning: Cannot stack under given object, which must be a sibling");
@@ -345,7 +351,7 @@ namespace GraphForms
                 }
                 siblings[siblingIndex] = this;
                 // Fixup the insertion ordering.
-                for (i = 0; i < siblings.Count; i++)
+                for (i = 0; i < siblingCount; i++)
                 {
                     index = siblings[i].siblingIndex;
                     if (i != siblingIndex && index >= siblingIndex && index <= myIndex)
@@ -482,7 +488,9 @@ namespace GraphForms
             get
             {
                 this.EnsureSortedChildren();
-                return this.children.ToArray();
+                GraphElement[] childs = new GraphElement[this.childCount];
+                Array.Copy(this.children, 0, childs, 0, this.childCount);
+                return childs;
             }
         }
 
@@ -491,7 +499,7 @@ namespace GraphForms
         /// </summary>
         public bool HasChildren
         {
-            get { return this.children.Count > 0; }
+            get { return this.childCount > 0; }
         }
 
         private void AddChild(GraphElement child)
@@ -500,8 +508,23 @@ namespace GraphForms
             // number is equal to the size of the children list.
             this.EnsureSequentialSiblingIndex();
             this.needSortChildren = true; // maybe false
-            child.siblingIndex = children.Count;
-            this.children.Add(child);
+            child.siblingIndex = this.childCount;
+            //this.children.Add(child);
+            if (this.childCount == this.children.Length)
+            {
+                GraphElement[] childs;
+                if (this.childCount == 0)
+                {
+                    childs = new GraphElement[4];
+                }
+                else
+                {
+                    childs = new GraphElement[2 * this.childCount];
+                    Array.Copy(this.children, 0, childs, 0, this.childCount);
+                }
+                this.children = childs;
+            }
+            this.children[this.childCount++] = child;
             
             this.OnChildAdded(child);
             System.Drawing.RectangleF invalid = child.ChildrenBoundingBox();
@@ -527,11 +550,36 @@ namespace GraphForms
             // When removing elements in the middle of the children list,
             // there will be a "gap" in the list of sibling indexes (0,1,3,4).
             if (!this.holesInSiblingIndex)
-                this.holesInSiblingIndex = child.siblingIndex != children.Count - 1;
+            {
+                this.holesInSiblingIndex 
+                    = child.siblingIndex != this.childCount - 1;
+            }
             if (this.sequentialOrdering && !this.holesInSiblingIndex)
-                this.children.RemoveAt(child.siblingIndex);
+            {
+                //this.children.RemoveAt(child.siblingIndex);
+                this.childCount--;
+                Array.Copy(this.children, child.siblingIndex + 1, 
+                           this.children, child.siblingIndex, 
+                           this.childCount - child.siblingIndex);
+                this.children[this.childCount] = null;
+            }
             else
-                this.children.Remove(child);
+            {
+                //this.children.Remove(child);
+                int i;
+                for (i = 0; i < this.childCount; i++)
+                {
+                    if (this.children[i] == child)
+                        break;
+                }
+                if (i < this.childCount)
+                {
+                    this.childCount--;
+                    Array.Copy(this.children, i + 1,
+                        this.children, i, this.childCount - i);
+                    this.children[this.childCount] = null;
+                }
+            }
             // NB! Do not use children.RemoveAt(child.siblingIndex) because
             // the child is not guaranteed to be at the index after the list is sorted.
             // (see ensureSortedChildren()).

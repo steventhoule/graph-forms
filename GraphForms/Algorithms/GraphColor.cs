@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace GraphForms.Algorithms
 {
@@ -14,14 +12,14 @@ namespace GraphForms.Algorithms
         /// <summary>
         /// The node/edge has not yet been visited by the algorithm.
         /// </summary>
-        White = 0,
+        White = 0x00,
         /// <summary>
         /// The node/edge is currently being visited by the algorithm.
         /// </summary>
-        Gray = 1,
+        Gray  = 0x01,
         /// <summary>
         /// The node/edge has already been visited by the algorithm.
         /// </summary>
-        Black = 2
+        Black = 0x02
     }
 }

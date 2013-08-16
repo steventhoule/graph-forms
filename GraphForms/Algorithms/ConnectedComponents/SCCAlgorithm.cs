@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using GraphForms.Algorithms.Search;
 
 namespace GraphForms.Algorithms.ConnectedComponents
@@ -8,7 +6,7 @@ namespace GraphForms.Algorithms.ConnectedComponents
     // Based on Tarjan's Algorithm for Strongly Connected Components
     // http://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm
     public class SCCAlgorithm<Node, Edge>
-        : DepthFirstSearch<Node, Edge>, ICCAlgorithm<Node>
+        : DepthFirstSearch<Node, Edge>, ICCAlgorithm<Node, Edge>
         where Edge : IGraphEdge<Node>
     {
         private class NodeData : IEquatable<NodeData>
@@ -30,67 +28,120 @@ namespace GraphForms.Algorithms.ConnectedComponents
             }
         }
 
-        private Stack<int> mNodeStack;
+        //private Stack<int> mStack;
+        private int mStackCount;
+        private int[] mStack;
         private NodeData[] mDatas;
         private int mDepth;
 
-        private List<Node> mRoots;
-        private List<Node[]> mComponents;
+        private int mCompCount;
+        private int[] mCompIds;
+        private Digraph<Node, Edge>.GNode[] mRoots;
 
-        public SCCAlgorithm(Digraph<Node, Edge> graph)
-            : this(graph, false)
-        {
-        }
-
-        public SCCAlgorithm(Digraph<Node, Edge> graph,
-            bool reversed)
+        public SCCAlgorithm(Digraph<Node, Edge> graph, bool reversed)
             : base(graph, true, reversed)
         {
-            this.mNodeStack = new Stack<int>(graph.NodeCount + 1);
-            this.mRoots = new List<Node>();
-            this.mComponents = new List<Node[]>();
+            //this.mStack = new Stack<int>(graph.NodeCount + 1);
+            this.mDatas = new NodeData[0];
+            this.mStack = new int[0];
+            this.mCompCount = 0;
+            this.mCompIds = new int[0];
+            this.mRoots = new Digraph<Node, Edge>.GNode[0];
         }
 
-        public Node[][] Components
+        public int ComponentCount
         {
-            get { return this.mComponents.ToArray(); }
+            get { return this.mCompCount; }
         }
 
-        public Node[] Roots
+        public int[] ComponentIds
         {
-            get { return this.mRoots.ToArray(); }
+            get
+            {
+                int count = this.mGraph.NodeCount;
+                int[] compIds = new int[count];
+                Array.Copy(this.mCompIds, 0, compIds, 0, count);
+                return compIds;
+            }
+        }
+
+        public Digraph<Node, Edge>.GNode[][] Components
+        {
+            get
+            {
+                int i, j, count, nCount = this.mGraph.NodeCount;
+                Digraph<Node, Edge>.GNode[] comp
+                    = new Digraph<Node, Edge>.GNode[nCount];
+                Digraph<Node, Edge>.GNode[][] comps
+                    = new Digraph<Node, Edge>.GNode[this.mCompCount][];
+                for (i = 0; i < this.mCompCount; i++)
+                {
+                    count = 0;
+                    for (j = 0; j < nCount; j++)
+                    {
+                        if (this.mCompIds[j] == i)
+                        {
+                            comp[count++] = this.mGraph.InternalNodeAt(j);
+                        }
+                    }
+                    comps[i] = new Digraph<Node, Edge>.GNode[count];
+                    Array.Copy(comp, 0, comps[i], 0, count);
+                }
+                return comps;
+            }
+        }
+
+        public Digraph<Node, Edge>.GNode[] Roots
+        {
+            get
+            {
+                Digraph<Node, Edge>.GNode[] roots
+                    = new Digraph<Node, Edge>.GNode[this.mCompCount];
+                Array.Copy(this.mRoots, 0, roots, 0, this.mCompCount);
+                return roots;
+            }
         }
 
         public override void Initialize()
         {
             this.mDepth = 0;
-            Digraph<Node, Edge>.GNode[] nodes
-                = this.mGraph.InternalNodes;
-            this.mDatas = new NodeData[nodes.Length];
-            for (int i = 0; i < nodes.Length; i++)
+            int count = this.mGraph.NodeCount;
+            if (this.mDatas.Length < count)
             {
-                this.mDatas[i] = new NodeData(nodes[i].mData);
+                this.mDatas = new NodeData[count];
+                this.mStack = new int[count];
+                this.mCompIds = new int[count];
             }
+            for (int i = 0; i < count; i++)
+            {
+                this.mDatas[i] = new NodeData(this.mGraph.NodeAt(i));
+                this.mCompIds[i] = -1;
+            }
+            this.mStackCount = 0;
+            this.mCompCount = 0;
             base.Initialize();
         }
 
-        protected override void OnDiscoverNode(Node n, int index)
+        protected override void OnDiscoverNode(
+            Digraph<Node, Edge>.GNode n, uint depth)
         {
-            NodeData data = this.mDatas[index];
+            NodeData data = this.mDatas[n.Index];
             if (data.Depth == -1)
             {
                 data.Depth = this.mDepth;
                 data.LowLink = this.mDepth;
                 this.mDepth++;
-                this.mNodeStack.Push(index);
+                //this.mStack.Push(n.Index);
+                this.mStack[this.mStackCount++] = n.Index;
             }
-            base.OnDiscoverNode(n, index);
         }
 
-        protected override void OnFinishEdge(Edge e, int srcIndex, 
-            int dstIndex, bool reversed)
+        protected override void OnFinishEdge(Digraph<Node, Edge>.GEdge e,
+            bool reversed, uint depth)
         {
             NodeData uDat, vDat;
+            int srcIndex = e.SrcNode.Index;
+            int dstIndex = e.DstNode.Index;
             if (reversed)
             {
                 uDat = this.mDatas[dstIndex];
@@ -102,68 +153,105 @@ namespace GraphForms.Algorithms.ConnectedComponents
                 vDat = this.mDatas[dstIndex];
             }
             uDat.LowLink = Math.Min(uDat.LowLink, vDat.LowLink);
-            base.OnFinishEdge(e, srcIndex, dstIndex, reversed);
         }
 
-        protected override void OnBlackEdge(Edge e, int srcIndex, 
-            int dstIndex, bool reversed)
+        protected override void OnBlackEdge(Digraph<Node, Edge>.GEdge e,
+            bool reversed, uint depth)
         {
             NodeData uDat;
             int v;
             if (reversed)
             {
-                uDat = this.mDatas[dstIndex];
-                v = srcIndex;
+                uDat = this.mDatas[e.DstNode.Index];//dstIndex];
+                v = e.SrcNode.Index;//srcIndex;
             }
             else
             {
-                uDat = this.mDatas[srcIndex];
-                v = dstIndex;
+                uDat = this.mDatas[e.SrcNode.Index];//srcIndex];
+                v = e.DstNode.Index;//dstIndex;
             }
-            if (this.mNodeStack.Contains(v))
+            int i;
+            for (i = 0; i < this.mStackCount; i++)
+            {
+                if (this.mStack[i] == v)
+                    break;
+            }
+            if (i < this.mStackCount)//this.mStack.Contains(v))
             {
                 uDat.LowLink = Math.Min(uDat.LowLink, this.mDatas[v].Depth);
             }
-            base.OnBlackEdge(e, srcIndex, dstIndex, reversed);
         }
 
-        protected override void OnGrayEdge(Edge e, int srcIndex, 
-            int dstIndex, bool reversed)
+        protected override void OnGrayEdge(Digraph<Node, Edge>.GEdge e,
+            bool reversed, uint depth)
         {
             NodeData uDat;
             int v;
             if (reversed)
             {
-                uDat = this.mDatas[dstIndex];
-                v = srcIndex;
+                uDat = this.mDatas[e.DstNode.Index];//dstIndex];
+                v = e.SrcNode.Index;//srcIndex;
             }
             else
             {
-                uDat = this.mDatas[srcIndex];
-                v = dstIndex;
+                uDat = this.mDatas[e.SrcNode.Index];//srcIndex];
+                v = e.DstNode.Index;//dstIndex;
             }
-            if (this.mNodeStack.Contains(v))
+            int i;
+            for (i = 0; i < this.mStackCount; i++)
+            {
+                if (this.mStack[i] == v)
+                    break;
+            }
+            if (i < this.mStackCount)//this.mStack.Contains(v))
             {
                 uDat.LowLink = Math.Min(uDat.LowLink, this.mDatas[v].Depth);
             }
-            base.OnGrayEdge(e, srcIndex, dstIndex, reversed);
         }
 
-        protected override void OnFinishNode(Node n, int index)
+        protected override void OnFinishNode(
+            Digraph<Node, Edge>.GNode n, uint depth)
         {
+            int index = n.Index;
             if (this.mDatas[index].LowLink == this.mDatas[index].Depth)
             {
-                this.mRoots.Add(n);
-                List<Node> comp = new List<Node>();
+                /*this.mRoots.Add(n.Data);
+                int count = 0;
+                Node[] comp = new Node[this.mStackCount];
                 int i = -1;
                 while (i != index)
                 {
-                    i = this.mNodeStack.Pop();
-                    comp.Add(this.mDatas[i].Data);
+                    i = this.mStack[--this.mStackCount];//this.mStack.Pop();
+                    comp[count++] = this.mDatas[i].Data;
                 }
-                this.mComponents.Add(comp.ToArray());
+                Node[] newComp = new Node[count];
+                Array.Copy(comp, 0, newComp, 0, count);
+                this.mComponents.Add(newComp);/* */
+                
+                if (this.mCompCount == this.mRoots.Length)
+                {
+                    Digraph<Node, Edge>.GNode[] roots;
+                    if (this.mCompCount == 0)
+                    {
+                        roots = new Digraph<Node, Edge>.GNode[4];
+                    }
+                    else
+                    {
+                        roots = new Digraph<Node, Edge>.GNode[2 * this.mCompCount];
+                        Array.Copy(this.mRoots, 0, roots, 0, this.mCompCount);
+                    }
+                    this.mRoots = roots;
+                }
+                this.mRoots[this.mCompCount] = n;
+
+                int i = -1;
+                while (i != index)
+                {
+                    i = this.mStack[--this.mStackCount];
+                    this.mCompIds[i] = this.mCompCount;
+                }
+                this.mCompCount++;
             }
-            base.OnFinishNode(n, index);
         }
     }
 }

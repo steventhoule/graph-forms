@@ -208,12 +208,12 @@ namespace GraphAlgorithmDemo
         }
     }
 
-    public class FDSCircleLayoutForCircles
-        : FDSingleCircleLayoutAlgorithm<CircleNode, ArrowEdge>
+    public class SCircleLayoutForCircles
+        : SingleCircleLayoutAlgorithm<CircleNode, ArrowEdge>
     {
         private CircleNodeScene mScene;
 
-        public FDSCircleLayoutForCircles(CircleNodeScene scene,
+        public SCircleLayoutForCircles(CircleNodeScene scene,
             Box2F boundingBox)
             : base(scene.Graph, boundingBox)
         {
@@ -222,7 +222,7 @@ namespace GraphAlgorithmDemo
             this.CenterY = boundingBox.Y + boundingBox.H / 2;
         }
 
-        public FDSCircleLayoutForCircles(CircleNodeScene scene,
+        public SCircleLayoutForCircles(CircleNodeScene scene,
             IClusterNode clusterNode)
             : base(scene.Graph, clusterNode)
         {
@@ -247,7 +247,7 @@ namespace GraphAlgorithmDemo
     }
 
     public class BalloonCirclesLayoutForCircles
-        : BalloonCirclesLayoutAlgorithm<CircleNode, ArrowEdge>
+        : BalloonCirclesLayoutAlgorithm2<CircleNode, ArrowEdge>
     {
         private CircleNodeScene mScene;
 

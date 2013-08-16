@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace GraphForms.Algorithms.Layout.ForceDirected
 {
@@ -11,9 +10,10 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         where Edge : IGraphEdge<Node>, IUpdateable
     {
         private readonly Random mRnd = new Random(DateTime.Now.Millisecond);
-        private Queue<int> mQueue;
+        //private Queue<int> mQueue;
+        private Digraph<Node, Edge>.GNode[] mQueue;
 
-        private Digraph<Node, Edge>.GNode[] mNodes;
+        private int mNodeCount;
         private int[] mDistances;
         private int mRadius;
         private double mAdapt;
@@ -31,7 +31,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             IClusterNode clusterNode)
             : base(graph, clusterNode)
         {
-            this.mQueue = new Queue<int>();
+            this.mQueue = new Digraph<Node, Edge>.GNode[0];
             this.mDistances = new int[0];
         }
 
@@ -39,7 +39,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             Box2F boundingBox)
             : base(graph, boundingBox)
         {
-            this.mQueue = new Queue<int>();
+            this.mQueue = new Digraph<Node, Edge>.GNode[0];
             this.mDistances = new int[0];
         }
 
@@ -130,7 +130,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
 
         protected override void PerformIteration(uint iteration)
         {
-            this.mNodes = this.mGraph.InternalNodes;
+            this.mNodeCount = this.mGraph.NodeCount;
 
             this.Adjust();
 
@@ -152,17 +152,19 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
 
             // find the closest node
             //Digraph<Node, Edge>.GNode[] nodes = this.mGraph.InternalNodes;
-            for (int i = 0; i < this.mNodes.Length; i++)
+            for (int i = 0; i < this.mNodeCount; i++)
             {
-                n = this.mNodes[i];
-                //dist = GraphHelpers.Length(n.Data.MapFromScene(position));
-                dx = n.Data.X - x;
-                dy = n.Data.Y - y;
-                dist = dx * dx + dy * dy;
-                if (dist < minDist)
+                n = this.mGraph.InternalNodeAt(i);
+                if (!n.Hidden)
                 {
-                    node = n;
-                    minDist = dist;
+                    dx = n.Data.X - x;
+                    dy = n.Data.Y - y;
+                    dist = dx * dx + dy * dy;
+                    if (dist < minDist)
+                    {
+                        node = n;
+                        minDist = dist;
+                    }
                 }
             }
             return node;
@@ -170,10 +172,22 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
 
         private void Adjust()
         {
-            Digraph<Node, Edge>.GNode closest = null;
+            Digraph<Node, Edge>.GNode closest;
+            if (this.mDistances.Length < this.mNodeCount)
+            {
+                this.mDistances = new int[this.mNodeCount];
+            }
+            for (int i = 0; i < this.mNodeCount; i++)
+            {
+                closest = this.mGraph.InternalNodeAt(i);
+                //this.mNodes[i].Index = i;
+                closest.Color = GraphColor.White;
+                this.mDistances[i] = 0;
+            }
+            closest = null;
             Box2F bbox = this.mClusterNode == null 
                 ? this.BoundingBox : this.mClusterNode.LayoutBBox;
-            while (closest == null || closest.AllEdgeCount == 0)
+            while (closest == null || closest.TotalEdgeCount(false) == 0)
             {
                 // get a random point in the container
                 this.mGlobalX = (0.1 + 0.8 * this.mRnd.NextDouble())
@@ -186,59 +200,47 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             }
 
             // Adjust the nodes to the selected node
-            //Digraph<Node, Edge>.GNode[] nodes = this.mGraph.InternalNodes;
-            if (this.mDistances.Length < this.mNodes.Length)
-            {
-                this.mDistances = new int[this.mNodes.Length];
-            }
-            for (int i = 0; i < this.mNodes.Length; i++)
-            {
-                this.mNodes[i].Index = i;
-                this.mNodes[i].Color = GraphColor.White;
-                this.mDistances[i] = 0;
-            }
+            
             this.AdjustNode(closest);
         }
 
         private void AdjustNode(Digraph<Node, Edge>.GNode closest)
         {
-            this.mQueue.Clear();
+            //this.mQueue.Clear();
+            if (this.mQueue.Length < this.mNodeCount)
+            {
+                this.mQueue = new Digraph<Node, Edge>.GNode[this.mNodeCount];
+            }
             this.mDistances[closest.Index] = 0;
             closest.Color = GraphColor.Gray;
-            this.mQueue.Enqueue(closest.Index);
-
-            //float[] newXs = this.NewXPositions;
-            //float[] newYs = this.NewYPositions;
+            //this.mQueue.Enqueue(closest.Index);
+            int qIndex = 0;
+            int qCount = 1;
+            this.mQueue[0] = closest;
             
-            Node curr;
             int i, ci, dist;
             //PointF force;
             double dx, dy, posX, posY, factor;
-            Digraph<Node, Edge>.GNode n;
+            Digraph<Node, Edge>.GNode n, curr;
             Digraph<Node, Edge>.GEdge[] edges
                 = this.mGraph.InternalEdges;
-            while (this.mQueue.Count > 0)
+            while (qIndex < qCount)//this.mQueue.Count > 0)
             {
-                ci = this.mQueue.Dequeue();
-                curr = this.mNodes[ci].Data;
+                curr = this.mQueue[qIndex++];//this.mQueue.Dequeue();
+                ci = curr.Index;
                 dist = this.mDistances[ci];
-                posX = curr.X;
-                posY = curr.Y;
-                if (!curr.PositionFixed)
+                posX = curr.Data.X;
+                posY = curr.Data.Y;
+                if (!curr.Data.PositionFixed)
                 {
-                    //force = node.MapFromScene(this.mTempPos);
                     dx = this.mGlobalX - posX;
                     dy = this.mGlobalY - posY;
                     factor = this.mAdapt / Math.Pow(2, dist);
 
-                    posX += factor * dx;//force.X;
-                    posY += factor * dy;//force.Y;
+                    posX += factor * dx;
+                    posY += factor * dy;
                 }
-                //curr.NewX = (float)posX;
-                //curr.NewY = (float)posY;
-                curr.SetNewPosition((float)posX, (float)posY);
-                //newXs[ci] = (float)posX;
-                //newYs[ci] = (float)posY;
+                curr.Data.SetPosition((float)posX, (float)posY);
 
                 // only if the node is within range
                 if (dist < this.mRadius)
@@ -246,22 +248,25 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                     // iterate through all its neighbors
                     for (i = 0; i < edges.Length; i++)
                     {
-                        if (edges[i].mSrcNode.Index == ci)
-                            n = edges[i].mDstNode;
-                        else if (edges[i].mDstNode.Index == ci)
-                            n = edges[i].mSrcNode;
+                        if (edges[i].Hidden)
+                            continue;
+                        if (edges[i].SrcNode.Index == ci)
+                            n = edges[i].DstNode;
+                        else if (edges[i].DstNode.Index == ci)
+                            n = edges[i].SrcNode;
                         else
                             continue;
-                        if (n.Color == GraphColor.White)
+                        if (n.Color == GraphColor.White && !n.Hidden)
                         {
                             this.mDistances[n.Index] = dist + 1;
                             n.Color = GraphColor.Gray;
-                            this.mQueue.Enqueue(n.Index);
+                            //this.mQueue.Enqueue(n.Index);
+                            this.mQueue[qCount++] = n;
                         }
                         /*else if (dist + 1 < this.mDistances[n.Index])
                         {
                             this.mDistances[n.Index] = dist + 1;
-                            if (n.Color == GraphColor.Black)
+                            if (n.Color == GraphColor.Black && !n.Hidden)
                             {
                                 n.Color = GraphColor.Gray;
                                 this.mQueue.Enqueue(n.Index);
@@ -269,7 +274,7 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                         }/* */
                     }
                 }
-                this.mNodes[ci].Color = GraphColor.Black;
+                curr.Color = GraphColor.Black;
             }
         }
     }

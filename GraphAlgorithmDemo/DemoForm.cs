@@ -56,7 +56,7 @@ namespace GraphAlgorithmDemo
                 new ISOMLayoutForCircles(mScene, mScene.LayoutBBox),
                 new KKLayoutForCircles(mScene, mScene.LayoutBBox),
                 new LinLogLayoutForCircles(mScene, mScene.LayoutBBox),
-                new FDSCircleLayoutForCircles(mScene, mScene.LayoutBBox),
+                new SCircleLayoutForCircles(mScene, mScene.LayoutBBox),
                 new BalloonCirclesLayoutForCircles(mScene, mScene.LayoutBBox),
                 new BalloonTreeLayoutForCircles(mScene, mScene.LayoutBBox),
                 new SimpleTreeLayoutForCircles(mScene, mScene.LayoutBBox)

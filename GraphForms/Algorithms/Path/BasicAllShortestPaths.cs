@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace GraphForms.Algorithms.Path
 {
@@ -10,7 +8,7 @@ namespace GraphForms.Algorithms.Path
     {
         private AShortestPath<Node, Edge> mAlg;
 
-        private double[][] mDistances;
+        private float[][] mDistances;
         private int[][] mPathNodes;
         private Edge[][] mPathEdges;
 
@@ -20,7 +18,7 @@ namespace GraphForms.Algorithms.Path
             this.mAlg = alg;
         }
 
-        public override double[][] Distances
+        public override float[][] Distances
         {
             get { return this.mDistances; }
         }
@@ -37,18 +35,35 @@ namespace GraphForms.Algorithms.Path
 
         protected override void InternalCompute()
         {
-            Digraph<Node, Edge>.GNode[] nodes
-                = this.mGraph.InternalNodes;
-            this.mDistances = new double[nodes.Length][];
-            this.mPathNodes = new int[nodes.Length][];
-            this.mPathEdges = new Edge[nodes.Length][];
-            for (int i = 0; i < nodes.Length; i++)
+            Digraph<Node, Edge>.GNode node;
+            int i, j, count = this.mGraph.NodeCount;
+            this.mDistances = new float[count][];
+            this.mPathNodes = new int[count][];
+            this.mPathEdges = new Edge[count][];
+            for (i = 0; i < count; i++)
             {
-                this.mAlg.Reset();
-                this.mAlg.Compute(nodes[i].mData);
-                this.mDistances[i] = this.mAlg.Distances;
-                this.mPathNodes[i] = this.mAlg.PathNodes;
-                this.mPathEdges[i] = this.mAlg.PathEdges;
+                node = this.mGraph.InternalNodeAt(i);
+                if (node.Hidden)
+                {
+                    this.mDistances[i] = new float[count];
+                    this.mPathNodes[i] = new int[count];
+                    this.mPathEdges[i] = new Edge[count];
+                    for (j = 0; j < count; j++)
+                    {
+                        this.mDistances[i][j] = float.MaxValue;
+                        this.mPathNodes[i][j] = -1;
+                    }
+                }
+                else
+                {
+                    this.mAlg.Reset();
+                    this.mAlg.ClearRoots();
+                    this.mAlg.AddRoot(i);
+                    this.mAlg.Compute();
+                    this.mDistances[i] = this.mAlg.Distances;
+                    this.mPathNodes[i] = this.mAlg.PathNodes;
+                    this.mPathEdges[i] = this.mAlg.PathEdges;
+                }
             }
         }
     }

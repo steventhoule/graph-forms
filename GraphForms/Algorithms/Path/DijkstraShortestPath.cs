@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using GraphForms.Algorithms.Collections;
 
 namespace GraphForms.Algorithms.Path
@@ -36,95 +34,110 @@ namespace GraphForms.Algorithms.Path
 
         private void PriorityQueueCompute()
         {
-            bool reversed;
+            bool rev;
+            Digraph<Node, Edge>.GNode node;
+            Digraph<Node, Edge>.GEdge edge;
+            int count = this.mGraph.NodeCount;
             int i, j, u, v, stop = this.bUndirected ? 2 : 1;
-            Digraph<Node, Edge>.GEdge[] edges
-                = this.mGraph.InternalEdges;
-            Digraph<Node, Edge>.GNode[] nodes
-                = this.mGraph.InternalNodes;
 
-            FibonacciNode<double, int>.Heap queue 
-                = new FibonacciNode<double, int>.Heap();
-            FibonacciNode<double, int>[] queueNodes
-                = new FibonacciNode<double, int>[nodes.Length];
-            for (i = 0; i < nodes.Length; i++)
+            FibonacciNode<float, int>.Heap queue 
+                = new FibonacciNode<float, int>.Heap();
+            FibonacciNode<float, int>[] queueNodes
+                = new FibonacciNode<float, int>[count];
+            for (i = 0; i < count; i++)
             {
-                queueNodes[i] = queue.Enqueue(this.mDistances[i], i);
+                node = this.mGraph.InternalNodeAt(i);
+                if (!node.Hidden)
+                    queueNodes[i] = queue.Enqueue(this.mDistances[i], i);
             }
 
-            double dist;
+            float dist;
+            count = this.mGraph.EdgeCount;
             while (queue.Count > 0)
             {
                 u = queue.Dequeue().Value;
-                if (this.mDistances[u] == double.MaxValue)
+                if (this.mDistances[u] == float.MaxValue)
                     break;
-                reversed = this.bReversed;
+                rev = this.bReversed;
                 for (j = 0; j < stop; j++)
                 {
-                    for (i = 0; i < edges.Length; i++)
+                    for (i = 0; i < count; i++)
                     {
-                        v = reversed ? edges[i].mDstNode.Index 
-                                     : edges[i].mSrcNode.Index;
-                        if (v != u)
+                        edge = this.mGraph.InternalEdgeAt(i);
+                        if (edge.Hidden)
                             continue;
-                        v = reversed ? edges[i].mSrcNode.Index
-                                     : edges[i].mDstNode.Index;
-                        dist = this.mDistances[u] + edges[i].mData.Weight;
+                        node = rev ? edge.DstNode : edge.SrcNode;
+                        if (node.Index != u)
+                            continue;
+                        node = rev ? edge.SrcNode : edge.DstNode;
+                        if (node.Hidden)
+                            continue;
+                        v = node.Index;
+                        dist = this.mDistances[u] + edge.Data.Weight;
                         if (dist < this.mDistances[v])
                         {
                             this.mDistances[v] = dist;
                             this.mPathNodes[v] = u;
-                            this.mPathEdges[v] = edges[i].mData;
+                            this.mPathEdges[v] = edge.Data;
                             queue.ChangePriority(queueNodes[v], dist);
                         }
                     }
-                    reversed = !reversed;
+                    rev = !rev;
                 }
             }
         }
 
         private void RegularQueueCompute(int root)
         {
-            bool reversed;
+            bool rev;
+            float dist;
+            Digraph<Node, Edge>.GNode node;
+            Digraph<Node, Edge>.GEdge edge;
             int i, j, u, v, stop = this.bUndirected ? 2 : 1;
-            Digraph<Node, Edge>.GEdge[] edges
-                = this.mGraph.InternalEdges;
-            Digraph<Node, Edge>.GNode[] nodes
-                = this.mGraph.InternalNodes;
-            double dist;
-            Queue<int> queue = new Queue<int>(nodes.Length);
-            nodes[root].Color = GraphColor.Gray;
-            queue.Enqueue(root);
-            while (queue.Count > 0)
+            int qIndex, qCount, count = this.mGraph.NodeCount;
+            //Queue<int> queue = new Queue<int>(count);
+            int[] queue = new int[count];
+            node = this.mGraph.InternalNodeAt(root);
+            node.Color = GraphColor.Gray;
+            //queue.Enqueue(root);
+            qIndex = 0;
+            qCount = 1;
+            queue[0] = root;
+            count = this.mGraph.EdgeCount;
+            while (qIndex < qCount)//queue.Count > 0)
             {
-                u = queue.Dequeue();
-                reversed = this.bReversed;
+                u = queue[qIndex++];//queue.Dequeue();
+                rev = this.bReversed;
                 for (j = 0; j < stop; j++)
                 {
-                    for (i = 0; i < edges.Length; i++)
+                    for (i = 0; i < count; i++)
                     {
-                        v = reversed ? edges[i].mDstNode.Index
-                                     : edges[i].mSrcNode.Index;
-                        if (v != u)
+                        edge = this.mGraph.InternalEdgeAt(i);
+                        if (edge.Hidden)
                             continue;
-                        v = reversed ? edges[i].mSrcNode.Index
-                                     : edges[i].mDstNode.Index;
-                        dist = this.mDistances[u] + edges[i].mData.Weight;
+                        node = rev ? edge.DstNode : edge.SrcNode;
+                        if (node.Index != u)
+                            continue;
+                        node = rev ? edge.SrcNode : edge.DstNode;
+                        if (node.Hidden)
+                            continue;
+                        v = node.Index;
+                        dist = this.mDistances[u] + edge.Data.Weight;
                         if (dist < this.mDistances[v])
                         {
                             this.mDistances[v] = dist;
                             this.mPathNodes[v] = u;
-                            this.mPathEdges[v] = edges[i].mData;
-                            if (nodes[v].Color != GraphColor.Gray)
+                            this.mPathEdges[v] = edge.Data;
+                            if (node.Color != GraphColor.Gray)
                             {
-                                nodes[v].Color = GraphColor.Gray;
-                                queue.Enqueue(v);
+                                node.Color = GraphColor.Gray;
+                                queue[qCount++] = v;//queue.Enqueue(v);
                             }
                         }
                     }
-                    reversed = !reversed;
+                    rev = !rev;
                 }
-                nodes[u].Color = GraphColor.Black;
+                //nodes[u].Color = GraphColor.Black;
             }
         }
 

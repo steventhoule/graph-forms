@@ -153,6 +153,11 @@ namespace GraphAlgorithmDemo
             set { this.mAName = value; }
         }
 
+        public override string ToString()
+        {
+            return this.AName;
+        }
+
         public void SetSrcNode(CircleNode srcNode)
         {
             this.mSrcNode = srcNode;

@@ -45,18 +45,8 @@ namespace GraphForms.Algorithms.Layout.Tree
         private int mDir;
         private Layer[] mLayers;
         private int mLayerCount;
-        
 
-        /*public SimpleTreeLayoutAlgorithm(Digraph<Node, Edge> graph)
-            : base(graph, null)
-        {
-        }
-
-        public SimpleTreeLayoutAlgorithm(Digraph<Node, Edge> graph,
-            SimpleTreeLayoutParameters oldParameters)
-            : base(graph, oldParameters)
-        {
-        }/* */
+        private bool bDirty = true;
 
         public SimpleTreeLayoutAlgorithm(Digraph<Node, Edge> graph,
             IClusterNode clusterNode)
@@ -83,7 +73,7 @@ namespace GraphForms.Algorithms.Layout.Tree
                 if (this.mVertexGap != value)
                 {
                     this.mVertexGap = value;
-                    this.MarkDirty();
+                    this.bDirty = true;
                 }
             }
         }
@@ -99,7 +89,7 @@ namespace GraphForms.Algorithms.Layout.Tree
                 if (this.mLayerGap != value)
                 {
                     this.mLayerGap = value;
-                    this.MarkDirty();
+                    this.bDirty = true;
                 }
             }
         }
@@ -115,7 +105,7 @@ namespace GraphForms.Algorithms.Layout.Tree
                 if (this.mDirection != value)
                 {
                     this.mDirection = value;
-                    this.MarkDirty();
+                    this.bDirty = true;
                 }
             }
         }
@@ -132,21 +122,24 @@ namespace GraphForms.Algorithms.Layout.Tree
                 if (this.mSpanTreeGen != value)
                 {
                     this.mSpanTreeGen = value;
-                    this.MarkDirty();
+                    this.bDirty = true;
                 }
             }
         }
 
-        protected override void OnBeginIteration(uint iteration,
-            bool dirty, int lastNodeCount, int lastEdgeCount)
+        protected override void PerformPrecalculations(
+            uint lastNodeVersion, uint lastEdgeVersion)
         {
-            if (lastNodeCount != this.mGraph.NodeCount ||
-                lastEdgeCount != this.mGraph.EdgeCount || dirty)
+            if (lastNodeVersion != this.mGraph.NodeVersion ||
+                lastEdgeVersion != this.mGraph.EdgeVersion || this.bDirty)
             {
                 this.ComputePositions();
             }
-            base.OnBeginIteration(iteration, dirty,
-                lastNodeCount, lastEdgeCount);
+            this.bDirty = false;
+        }
+
+        protected override void PerformIteration(uint iteration)
+        {
         }
 
         private void ComputePositions()
@@ -157,27 +150,26 @@ namespace GraphForms.Algorithms.Layout.Tree
             //this.mDirection = param.Direction;
             //this.mSpanTreeGen = param.SpanningTreeGeneration;
 
-            int i;
-            Digraph<Node, Edge>.GNode[] nodes
-                = this.mGraph.InternalNodes;
+            Digraph<Node, Edge>.GNode node;
+            int i, count = this.mGraph.NodeCount;
 
-            this.mSizes = new Vec2F[nodes.Length];
-            this.mDatas = new NodeData[nodes.Length];
+            this.mSizes = new Vec2F[count];
+            this.mDatas = new NodeData[count];
             Box2F bbox;
             if (this.mDirection == LayoutDirection.LeftToRight ||
                 this.mDirection == LayoutDirection.RightToLeft)
             {
-                for (i = 0; i < nodes.Length; i++)
+                for (i = 0; i < count; i++)
                 {
-                    bbox = nodes[i].Data.LayoutBBox;
+                    bbox = this.mGraph.NodeAt(i).LayoutBBox;
                     this.mSizes[i] = new Vec2F(bbox.H, bbox.W);
                 }
             }
             else
             {
-                for (i = 0; i < nodes.Length; i++)
+                for (i = 0; i < count; i++)
                 {
-                    bbox = nodes[i].Data.LayoutBBox;
+                    bbox = this.mGraph.NodeAt(i).LayoutBBox;
                     this.mSizes[i] = new Vec2F(bbox.W, bbox.H);
                 }
             }
@@ -195,22 +187,25 @@ namespace GraphForms.Algorithms.Layout.Tree
 
             this.mSpanTreeEdges = this.mSpanningTree.InternalEdges;
 
-            nodes = this.mSpanningTree.InternalNodes;
-            for (i = 0; i < nodes.Length; i++)
+            count = this.mSpanningTree.NodeCount;
+            for (i = 0; i < count; i++)
             {
-                nodes[i].Index = i;
-                nodes[i].Color = GraphColor.White;
+                node = this.mSpanningTree.InternalNodeAt(i);
+                //nodes[i].Index = i;
+                node.Color = GraphColor.White;
             }
             // first layout the nodes with 0 src edges
-            for (i = 0; i < nodes.Length; i++)
+            for (i = 0; i < count; i++)
             {
-                if (nodes[i].SrcEdgeCount == 0)
-                    this.CalculatePosition(nodes[i], null, 0);
+                node = this.mSpanningTree.InternalNodeAt(i);
+                if (node.IncomingEdgeCount == 0)
+                    this.CalculatePosition(node, null, 0);
             }
             // then layout the other nodes
-            for (i = 0; i < nodes.Length; i++)
+            for (i = 0; i < count; i++)
             {
-                this.CalculatePosition(nodes[i], null, 0);
+                node = this.mSpanningTree.InternalNodeAt(i);
+                this.CalculatePosition(node, null, 0);
             }
 
             this.mSpanTreeEdges = null;
@@ -227,16 +222,26 @@ namespace GraphForms.Algorithms.Layout.Tree
                     BFSpanningTree<Node, Edge> bfst 
                         = new BFSpanningTree<Node, Edge>(
                             this.mGraph, false, false);
-                    Digraph<Node, Edge>.GNode r1 = this.TryGetGraphRoot();
-                    bfst.SetRoot(r1.mData);
+                    bfst.RootCapacity = this.RootCount;
+                    Digraph<Node, Edge>.GNode r1;
+                    for (int i = this.RootCount - 1; i >= 0; i--)
+                    {
+                        r1 = this.RootAt(i);
+                        bfst.AddRoot(r1.Index);
+                    }
                     alg = bfst;
                     break;
                 case SpanningTreeGen.DFS:
                     DFSpanningTree<Node, Edge> dfst 
                         = new DFSpanningTree<Node, Edge>(
                             this.mGraph, false, false);
-                    Digraph<Node, Edge>.GNode r2 = this.TryGetGraphRoot();
-                    dfst.SetRoot(r2.mData);
+                    dfst.RootCapacity = this.RootCount;
+                    Digraph<Node, Edge>.GNode r2;
+                    for (int j = this.RootCount - 1; j >= 0; j--)
+                    {
+                        r2 = this.RootAt(j);
+                        dfst.AddRoot(r2.Index);
+                    }
                     alg = dfst;
                     break;
                 case SpanningTreeGen.Boruvka:
@@ -296,7 +301,7 @@ namespace GraphForms.Algorithms.Layout.Tree
                 layer.Nodes = nodes;
             }
             layer.Nodes[layer.NodeCount++] = n;
-            if (n.DstEdgeCount == 0)
+            if (n.OutgoingEdgeCount == 0)
             {
                 d.position = layer.NextPosition;
             }
@@ -309,10 +314,10 @@ namespace GraphForms.Algorithms.Layout.Tree
                 double childPos;
                 for (int i = 0; i < this.mSpanTreeEdges.Length; i++)
                 {
-                    child = this.mSpanTreeEdges[i].mSrcNode;
+                    child = this.mSpanTreeEdges[i].SrcNode;
                     if (child.Index != n.Index)
                         continue;
-                    child = this.mSpanTreeEdges[i].mDstNode;
+                    child = this.mSpanTreeEdges[i].DstNode;
                     childPos = this.CalculatePosition(child, n, lnum + 1);
                     if (childPos >= 0)
                     {
@@ -376,7 +381,7 @@ namespace GraphForms.Algorithms.Layout.Tree
                     }
                     //node.Data.NewX = (float)x;
                     //node.Data.NewY = (float)y;
-                    node.Data.SetNewPosition((float)x, (float)y);
+                    node.Data.SetPosition((float)x, (float)y);//SetNewPosition((float)x, (float)y);
                     //newXs[node.Index] = (float)x;
                     //newYs[node.Index] = (float)y;
                 }

@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Text;
 
 namespace GraphForms.Algorithms.Layout
 {
@@ -46,7 +43,7 @@ namespace GraphForms.Algorithms.Layout
         /// </remarks>
         bool PositionFixed { get; }
 
-        /// <summary>
+        /*/// <summary>
         /// The temporary new X-coordinate of the position of this node.
         /// </summary>
         float NewX { get; }
@@ -61,6 +58,6 @@ namespace GraphForms.Algorithms.Layout
         /// </summary>
         /// <param name="newX">The temporary new X-coordinate.</param>
         /// <param name="newY">The temporary new Y-coordinate.</param>
-        void SetNewPosition(float newX, float newY);
+        void SetNewPosition(float newX, float newY);/* */
     }
 }

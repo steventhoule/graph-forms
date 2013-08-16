@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace GraphForms.Algorithms.Path
 {
@@ -35,7 +33,7 @@ namespace GraphForms.Algorithms.Path
             get { return this.bReversed; }
         }
 
-        public abstract double[][] Distances
+        public abstract float[][] Distances
         {
             get;
         }
@@ -50,27 +48,27 @@ namespace GraphForms.Algorithms.Path
             get;
         }
 
-        public double GetDiameter()
+        public float GetDiameter()
         {
             int i, j;
-            double diameter = -double.MaxValue;
-            double[] dists;
-            double[][] distances = this.Distances;
+            float diameter = -float.MaxValue;
+            float[] dists;
+            float[][] distances = this.Distances;
             for (i = 0; i < distances.Length; i++)
             {
                 dists = distances[i];
                 for (j = 0; j < dists.Length; j++)
                 {
-                    if (dists[j] != double.MaxValue)
+                    if (dists[j] != float.MaxValue)
                         diameter = Math.Max(dists[j], diameter);
                 }
             }
-            if (diameter == -double.MaxValue)
+            if (diameter == -float.MaxValue)
                 diameter = 0;
             return diameter;
         }
 
-        private class StackFrame
+        /*private class StackFrame
         {
             public int Src;
             public int Dst;
@@ -80,34 +78,64 @@ namespace GraphForms.Algorithms.Path
                 this.Src = src;
                 this.Dst = dst;
             }
-        }
+        }/* */
 
         public int[] TryGetNodePath(int srcNode, int dstNode)
         {
-            double[][] dists = this.Distances;
-            int[][] preds = this.PathNodes;
-            int intermediate;
-            StackFrame curr;
-            List<int> path = new List<int>();
-            path.Add(srcNode);
-            Stack<StackFrame> todo = new Stack<StackFrame>();
-            todo.Push(new StackFrame(srcNode, dstNode));
-            while (todo.Count > 0)
+            if (srcNode == dstNode)
             {
-                curr = todo.Pop();
-                if (dists[curr.Src][curr.Dst] < double.MaxValue)
+                return new int[] { srcNode };
+            }
+            if (srcNode < 0 || srcNode >= this.mGraph.NodeCount)
+            {
+                throw new ArgumentOutOfRangeException("srcNode");
+            }
+            if (dstNode < 0 || dstNode >= this.mGraph.NodeCount)
+            {
+                throw new ArgumentOutOfRangeException("dstNode");
+            }
+            float[][] dists = this.Distances;
+            if (dists[srcNode][dstNode] == float.MaxValue)
+            {
+                return null;
+            }
+            int[][] preds = this.PathNodes;
+            //StackFrame curr;
+            int currSrc, currDst, intermediate, pathCount = 0;
+            int[] path = new int[this.mGraph.NodeCount];
+            path[pathCount++] = srcNode;
+            int todoCount = 1;
+            int[] todoSrc = new int[this.mGraph.NodeCount];
+            int[] todoDst = new int[this.mGraph.NodeCount];
+            todoSrc[0] = srcNode;
+            todoDst[0] = dstNode;
+            //Stack<StackFrame> todo = new Stack<StackFrame>();
+            //todo.Push(new StackFrame(srcNode, dstNode));
+            while (todoCount > 0)
+            {
+                //curr = todo.Pop();
+                todoCount--;
+                currSrc = todoSrc[todoCount];
+                currDst = todoDst[todoCount];
+                if (dists[currSrc][currDst] < float.MaxValue)
                 {
-                    intermediate = preds[curr.Src][curr.Dst];
+                    intermediate = preds[currSrc][currDst];
                     if (intermediate > -1)
                     {
                         // explore sub-paths
-                        todo.Push(new StackFrame(intermediate, curr.Dst));
-                        todo.Push(new StackFrame(curr.Src, intermediate));
+                        //todo.Push(new StackFrame(intermediate, curr.Dst));
+                        //todo.Push(new StackFrame(curr.Src, intermediate));
+                        todoSrc[todoCount] = intermediate;
+                        todoDst[todoCount] = currDst;
+                        todoCount++;
+                        todoSrc[todoCount] = currSrc;
+                        todoDst[todoCount] = intermediate;
+                        todoCount++;
                     }
                     else
                     {
                         // add edge to path
-                        path.Add(curr.Dst);
+                        path[pathCount++] = currDst;
                     }
                 }
                 else
@@ -115,35 +143,61 @@ namespace GraphForms.Algorithms.Path
                     return null;
                 }
             }
-            return path.ToArray();
+            int[] newPath = new int[pathCount];
+            Array.Copy(path, 0, newPath, 0, pathCount);
+            return newPath;
         }
 
         public Edge[] TryGetEdgePath(int srcNode, int dstNode)
         {
-            double[][] dists = this.Distances;
+            if (srcNode == dstNode)
+            {
+                return new Edge[0];
+            }
+            if (srcNode < 0 || srcNode >= this.mGraph.NodeCount)
+            {
+                throw new ArgumentOutOfRangeException("srcNode");
+            }
+            if (dstNode < 0 || dstNode >= this.mGraph.NodeCount)
+            {
+                throw new ArgumentOutOfRangeException("dstNode");
+            }
+            float[][] dists = this.Distances;
+            if (dists[srcNode][dstNode] == float.MaxValue)
+            {
+                return null;
+            }
             int[][] preds = this.PathNodes;
             Edge[][] edges = this.PathEdges;
-            int intermediate;
-            StackFrame curr;
-            List<Edge> path = new List<Edge>();
-            Stack<StackFrame> todo = new Stack<StackFrame>();
-            todo.Push(new StackFrame(srcNode, dstNode));
-            while (todo.Count > 0)
+            //StackFrame curr;
+            int currSrc, currDst, intermediate, pathCount = 0;
+            Edge[] path = new Edge[this.mGraph.NodeCount - 1];
+            int todoCount = 1;
+            int[] todoSrc = new int[this.mGraph.NodeCount];
+            int[] todoDst = new int[this.mGraph.NodeCount];
+            todoSrc[0] = srcNode;
+            todoDst[0] = dstNode;
+            //Stack<StackFrame> todo = new Stack<StackFrame>();
+            //todo.Push(new StackFrame(srcNode, dstNode));
+            while (todoCount > 0)
             {
-                curr = todo.Pop();
-                if (dists[curr.Src][curr.Dst] < double.MaxValue)
+                //curr = todo.Pop();
+                todoCount--;
+                currSrc = todoSrc[todoCount];
+                currDst = todoDst[todoCount];
+                if (dists[currSrc][currDst] < float.MaxValue)
                 {
-                    intermediate = preds[curr.Src][curr.Dst];
+                    intermediate = preds[currSrc][currDst];
                     if (intermediate > -1)
                     {
                         // explore sub-paths
-                        todo.Push(new StackFrame(intermediate, curr.Dst));
-                        todo.Push(new StackFrame(curr.Src, intermediate));
+                        //todo.Push(new StackFrame(intermediate, curr.Dst));
+                        //todo.Push(new StackFrame(curr.Src, intermediate));
                     }
                     else
                     {
                         // add edge to path
-                        path.Add(edges[curr.Src][curr.Dst]);
+                        path[pathCount++] = edges[currSrc][currDst];
                     }
                 }
                 else
@@ -151,7 +205,9 @@ namespace GraphForms.Algorithms.Path
                     return null;
                 }
             }
-            return path.ToArray();
+            Edge[] newPath = new Edge[pathCount];
+            Array.Copy(path, 0, newPath, 0, pathCount);
+            return newPath;
         }
     }
 }

@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace GraphForms.Algorithms.Path
 {
@@ -8,7 +6,7 @@ namespace GraphForms.Algorithms.Path
         : AAllShortestPaths<Node, Edge>
         where Edge : IGraphEdge<Node>
     {
-        private double[][] mDists;
+        private float[][] mDists;
         private int[][] mNextNodes;
         private Edge[][] mPathEdges;
 
@@ -18,7 +16,7 @@ namespace GraphForms.Algorithms.Path
         {
         }
 
-        public override double[][] Distances
+        public override float[][] Distances
         {
             get { return this.mDists; }
         }
@@ -35,60 +33,77 @@ namespace GraphForms.Algorithms.Path
 
         protected override void InternalCompute()
         {
-            int i, j, k;
-            Digraph<Node, Edge>.GNode[] nodes
-                = this.mGraph.InternalNodes;
-            this.mDists = new double[nodes.Length][];
-            this.mNextNodes = new int[nodes.Length][];
-            this.mPathEdges = new Edge[nodes.Length][];
-            for (i = 0; i < nodes.Length; i++)
+            int count = this.mGraph.NodeCount;
+            int i, j, k, vCount = 0;
+            Digraph<Node, Edge>.GNode node;
+            this.mDists = new float[count][];
+            this.mNextNodes = new int[count][];
+            this.mPathEdges = new Edge[count][];
+            for (i = 0; i < count; i++)
             {
-                nodes[i].Index = i;
-                this.mDists[i] = new double[nodes.Length];
-                this.mNextNodes[i] = new int[nodes.Length];
-                this.mPathEdges[i] = new Edge[nodes.Length];
-                for (j = 0; j < nodes.Length; j++)
+                node = this.mGraph.InternalNodeAt(i);
+                //nodes[i].Index = i;
+                if (!node.Hidden)
+                    vCount++;
+                this.mDists[i] = new float[count];
+                this.mNextNodes[i] = new int[count];
+                this.mPathEdges[i] = new Edge[count];
+                for (j = 0; j < count; j++)
                 {
-                    this.mDists[i][j] = double.MaxValue;
+                    this.mDists[i][j] = float.MaxValue;
                     this.mNextNodes[i][j] = -1;
                 }
                 this.mDists[i][i] = 0;
             }
-            Digraph<Node, Edge>.GEdge[] edges
-                = this.mGraph.InternalEdges;
+            if (vCount == 0 || this.mGraph.EdgeCount == 0)
+            {
+                // There are no visible nodes, 
+                // so it's as if the graph is empty
+                return;
+            }
+            Digraph<Node, Edge>.GEdge edge;
+            vCount = this.mGraph.EdgeCount;
             // TODO: How should this algorithm handle self-loops?
             if (this.bUndirected || !this.bReversed)
             {
-                for (i = 0; i < edges.Length; i++)
+                for (i = 0; i < vCount; i++)
                 {
-                    j = edges[i].mSrcNode.Index;
-                    k = edges[i].mDstNode.Index;
-                    this.mDists[j][k] = edges[i].mData.Weight;
-                    this.mPathEdges[j][k] = edges[i].mData;
+                    edge = this.mGraph.InternalEdgeAt(i);
+                    // TODO: Also check if edge.SrcNode.Hidden?
+                    if (edge.Hidden || edge.DstNode.Hidden)
+                        continue;
+                    j = edge.SrcNode.Index;
+                    k = edge.DstNode.Index;
+                    this.mDists[j][k] = edge.Data.Weight;
+                    this.mPathEdges[j][k] = edge.Data;
                 }
             }
             if (this.bUndirected || this.bReversed)
             {
                 float weight;
-                for (i = 0; i < edges.Length; i++)
+                for (i = 0; i < vCount; i++)
                 {
-                    j = edges[i].mSrcNode.Index;
-                    k = edges[i].mDstNode.Index;
-                    weight = edges[i].mData.Weight;
+                    edge = this.mGraph.InternalEdgeAt(i);
+                    // TODO: Also check if edge.DstNode.Hidden?
+                    if (edge.Hidden || edge.SrcNode.Hidden)
+                        continue;
+                    j = edge.SrcNode.Index;
+                    k = edge.DstNode.Index;
+                    weight = edge.Data.Weight;
                     if (weight < this.mDists[k][j])
                     {
                         this.mDists[k][j] = weight;
-                        this.mPathEdges[k][j] = edges[i].mData;
+                        this.mPathEdges[k][j] = edge.Data;
                     }
                 }
             }
 
-            double dist;
-            for (k = 0; k < nodes.Length; k++)
+            float dist;
+            for (k = 0; k < count; k++)
             {
-                for (i = 0; i < nodes.Length; i++)
+                for (i = 0; i < count; i++)
                 {
-                    for (j = 0; j < nodes.Length; j++)
+                    for (j = 0; j < count; j++)
                     {
                         dist = this.mDists[i][k] + this.mDists[k][j];
                         if (dist < this.mDists[i][j])

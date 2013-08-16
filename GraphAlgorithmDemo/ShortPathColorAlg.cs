@@ -111,11 +111,11 @@ namespace GraphAlgorithmDemo
         {
             if (this.mAlg != null)
             {
-                double[][] distances = this.mAlg.Distances;
+                float[][] distances = this.mAlg.Distances;
                 if (distances != null)
                 {
                     int i, j;
-                    double[] dists;
+                    float[] dists;
                     StringBuilder builder = new StringBuilder();
                     for (i = 0; i < distances.Length; i++)
                     {

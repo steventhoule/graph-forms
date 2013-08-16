@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace GraphForms.Algorithms.SpanningTree
 {
@@ -20,8 +18,7 @@ namespace GraphForms.Algorithms.SpanningTree
     /// containing multiple spanning trees, one for each (weakly) 
     /// connected component of the input graph.
     /// </remarks>
-    public interface ISpanningTreeAlgorithm<Node, Edge> 
-        : IAlgorithm
+    public interface ISpanningTreeAlgorithm<Node, Edge> : IAlgorithm
         where Edge : IGraphEdge<Node>
     {
         /// <summary>
@@ -33,5 +30,7 @@ namespace GraphForms.Algorithms.SpanningTree
         /// component of the original graph.
         /// </remarks>
         Digraph<Node, Edge> SpanningTree { get; }
+
+        Digraph<Node, Edge>.GEdge[] SpanningTreeEdges { get; }
     }
 }

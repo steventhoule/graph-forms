@@ -26,17 +26,34 @@ namespace GraphForms.Algorithms
         public class GEdge
         {
             /// <summary>
-            /// The source node of this edge; its parent
-            /// </summary>
-            internal GNode mSrcNode;
+            /// The source node of this edge; its parent.
+            /// </summary><remarks>
+            /// The <see cref="GNode"/> instance that stores the
+            /// <see cref="P:IGraphEdge`1{Node}.SrcNode"/> of 
+            /// <see cref="Data"/>.
+            /// </remarks>
+            public readonly GNode SrcNode;
             /// <summary>
-            /// The destination node of this edge; its child
-            /// </summary>
-            internal GNode mDstNode;
+            /// The destination node of this edge; its child.
+            /// </summary><remarks>
+            /// The <see cref="GNode"/> instance that stores the
+            /// <see cref="P:IGraphEdge`1{Node}.DstNode"/> of 
+            /// <see cref="Data"/>.
+            /// </remarks>
+            public readonly GNode DstNode;
             /// <summary>
             /// The underlying data that this edge represents.
+            /// </summary><remarks>
+            /// The underlying <typeparamref name="Edge"/> instance that
+            /// this <see cref="GEdge"/> instance represents.
+            /// </remarks>
+            public readonly Edge Data;
+            /// <summary>
+            /// If true, all graph processing algorithms in this library,
+            /// including both graph theory and layout algorithms,
+            /// will ignore this edge and skip over it.
             /// </summary>
-            internal Edge mData;
+            public bool Hidden;
             /*/// <summary>
             /// Marks the state of visitation of this <see cref="GEdge"/>
             /// instance when it is being traversed by a search algorithm or
@@ -58,60 +75,31 @@ namespace GraphForms.Algorithms
             /// <see cref="P:IGraphEdge{Node}`1.SrcNode"/> and 
             /// <see cref="P:IGraphEdge`1{Node}.DstNode"/> of 
             /// <paramref name="data"/>.</remarks>
-            internal GEdge(GNode srcNode, GNode dstNode, Edge data)
+            public GEdge(GNode srcNode, GNode dstNode, Edge data)
             {
-                this.mSrcNode = srcNode;
-                this.mDstNode = dstNode;
-                this.mData = data;
+                this.SrcNode = srcNode;
+                this.DstNode = dstNode;
+                this.Data = data;
+                this.Hidden = false;
             }
-            /// <summary>
-            /// The underlying <typeparamref name="Edge"/> instance that this
-            /// <see cref="GEdge"/> instance represents.
-            /// </summary>
-            public Edge Data
-            {
-                get { return this.mData; }
-            }
-            /// <summary>
-            /// The <see cref="GNode"/> instance that stores the
-            /// <see cref="P:IGraphEdge`1{Node}.SrcNode"/> of 
-            /// <see cref="Data"/>.
-            /// </summary>
-            public GNode SrcNode
-            {
-                get { return this.mSrcNode; }
-            }
-            /// <summary>
-            /// The <see cref="GNode"/> instance that stores the
-            /// <see cref="P:IGraphEdge`1{Node}.DstNode"/> of 
-            /// <see cref="Data"/>.
-            /// </summary>
-            public GNode DstNode
-            {
-                get { return this.mDstNode; }
-            }
-        }
 
-        private static int IndexOfSrc(List<GEdge> nodes, int nodeIndex)
-        {
-            int count = nodes.Count;
-            for (int i = 0; i < count; i++)
+            public override string ToString()
             {
-                if (nodes[i].mSrcNode.Index == nodeIndex)
-                    return i;
+                string str;
+                try
+                {
+                    str = this.Data.ToString();
+                }
+                catch (NullReferenceException)
+                {
+                    str = "{NULL}";
+                }
+                catch (Exception ex)
+                {
+                    str = ex.ToString();
+                }
+                return str;
             }
-            return -1;
-        }
-
-        private static int IndexOfDst(List<GEdge> nodes, int nodeIndex)
-        {
-            int count = nodes.Count;
-            for (int i = 0; i < count; i++)
-            {
-                if (nodes[i].mDstNode.Index == nodeIndex)
-                    return i;
-            }
-            return -1;
         }
 
         /// <summary>
@@ -120,20 +108,33 @@ namespace GraphForms.Algorithms
         /// used for traversing its containing 
         /// <see cref="T:Digraph`2{Node,Edge}"/> instance.
         /// </summary>
-        public class GNode : IEquatable<GNode>
+        public class GNode
         {
-            internal Digraph<Node, Edge> mGraph;
             /// <summary>
-            /// The underlying data that this node represents.
+            /// The underlying <typeparamref name="Node"/> data that this
+            /// <see cref="GNode"/> instance represents.
             /// </summary>
-            internal Node mData;
-
+            public readonly Node Data;
             /// <summary>
-            /// Temporary storage for this node's index in its containing
-            /// directional graph's internal list of 
-            /// <see cref="P:Digraph`2{Node,Edge}.InternalNodes"/>.
+            /// This node's index in its containing directional graph's 
+            /// internal node list.
             /// </summary>
-            public int Index;
+            internal int mIndex;
+            /// <summary>
+            /// Current number of edges that have this node as both their
+            /// SrcNode and DstNode.
+            /// </summary>
+            internal int mLoopCount;
+            /// <summary>
+            /// Current number of edges that have this node as their SrcNode.
+            /// </summary>
+            internal int mSrcCount;
+            /// <summary>
+            /// Current number of edges that have this node as their DstNode.
+            /// </summary>
+            internal int mDstCount;
+            
+            internal bool mHidden;
             /// <summary>
             /// Marks the state of visitation of this <see cref="GNode"/>
             /// instance when it is being traversed by a search algorithm or
@@ -141,332 +142,120 @@ namespace GraphForms.Algorithms
             /// </summary>
             public GraphColor Color;
 
-            internal List<GEdge> mSrcEdges = new List<GEdge>();
-            internal List<GEdge> mDstEdges = new List<GEdge>();
-
             /// <summary>
-            /// Initializes a new <see cref="GNode"/> instance contained
-            /// within the given <paramref name="graph"/> and representing
-            /// the given <paramref name="data"/>.
+            /// Initializes a new <see cref="GNode"/> instance representing
+            /// the given <paramref name="data"/> with the given initial
+            /// <paramref name="index"/> in the internal node list of the
+            /// <see cref="T:Digraph`2{Node,Edge}"/> that created it.
             /// </summary>
-            /// <param name="graph">The graph that contains this node.</param>
             /// <param name="data">The data that this node represents.</param>
-            internal GNode(Digraph<Node, Edge> graph, Node data)
+            /// <param name="index">The initial index of this node in its
+            /// parent graph's internal node list.</param>
+            internal GNode(Node data, int index)
             {
-                this.mGraph = graph;
-                this.mData = data;
+                this.Data = data;
+                this.mIndex = index;
+                this.mLoopCount = 0;
+                this.mSrcCount = 0;
+                this.mDstCount = 0;
+                this.mHidden = false;
             }
 
             #region Properties
-
             /// <summary>
-            /// The <see cref="T:Digraph`2{Node,Edge}"/> instance within
-            /// which this <see cref="GNode"/> instance was created.
+            /// Gets the current index of this node in its graph's
+            /// <see cref="P:Digraph`2{Node,Edge}.InternalNodes"/> list.
             /// </summary>
-            public Digraph<Node, Edge> Graph
+            public int Index
             {
-                get { return this.mGraph; }
+                get { return this.mIndex; }
             }
-
             /// <summary>
-            /// The underlying <typeparamref name="Node"/> data that this
-            /// <see cref="GNode"/> instance represents.
+            /// Whether this node all graph processing algorithms in this 
+            /// library, including both graph theory and layout algorithms.
+            /// If true, this node will be ignored and skipped over by them.
             /// </summary>
-            public Node Data
+            public bool Hidden
             {
-                get { return this.mData; }
+                get { return this.mHidden; }
             }
-
-            #region Source Traversal
             /// <summary>
-            /// The current number of <typeparamref name="Edge"/> instances
-            /// that have this <see cref="GNode"/>'s <see cref="Data"/>
-            /// as their <see cref="P:IGraphEdge`1{Node}.DstNode"/>.
+            /// Gets the current number of edges in this node's graph that
+            /// have this node as their destination/target (their arrow heads
+            /// touch this node in a visual representation of the graph).
             /// </summary>
-            public int SrcEdgeCount
+            public int IncomingEdgeCount
             {
-                get { return this.mSrcEdges.Count; }
+                get { return this.mDstCount; }
             }
-
             /// <summary>
-            /// An array of all <typeparamref name="Edge"/> instances that
-            /// have this <see cref="GNode"/>'s <see cref="Data"/> as
-            /// their <see cref="P:IGraphNode`1{Node}.DstNode"/>.
+            /// Gets the current number of edges in this node's graph that
+            /// have this node as their source (their arrow tails
+            /// touch this node in a visual representation of the graph).
             /// </summary>
-            public Edge[] SrcEdges
+            public int OutgoingEdgeCount
             {
-                get
-                {
-                    Edge[] srcEdges = new Edge[this.mSrcEdges.Count];
-                    for (int i = 0; i < this.mSrcEdges.Count; i++)
-                        srcEdges[i] = this.mSrcEdges[i].mData;
-                    return srcEdges;
-                }
+                get { return this.mSrcCount; }
             }
-
             /// <summary>
-            /// An array of all <see cref="GEdge"/> instances that
-            /// has this <see cref="GNode"/> as their
-            /// <see cref="P:GEdge.DstNode"/>.
+            /// Gets the current number of edges in this node's graph that
+            /// have this node as both their destination/target and their
+            /// source (their arrow heads and tails would touch this node in
+            /// a visual representation of the graph).
             /// </summary>
-            public GEdge[] InternalSrcEdges
+            public int SelfLoopEdgeCount
             {
-                get { return this.mSrcEdges.ToArray(); }
+                get { return this.mLoopCount; }
             }
-
             /// <summary>
-            /// An array of all <see cref="GNode"/> instances connected
-            /// to this <see cref="GNode"/> instance by an <typeparamref 
-            /// name="Edge"/> instance with this node as its destination.
+            /// Gets the current total number of edges in this node's graph
+            /// that are connected to this node in either direction (both
+            /// incoming and outgoing).
             /// </summary>
-            public GNode[] SrcNodes
+            /// <param name="includeLoops">Whether to include the number of
+            /// self-looping edges in the returned edge count.</param>
+            /// <returns>The sum of the <see cref="IncomingEdgeCount"/> and
+            /// <see cref="OutgoingEdgeCount"/> (and the
+            /// <see cref="SelfLoopEdgeCount"/> if 
+            /// <paramref name="includeLoops"/> is true).</returns>
+            public int TotalEdgeCount(bool includeLoops)
             {
-                get
-                {
-                    GNode[] srcNodes = new GNode[this.mSrcEdges.Count];
-                    for (int i = 0; i < this.mSrcEdges.Count; i++)
-                        srcNodes[i] = this.mSrcEdges[i].mSrcNode;
-                    return srcNodes;
-                }
+                return includeLoops
+                    ? this.mSrcCount + this.mDstCount + this.mLoopCount
+                    : this.mSrcCount + this.mDstCount;
             }
-            #endregion
-
-            #region Destination Traversal
-            /// <summary>
-            /// The current number of <typeparamref name="Edge"/> instances
-            /// that have this <see cref="GNode"/>'s <see cref="Data"/>
-            /// as their <see cref="P:IGraphEdge`1{Node}.SrcNode"/>.
-            /// </summary>
-            public int DstEdgeCount
-            {
-                get { return this.mDstEdges.Count; }
-            }
-
-            /// <summary>
-            /// An array of all <typeparamref name="Edge"/> instances that
-            /// have this <see cref="GNode"/>'s <see cref="Data"/> as
-            /// their <see cref="P:IGraphNode`1{Node}.SrcNode"/>.
-            /// </summary>
-            public Edge[] DstEdges
-            {
-                get
-                {
-                    Edge[] dstEdges = new Edge[this.mDstEdges.Count];
-                    for (int i = 0; i < this.mDstEdges.Count; i++)
-                        dstEdges[i] = this.mDstEdges[i].mData;
-                    return dstEdges;
-                }
-            }
-
-            /// <summary>
-            /// An array of all <see cref="GEdge"/> instances that
-            /// has this <see cref="GNode"/> as their
-            /// <see cref="P:GEdge.SrcNode"/>.
-            /// </summary>
-            public GEdge[] InternalDstEdges
-            {
-                get { return this.mDstEdges.ToArray(); }
-            }
-
-            /// <summary>
-            /// An array of all <see cref="GNode"/> instances connected
-            /// to this <see cref="GNode"/> instance by an <typeparamref 
-            /// name="Edge"/> instance with this node as its source.
-            /// </summary>
-            public GNode[] DstNodes
-            {
-                get
-                {
-                    GNode[] dstNodes = new GNode[this.mDstEdges.Count];
-                    for (int i = 0; i < this.mDstEdges.Count; i++)
-                        dstNodes[i] = this.mDstEdges[i].mDstNode;
-                    return dstNodes;
-                }
-            }
-            #endregion
-
-            #region Undirected Traversal
-            /// <summary>
-            /// The current number of <typeparamref name="Edge"/> instances
-            /// that have this <see cref="GNode"/>'s <see cref="Data"/>
-            /// as their <see cref="P:IGraphEdge`1{Node}.SrcNode"/>
-            /// or their <see cref="P:IGraphEdge`1{Node}.DstNode"/>
-            /// </summary>
-            public int AllEdgeCount
-            {
-                get { return this.mSrcEdges.Count + this.mDstEdges.Count; }
-            }
-
-            /// <summary>
-            /// A combined array of both <see cref="SrcEdges"/> and
-            /// <see cref="DstEdges"/>, ordered by the given 
-            /// <paramref name="srcFirst"/> flag.
-            /// </summary>
-            /// <param name="srcFirst">Whether <see cref="SrcEdges"/> comes 
-            /// before <see cref="DstEdges"/> in the returned array.</param>
-            /// <returns>A union of the <see cref="SrcEdges"/> and 
-            /// <see cref="DstEdges"/> arrays.</returns>
-            public Edge[] AllEdges(bool srcFirst)
-            {
-                int i;
-                int srcCount = this.mSrcEdges.Count;
-                int dstCount = this.mDstEdges.Count;
-                Edge[] edges = new Edge[srcCount + dstCount];
-                if (srcFirst)
-                {
-                    for (i = 0; i < srcCount; i++)
-                        edges[i] = this.mSrcEdges[i].mData;
-                    for (i = 0; i < dstCount; i++)
-                        edges[i + srcCount] = this.mDstEdges[i].mData;
-                }
-                else
-                {
-                    for (i = 0; i < dstCount; i++)
-                        edges[i] = this.mDstEdges[i].mData;
-                    for (i = 0; i < srcCount; i++)
-                        edges[i + dstCount] = this.mSrcEdges[i].mData;
-                }
-                return edges;
-            }
-
-            /// <summary>
-            /// A combined array of both <see cref="InternalSrcEdges"/> and
-            /// <see cref="InternalDstEdges"/>, ordered by the given
-            /// <paramref name="srcFirst"/> flag.
-            /// </summary>
-            /// <param name="srcFirst">Whether <see cref="InternalSrcEdges"/>
-            /// comes before <see cref="InternalDstEdges"/> in the returned
-            /// array.</param>
-            /// <returns>A union of the <see cref="InternalSrcEdges"/> and 
-            /// <see cref="InternalDstEdges"/> arrays.</returns>
-            public GEdge[] AllInternalEdges(bool srcFirst)
-            {
-                GEdge[] edges = new GEdge[this.mSrcEdges.Count
-                    + this.mDstEdges.Count];
-                if (srcFirst)
-                {
-                    Array.Copy(this.mSrcEdges.ToArray(), 0,
-                        edges, 0, this.mSrcEdges.Count);
-                    Array.Copy(this.mDstEdges.ToArray(), 0,
-                        edges, this.mSrcEdges.Count, this.mDstEdges.Count);
-                }
-                else
-                {
-                    Array.Copy(this.mDstEdges.ToArray(), 0,
-                        edges, 0, this.mDstEdges.Count);
-                    Array.Copy(this.mSrcEdges.ToArray(), 0,
-                        edges, this.mDstEdges.Count, this.mSrcEdges.Count);
-                }
-                return edges;
-            }
-
-            /// <summary>
-            /// A combined array of both <see cref="SrcNodes"/> and
-            /// <see cref="DstNodes"/>, ordered by the given 
-            /// <paramref name="srcFirst"/> flag.
-            /// </summary>
-            /// <param name="srcFirst">Whether <see cref="SrcNodes"/> comes 
-            /// before <see cref="DstNodes"/> in the returned array.</param>
-            /// <returns>A union of the <see cref="SrcNodes"/> and 
-            /// <see cref="DstNodes"/> arrays.</returns>
-            public GNode[] AllNodes(bool srcFirst)
-            {
-                int i;
-                int srcCount = this.mSrcEdges.Count;
-                int dstCount = this.mDstEdges.Count;
-                GNode[] nodes = new GNode[srcCount + dstCount];
-                if (srcFirst)
-                {
-                    for (i = 0; i < srcCount; i++)
-                        nodes[i] = this.mSrcEdges[i].mSrcNode;
-                    for (i = 0; i < dstCount; i++)
-                        nodes[i + srcCount] = this.mDstEdges[i].mDstNode;
-                }
-                else
-                {
-                    for (i = 0; i < dstCount; i++)
-                        nodes[i] = this.mDstEdges[i].mDstNode;
-                    for (i = 0; i < srcCount; i++)
-                        nodes[i + dstCount] = this.mSrcEdges[i].mSrcNode;
-                }
-                return nodes;
-            }
-            #endregion
 
             #endregion
 
-            /// <summary>
-            /// Tests whether or not this <see cref="GNode"/> instance's
-            /// <see cref="Data"/> is equal the <paramref name="other"/>
-            /// instance's Data.
-            /// </summary>
-            /// <param name="other">The other <see cref="GNode"/> instance
-            /// to compare <see cref="Data"/> with.</param>
-            /// <returns>true if this instance's <see cref="Data"/> is equal to
-            /// the <paramref name="other"/> instance's Data, false otherwise.
-            /// </returns>
-            public bool Equals(GNode other)
+            public override string ToString()
             {
-                return this.mData.Equals(other.mData);
-            }
-
-            /// <summary>
-            /// Disconnects this <see cref="GNode"/> instance from all
-            /// other instances in its containing <see cref="Graph"/>,
-            /// orphaning it, usually in preparation for removal.
-            /// </summary>
-            /// <returns>The number of additional nodes which have also been
-            /// orphaned by this function because they were connected to this
-            /// node only.</returns>
-            internal int Disconnect()
-            {
-                int count = this.mSrcEdges.Count;
-                if (count == 0 && this.mDstEdges.Count == 0)
+                string str;
+                try
                 {
-                    return 0;
+                    str = this.Data.ToString();
                 }
-                GNode n;
-                int i, index;
-                // Disconnect this node from its source nodes
-                for (i = 0; i < count; i++)
+                catch (NullReferenceException)
                 {
-                    n = this.mSrcEdges[i].mSrcNode;
-                    index = IndexOfDst(n.mDstEdges, this.Index);
-                    n.mDstEdges.RemoveAt(index);
-                    if (n.mDstEdges.Count == 0)
-                        n.Color = GraphColor.Gray;
+                    str = "{NULL}";
                 }
-                this.mSrcEdges.Clear();
-                // Disconnect this node from its destination nodes
-                count = this.mDstEdges.Count;
-                for (i = 0; i < count; i++)
+                catch (Exception ex)
                 {
-                    n = this.mDstEdges[i].mDstNode;
-                    index = IndexOfSrc(n.mSrcEdges, this.Index);
-                    n.mSrcEdges.RemoveAt(index);
-                    if (n.mSrcEdges.Count == 0)
-                        n.Color = GraphColor.Gray;
+                    str = ex.ToString();
                 }
-                this.mDstEdges.Clear();
-                // Tally orphanced source and destination nodes
-                count = this.mGraph.mNodes.Count;
-                index = 0;
-                for (i = 0; i < count; i++)
-                {
-                    n = this.mGraph.mNodes[i];
-                    if (n.Color == GraphColor.Gray &&
-                        n.mSrcEdges.Count == 0 && n.mDstEdges.Count == 0)
-                    {
-                        n.Color = GraphColor.Black;
-                        index++;
-                    }
-                }
-                return index;
+                return str;
             }
         }
 
-        private List<GNode> mNodes;
-        private List<GEdge> mEdges;
+        private static readonly GNode[] sEmptyNodes = new GNode[0];
+        private static readonly GEdge[] sEmptyEdges = new GEdge[0];
+
+        private GNode[] mNodes;
+        private int mNCount;
+        private uint mNVers;
+
+        private GEdge[] mEdges;
+        private int mECount;
+        private uint mEVers;
 
         /// <summary>
         /// Initializes a new <see cref="T:Digraph`2{Node,Edge}"/>
@@ -475,8 +264,13 @@ namespace GraphForms.Algorithms
         /// </summary>
         public Digraph()
         {
-            this.mNodes = new List<GNode>();
-            this.mEdges = new List<GEdge>();
+            this.mNodes = sEmptyNodes;
+            this.mNCount = 0;
+            this.mNVers = 0;
+
+            this.mEdges = sEmptyEdges;
+            this.mECount = 0;
+            this.mEVers = 0;
         }
 
         /// <summary>
@@ -488,345 +282,420 @@ namespace GraphForms.Algorithms
         /// can initially store.</param>
         /// <param name="edgeCapacity">The number of edges that the new graph
         /// can initially store.</param>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// <paramref name="nodeCapacity"/> and/or 
+        /// <paramref name="edgeCapacity"/> are less than zero.</exception>
         public Digraph(int nodeCapacity, int edgeCapacity)
         {
-            this.mNodes = new List<GNode>(nodeCapacity);
-            this.mEdges = new List<GEdge>(edgeCapacity);
-        }
+            if (nodeCapacity < 0)
+                throw new ArgumentOutOfRangeException("nodeCapacity");
+            if (edgeCapacity < 0)
+                throw new ArgumentOutOfRangeException("edgeCapacity");
 
-        #region Graph Traversal
+            this.mNodes = nodeCapacity == 0 
+                ? sEmptyNodes : new GNode[nodeCapacity];
+            this.mNCount = 0;
+            this.mNVers = 0;
 
-        #region Source Node Traversal
-        /// <summary>
-        /// Retrieves all <typeparamref name="Node"/> instances that are 
-        /// connected to the given <paramref name="node"/> by an <typeparamref 
-        /// name="Edge"/> instance which has <paramref name="node"/> as its
-        /// <see cref="P:IGraphEdge`1{Node}.DstNode"/>.
-        /// </summary>
-        /// <param name="node">A <typeparamref name="Node"/> instance to 
-        /// retrieve all source nodes of.</param>
-        /// <returns>An array of all <typeparamref name="Node"/> instances
-        /// that are connected to <paramref name="node"/> by an <typeparamref 
-        /// name="Edge"/> instance which has <paramref name="node"/> as its
-        /// destination.</returns>
-        /// <seealso cref="GetSrcNodesAt(int)"/>
-        /// <seealso cref="GetSrcEdges(Node)"/>
-        /// <seealso cref="GetDstNodes(Node)"/>
-        public Node[] GetSrcNodes(Node node)
-        {
-            int index = this.IndexOfNode(node);
-            if (index < 0) 
-                return null;
-            return this.InternalGetSrcNodesAt(index);
+            this.mEdges = edgeCapacity == 0 
+                ? sEmptyEdges : new GEdge[edgeCapacity];
+            this.mECount = 0;
+            this.mEVers = 0;
         }
 
         /// <summary>
-        /// Retrieves all <typeparamref name="Node"/> instances that are 
-        /// connected to the <typeparamref name="Node"/> instance at the given 
-        /// <paramref name="nodeIndex"/> by an <typeparamref name="Edge"/> 
-        /// instance which has that <typeparamref name="Node"/> instance as its
-        /// <see cref="P:IGraphEdge`1{Node}.DstNode"/>.</summary>
-        /// <param name="nodeIndex">An index of a <typeparamref name="Node"/>
-        /// instance in <see cref="Nodes"/> to retrieve all source nodes of.</param>
-        /// <returns>An array of all <typeparamref name="Node"/> instances
-        /// that are connected to the <typeparamref name="Node"/> instance at
-        /// <paramref name="nodeIndex"/> by an <typeparamref name="Edge"/>
-        /// instance which has the <typeparamref name="Node"/> instance at
-        /// <paramref name="nodeIndex"/> as its destination.</returns>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref 
-        /// name="nodeIndex"/> is less than 0 or <paramref name="nodeIndex"/>
-        /// is greater than or equal to <see cref="NodeCount"/>.</exception>
-        /// <seealso cref="GetSrcNodes(Node)"/>
-        /// <seealso cref="GetSrcEdgesAt(int)"/>
-        /// <seealso cref="GetDstNodesAt(int)"/>
-        public Node[] GetSrcNodesAt(int nodeIndex)
-        {
-            if (nodeIndex < 0 || nodeIndex > this.mNodes.Count)
-                throw new ArgumentOutOfRangeException("nodeIndex");
-            return this.InternalGetSrcNodesAt(nodeIndex);
-        }
-
-        private Node[] InternalGetSrcNodesAt(int index)
-        {
-            if (this.mEdges.Count == 0)
-                return new Node[0];
-            GNode node = this.mNodes[index];
-            Node[] srcNodes = new Node[node.mSrcEdges.Count];
-            for (int i = 0; i < node.mSrcEdges.Count; i++)
-                srcNodes[i] = node.mSrcEdges[i].mSrcNode.mData;
-            return srcNodes;
-        }
-        #endregion
-
-        #region Source Edge Traversal
-        /// <summary>
-        /// Retrieves all <typeparamref name="Edge"/> instances that have
-        /// <paramref name="node"/> as their <see 
-        /// cref="P:IGraphEdge`1{Node}.DstNode"/>.</summary>
-        /// <param name="node">A <typeparamref name="Node"/> instance to 
-        /// retrieve all source edges of.</param>
-        /// <returns>An array of all <typeparamref name="Edge"/> instances
-        /// that have <paramref name="node"/> as their destination, or 
-        /// null if <paramref name="node"/> isn't contained in this
-        /// <see cref="T:Digraph`2{Node,Edge}"/>.</returns>
-        /// <seealso cref="GetSrcEdgesAt(int)"/>
-        /// <seealso cref="GetSrcNodes(Node)"/>
-        /// <seealso cref="GetDstEdges(Node)"/>
-        public Edge[] GetSrcEdges(Node node)
-        {
-            int index = this.IndexOfNode(node);
-            if (index < 0) 
-                return null;
-            return this.mNodes[index].SrcEdges;
-        }
-
-        /// <summary>
-        /// Retrieves all <typeparamref name="Edge"/> instances that have
-        /// <typeparamref name="Node"/> instance at the given <paramref 
-        /// name="nodeIndex"/> as their <see 
-        /// cref="P:IGraphEdge`1{Node}.DstNode"/>.</summary>
-        /// <param name="nodeIndex">An index of a <typeparamref name="Node"/>
-        /// instance in <see cref="Nodes"/> to retrieve all source edges of.</param>
-        /// <returns>An array of all <typeparamref name="Edge"/> instances
-        /// that have the <typeparamref name="Node"/> instance at <paramref 
-        /// name="nodeIndex"/> as their destination.</returns>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref 
-        /// name="nodeIndex"/> is less than 0 or <paramref name="nodeIndex"/>
-        /// is greater than or equal to <see cref="NodeCount"/>.</exception>
-        /// <seealso cref="GetSrcEdges(Node)"/>
-        /// <seealso cref="GetSrcNodesAt(int)"/>
-        /// <seealso cref="GetDstEdgesAt(int)"/>
-        public Edge[] GetSrcEdgesAt(int nodeIndex)
-        {
-            if (nodeIndex < 0 || nodeIndex >= this.mNodes.Count)
-                throw new ArgumentOutOfRangeException("nodeIndex");
-            return this.mNodes[nodeIndex].SrcEdges;
-        }
-        #endregion
-
-        #region Destination Node Traversal
-        /// <summary>
-        /// Retrieves all <typeparamref name="Node"/> instances that are 
-        /// connected to the given <paramref name="node"/> by an <typeparamref 
-        /// name="Edge"/> instance which has <paramref name="node"/> as its
-        /// <see cref="P:IGraphEdge`1{Node}.SrcNode"/>.
-        /// </summary>
-        /// <param name="node">A <typeparamref name="Node"/> instance to 
-        /// retrieve all destination nodes of.</param>
-        /// <returns>An array of all <typeparamref name="Node"/> instances
-        /// that are connected to <paramref name="node"/> by an <typeparamref 
-        /// name="Edge"/> instance which has <paramref name="node"/> as its
-        /// source.</returns>
-        /// <seealso cref="GetDstNodesAt(int)"/>
-        /// <seealso cref="GetDstEdges(Node)"/>
-        /// <seealso cref="GetSrcNodes(Node)"/>
-        public Node[] GetDstNodes(Node node)
-        {
-            int index = this.IndexOfNode(node);
-            if (index < 0) 
-                return null;
-            return this.InternalGetDstNodesAt(index);
-        }
-
-        /// <summary>
-        /// Retrieves all <typeparamref name="Node"/> instances that are 
-        /// connected to the <typeparamref name="Node"/> instance at the given 
-        /// <paramref name="nodeIndex"/> by an <typeparamref name="Edge"/> 
-        /// instance which has that <typeparamref name="Node"/> instance as its
-        /// <see cref="P:IGraphEdge`1{Node}.SrcNode"/>.</summary>
-        /// <param name="nodeIndex">An index of a <typeparamref name="Node"/>
-        /// instance in <see cref="Nodes"/> to retrieve all destination nodes of.</param>
-        /// <returns>An array of all <typeparamref name="Node"/> instances
-        /// that are connected to the <typeparamref name="Node"/> instance at
-        /// <paramref name="nodeIndex"/> by an <typeparamref name="Edge"/>
-        /// instance which has the <typeparamref name="Node"/> instance at
-        /// <paramref name="nodeIndex"/> as its source.</returns>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref 
-        /// name="nodeIndex"/> is less than 0 or <paramref name="nodeIndex"/>
-        /// is greater than or equal to <see cref="NodeCount"/>.</exception>
-        /// <seealso cref="GetDstNodes(Node)"/>
-        /// <seealso cref="GetDstEdgesAt(int)"/>
-        /// <seealso cref="GetSrcNodesAt(int)"/>
-        public Node[] GetDstNodesAt(int nodeIndex)
-        {
-            if (nodeIndex < 0 || nodeIndex > this.mNodes.Count)
-                throw new ArgumentOutOfRangeException("nodeIndex");
-            return this.InternalGetDstNodesAt(nodeIndex);
-        }
-
-        private Node[] InternalGetDstNodesAt(int index)
-        {
-            if (this.mEdges.Count == 0)
-                return new Node[0];
-            GNode node = this.mNodes[index];
-            Node[] dstNodes = new Node[node.mDstEdges.Count];
-            for (int i = 0; i < node.mDstEdges.Count; i++)
-                dstNodes[i] = node.mDstEdges[i].mDstNode.mData;
-            return dstNodes;
-        }
-        #endregion
-
-        #region Destination Edge Traversal
-        /// <summary>
-        /// Retrieves all <typeparamref name="Edge"/> instances that have
-        /// <paramref name="node"/> as their <see 
-        /// cref="P:IGraphEdge`1{Node}.SrcNode"/>.</summary>
-        /// <param name="node">A <typeparamref name="Node"/> instance to 
-        /// retrieve all destination edges of.</param>
-        /// <returns>An array of all <typeparamref name="Edge"/> instances
-        /// that have <paramref name="node"/> as their source, or 
-        /// null if <paramref name="node"/> isn't contained in this
-        /// <see cref="T:Digraph`2{Node,Edge}"/>.</returns>
-        /// <seealso cref="GetDstEdgesAt(int)"/>
-        /// <seealso cref="GetDstNodes(Node)"/>
-        /// <seealso cref="GetSrcEdges(Node)"/>
-        public Edge[] GetDstEdges(Node node)
-        {
-            int index = this.IndexOfNode(node);
-            if (index < 0) 
-                return null;
-            return this.mNodes[index].DstEdges;
-        }
-
-        /// <summary>
-        /// Retrieves all <typeparamref name="Edge"/> instances that have
-        /// <typeparamref name="Node"/> instance at the given <paramref 
-        /// name="nodeIndex"/> as their <see 
-        /// cref="P:IGraphEdge`1{Node}.SrcNode"/>.</summary>
-        /// <param name="nodeIndex">An index of a <typeparamref name="Node"/>
-        /// instance in <see cref="Nodes"/> to retrieve all destination edges of.</param>
-        /// <returns>An array of all <typeparamref name="Edge"/> instances
-        /// that have the <typeparamref name="Node"/> instance at <paramref 
-        /// name="nodeIndex"/> as their source.</returns>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref 
-        /// name="nodeIndex"/> is less than 0 or <paramref name="nodeIndex"/>
-        /// is greater than or equal to <see cref="NodeCount"/>.</exception>
-        /// <seealso cref="GetDstEdges(Node)"/>
-        /// <seealso cref="GetDstNodesAt(int)"/>
-        /// <seealso cref="GetSrcEdgesAt(int)"/>
-        public Edge[] GetDstEdgesAt(int nodeIndex)
-        {
-            if (nodeIndex < 0 || nodeIndex >= this.mNodes.Count)
-                throw new ArgumentOutOfRangeException("nodeIndex");
-            return this.mNodes[nodeIndex].DstEdges;
-        }
-        #endregion
-
-        /// <summary>
-        /// Retrieves all <typeparamref name="Edge"/> instances that have
-        /// <paramref name="node"/> as either their <see 
-        /// cref="P:IGraphEdge`1{Node}.DstNode"/> or their <see 
-        /// cref="P:IGraphEdge`1{Node}.SrcNode"/>.</summary>
-        /// <param name="node">A <typeparamref name="Node"/> instance to 
-        /// retrieve all source and destination edges of.</param>
-        /// <param name="srcFirst">Whether the <typeparamref name="Edge"/>
-        /// instances that have <paramref name="node"/> as their <see 
-        /// cref="P:IGraphEdge`1{Node}.DstNode"/> come before instances that
-        /// have it as their <see cref="P:IGraphEdge`1{Node}.SrcNode"/> in the
-        /// returned array.</param>
-        /// <returns>An array of all <typeparamref name="Edge"/> instances
-        /// that have <paramref name="node"/> as their source or destination,  
-        /// or null if <paramref name="node"/> isn't contained in this
-        /// <see cref="T:Digraph`2{Node,Edge}"/>.</returns>
-        public Edge[] GetAllEdges(Node node, bool srcFirst)
-        {
-            int index = this.IndexOfNode(node);
-            if (index < 0)
-                return null;
-            return this.mNodes[index].AllEdges(srcFirst);
-        }
-
-        #endregion
-
-        /// <summary>
-        /// Finds the "center" node of this graph based on a breadth first
-        /// "pruning" of edges, starting from its "leaf" nodes (nodes with
-        /// only one edge connecting them to the rest of the graph) and 
-        /// working its way inward until a single "center" node is left.
-        /// </summary>
-        /// <param name="undirected">Whether the "pruning" is done for both
-        /// the source and destination edges of each node rather than just
-        /// one or the other.</param>
-        /// <param name="reversed">Whether the source edges of each node are
-        /// "pruned" instead of the destination edges. If 
-        /// <paramref name="undirected"/> is true, whether source edges are 
-        /// "pruned" before destination edges.</param>
-        /// <returns>Null is returned if this graph could not be "pruned"
-        /// because it has no nodes or no edges or no "leaf" nodes;
-        /// otherwise the "center" found via the breadth first "pruning" is
-        /// returned.</returns>
+        /// Finds the "center" node of this graph based on an undirected 
+        /// breadth first "pruning" of edges, starting from its "leaf" nodes
+        /// (nodes with only one edge connecting them to the rest of the 
+        /// graph) and working its way inward until a single "center" node 
+        /// is left.</summary>
+        /// <returns>Null if this graph could not be "pruned" because it has 
+        /// no nodes or no edges or no "leaf" nodes; otherwise the "center" 
+        /// found via the undirected breadth first "pruning".</returns>
         public GNode FindCenter(bool undirected, bool reversed)
         {
-            if (this.mNodes.Count == 0)
+            if (this.mNCount == 0)
+            {
                 return null;
-            if (this.mEdges.Count == 0)
+            }
+            int i, degree = 0;
+            for (i = 0; i < this.mNCount; i++)
+            {
+                if (!this.mNodes[i].Hidden)
+                    degree++;
+            }
+            if (degree == 0)
+            {
+                // There are no visible nodes, 
+                // so it's as if the graph is empty.
                 return null;
+            }
+            else if (degree == 1 || this.mECount == 0)
+            {
+                // There aren't enough visible nodes to warrant pruning,
+                // so just return the first visible node found.
+                for (i = 0; i < this.mNCount; i++)
+                {
+                    if (!this.mNodes[i].Hidden)
+                        return this.mNodes[i];
+                }
+            }
+            GNode node;
+            GEdge edge;
+            int u, v = -1;
+            int leafIndex = 0;
+            int leafCount = 0;
+            int[] degrees = new int[this.mNCount];
+            int[] leaves = new int[degree];
+            for (i = 0; i < this.mNCount; i++)
+            {
+                degrees[i] = 0;
+            }
+            for (i = 0; i < this.mECount; i++)
+            {
+                edge = this.mEdges[i];
+                if (!edge.Hidden && 
+                    edge.SrcNode.mIndex != edge.DstNode.mIndex)
+                {
+                    if (!edge.DstNode.Hidden && (undirected || !reversed))
+                    {
+                        degree = degrees[edge.DstNode.mIndex];
+                        degrees[edge.DstNode.mIndex] = degree + 1;
+                    }
+                    if (!edge.SrcNode.Hidden && (undirected || reversed))
+                    {
+                        degree = degrees[edge.SrcNode.mIndex];
+                        degrees[edge.SrcNode.mIndex] = degree + 1;
+                    }
+                }
+            }
+            for (i = 0; i < this.mNCount; i++)
+            {
+                node = this.mNodes[i];
+                if (!node.Hidden && degrees[node.mIndex] == 1)
+                    leaves[leafCount++] = node.mIndex;
+            }
+            if (leafCount == 0)
+            {
+                // There are no leaves to prune,
+                // so just return the first visible node found.
+                for (i = 0; i < this.mNCount; i++)
+                {
+                    if (!this.mNodes[i].Hidden)
+                        return this.mNodes[i];
+                }
+            }
+            while (leafIndex < leafCount)
+            {
+                v = leaves[leafIndex++];
+                for (i = 0; i < this.mECount; i++)
+                {
+                    edge = this.mEdges[i];
+                    if (!edge.Hidden &&
+                        edge.SrcNode.mIndex != edge.DstNode.mIndex)
+                    {
+                        if (edge.DstNode.mIndex == v && 
+                            !edge.SrcNode.Hidden &&
+                            (undirected || !reversed))
+                        {
+                            u = edge.SrcNode.mIndex;
+                            degree = degrees[u] - 1;
+                            degrees[u] = degree;
+                            if (degree == 1)
+                                leaves[leafCount++] = u;
+                        }
+                        else if (edge.SrcNode.mIndex == v &&
+                            !edge.DstNode.Hidden &&
+                            (undirected || reversed))
+                        {
+                            u = edge.DstNode.mIndex;
+                            degree = degrees[u] - 1;
+                            degrees[u] = degree;
+                            if (degree == 1)
+                                leaves[leafCount++] = u;
+                        }
+                    }
+                }
+            }
+            return v == -1 ? null : this.mNodes[v];
+        }
 
-            bool rev;
-            int i, j, degree, stop = undirected ? 2 : 1;
-            int[] degrees = new int[this.mNodes.Count];
-            Queue<Digraph<Node, Edge>.GNode> leaves
-                = new Queue<Digraph<Node, Edge>.GNode>(this.mNodes.Count);
+        /*private class StackFrame
+        {
+            public int RootIndex;
+            public int NodeIndex;
+            public int EdgeIndex;
+            public int Size;
 
-            if (undirected)
+            public StackFrame(int rootIndex, int nodeIndex, int edgeIndex, int size)
             {
-                for (i = 0; i < this.mNodes.Count; i++)
+                this.RootIndex = rootIndex;
+                this.NodeIndex = nodeIndex;
+                this.EdgeIndex = edgeIndex;
+                this.Size = size;
+            }
+        }/* */
+
+        public GNode FindPathCenter()
+        {
+            if (this.mNCount == 0)
+            {
+                return null;
+            }
+            int i, j = -1;
+            int count = 0;
+            for (i = 0; i < this.mNCount; i++)
+            {
+                if (!this.mNodes[i].Hidden)
                 {
-                    this.mNodes[i].Index = i;
-                    degrees[i] = this.mNodes[i].AllEdgeCount;
-                    if (degrees[i] == 1)
-                        leaves.Enqueue(this.mNodes[i]);
+                    count++;
+                    if (j == -1)
+                        j = i;
                 }
             }
-            else
+            if (count == 0)
             {
-                if (reversed)
+                // There are no visible nodes, 
+                // so it's as if the graph is empty.
+                return null;
+            }
+            else if (count < 3 || this.mECount < 2)
+            {
+                // There are not enough edges or visible nodes to make
+                // a path with an intermediate node as their center,
+                // so just return the first visible node found.
+                return this.mNodes[j];
+            }
+            int pathCount, maxPathCount = -1;
+            int ni, pi, size, n1, n2, center = 0;
+            Digraph<Node, Edge>.GEdge edge1, edge2;
+            int[] sizes = new int[this.mNCount];
+            for (i = 0; i < this.mNCount; i++)
+            {
+                sizes[i] = -1;
+            }
+            // Calculate the number of child nodes of the current node in
+            // the tree by using a DFS algorithm, as it is the sum of the
+            // number of child nodes in each of its branches, which might
+            // not be leaves.
+            int[] frame;
+            int[][] stack = new int[count][];
+            //Stack<int[]> stack = new Stack<int[]>(this.mNCount);
+            //stack.Push(new int[] { -1, 0, 0, 0 });
+            stack[0] = new int[] { -1, j, 0, 0 };
+            count = 1;
+            while (count > 0)
+            {
+                frame = stack[--count];//stack.Pop();
+                pi = frame[0];//frame.RootIndex;
+                ni = frame[1];//frame.NodeIndex;
+                i  = frame[2];//frame.EdgeIndex;
+                size = frame[3];//frame.Size;
+                if (i > 0)
                 {
-                    for (i = 0; i < this.mNodes.Count; i++)
+                    edge1 = this.mEdges[i - 1];
+                    if (edge1.SrcNode.mIndex == ni)
+                        n1 = edge1.DstNode.mIndex;
+                    else
+                        n1 = edge1.SrcNode.mIndex;
+                    size += sizes[n1];
+                }
+                while (i < this.mECount)
+                {
+                    edge1 = this.mEdges[i];
+                    i++;
+                    if (!edge1.Hidden &&
+                        !edge1.SrcNode.Hidden && !edge1.DstNode.Hidden)
                     {
-                        this.mNodes[i].Index = i;
-                        degrees[i] = this.mNodes[i].mSrcEdges.Count;
-                        if (degrees[i] == 1)
-                            leaves.Enqueue(this.mNodes[i]);
+                        n1 = -1;
+                        if (edge1.SrcNode.mIndex == ni &&
+                            edge1.DstNode.mIndex != ni &&
+                            edge1.DstNode.mIndex != pi)
+                        {
+                            n1 = edge1.DstNode.mIndex;
+                        }
+                        else if (edge1.DstNode.mIndex == ni &&
+                                 edge1.SrcNode.mIndex != pi)
+                        {
+                            n1 = edge1.SrcNode.mIndex;
+                        }
+                        if (n1 != -1)
+                        {
+                            //stack.Push(new int[] { pi, ni, ei, size });
+                            stack[count++] = new int[] { pi, ni, i, size };
+                            pi = ni;
+                            ni = n1;
+                            i = 0;
+                            size = 0;
+                        }
                     }
                 }
-                else
+                sizes[ni] = size + 1;
+                // The initial path count is the product of the number of
+                // nodes that come before the current node in the DFS tree
+                // and the number of child nodes that come after it, 
+                // as there are undirected paths connecting each of them 
+                // that go through the current node.
+                pathCount = size * (this.mNCount - 1 - size);
+                // The rest of the path count is calculated from the products
+                // of the permutations of each child branch of the current
+                // node in the DFS tree, as there are undirected paths
+                // connecting each child in each branch to the children in
+                // all the other branches that go through the current node.
+                for (i = 0; i < this.mECount; i++)
                 {
-                    for (i = 0; i < this.mNodes.Count; i++)
+                    edge1 = this.mEdges[i];
+                    if (!edge1.Hidden &&
+                        !edge1.SrcNode.Hidden && !edge1.DstNode.Hidden)
                     {
-                        this.mNodes[i].Index = i;
-                        degrees[i] = this.mNodes[i].mDstEdges.Count;
-                        if (degrees[i] == 1)
-                            leaves.Enqueue(this.mNodes[i]);
+                        n1 = -1;
+                        if (edge1.SrcNode.mIndex == ni &&
+                            edge1.DstNode.mIndex != ni &&
+                            edge1.DstNode.mIndex != pi)
+                        {
+                            n1 = edge1.DstNode.mIndex;
+                        }
+                        else if (edge1.DstNode.mIndex == ni &&
+                                 edge1.SrcNode.mIndex != pi)
+                        {
+                            n1 = edge1.SrcNode.mIndex;
+                        }
+                        if (n1 != -1)
+                        {
+                            for (j = i + 1; j < this.mECount; j++)
+                            {
+                                edge2 = this.mEdges[j];
+                                if (!edge2.Hidden && !edge2.SrcNode.Hidden &&
+                                    !edge2.DstNode.Hidden)
+                                {
+                                    n2 = -1;
+                                    if (edge2.SrcNode.mIndex == ni &&
+                                        edge2.DstNode.mIndex != ni &&
+                                        edge2.DstNode.mIndex != pi)
+                                    {
+                                        n2 = edge2.DstNode.mIndex;
+                                    }
+                                    else if (edge2.DstNode.mIndex == ni &&
+                                             edge2.SrcNode.mIndex != pi)
+                                    {
+                                        n2 = edge2.SrcNode.mIndex;
+                                    }
+                                    if (n2 != -1)
+                                    {
+                                        pathCount += sizes[n1] * sizes[n2];
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if (pathCount > maxPathCount)
+                {
+                    maxPathCount = pathCount;
+                    center = ni;
+                }
+            }
+            return this.mNodes[center];
+        }
+
+        public GNode FindWeightedCenter(bool undirected, bool reversed)
+        {
+            int[] center = new int[1];
+            int[] sizes = new int[this.mNCount];
+            for (int i = 0; i < this.mNCount; i++)
+                sizes[i] = -1;
+            this.CalcPathCount(undirected, reversed, 0, -1, center, sizes, -1);
+            return this.mNodes[center[0]];
+        }
+
+        private int CalcPathCount(bool undirected, bool reversed, int index,
+            int pIndex, int[] center, int[] sizes, int maxPathCount)
+        {
+            int k, m, n, size = 0;
+            int node1, node2;
+            Digraph<Node, Edge>.GEdge edge1, edge2;
+            for (m = 0; m < this.mECount; m++)
+            {
+                edge1 = this.mEdges[m];
+                if (!edge1.Hidden)
+                {
+                    node1 = -1;
+                    if ((undirected || !reversed) &&
+                        edge1.SrcNode.mIndex == index &&
+                        edge1.DstNode.mIndex != pIndex)
+                    {
+                        node1 = edge1.DstNode.mIndex;
+                    }
+                    else if ((undirected || reversed) &&
+                        edge1.DstNode.mIndex == index &&
+                        edge1.SrcNode.mIndex != pIndex)
+                    {
+                        node1 = edge1.SrcNode.mIndex;
+                    }
+                    if (node1 != -1)
+                    {
+                        k = CalcPathCount(undirected, reversed, node1, index, center, sizes, maxPathCount);
+                        if (k > maxPathCount)
+                            maxPathCount = k;
+                        size += sizes[node1];
                     }
                 }
             }
-            Digraph<Node, Edge>.GNode u, v = null;
-            Digraph<Node, Edge>.GEdge edge;
-            Digraph<Node, Edge>.GEdge[] edges
-                = this.mEdges.ToArray();
-            while (leaves.Count > 0)
+            int pathCount = size * (this.mNCount - 1 - size);
+            for (m = 0; m < this.mECount; m++)
             {
-                v = leaves.Dequeue();
-                rev = reversed;
-                for (j = 0; j < stop; j++)
+                edge1 = this.mEdges[m];
+                if (!edge1.Hidden)
                 {
-                    for (i = 0; i < edges.Length; i++)
+                    node1 = -1;
+                    if ((undirected || !reversed) &&
+                        edge1.SrcNode.mIndex == index &&
+                        edge1.DstNode.mIndex != pIndex)
                     {
-                        edge = edges[i];
-                        u = rev ? edge.mDstNode : edge.mSrcNode;
-                        if (u.Index != v.Index)
-                            continue;
-                        u = rev ? edge.mSrcNode : edge.mDstNode;
-                        degree = degrees[u.Index] - 1;
-                        degrees[u.Index] = degree;
-                        if (degree == 1)
-                            leaves.Enqueue(u);
+                        node1 = edge1.DstNode.mIndex;
                     }
-                    rev = !rev;
+                    else if ((undirected || reversed) &&
+                        edge1.DstNode.mIndex == index &&
+                        edge1.SrcNode.mIndex != pIndex)
+                    {
+                        node1 = edge1.SrcNode.mIndex;
+                    }
+                    if (node1 != -1)
+                    {
+                        for (n = m + 1; n < this.mECount; n++)
+                        {
+                            edge2 = this.mEdges[m];
+                            if (!edge2.Hidden)
+                            {
+                                node2 = -1;
+                                if ((undirected || !reversed) &&
+                                    edge2.SrcNode.mIndex == index &&
+                                    edge2.DstNode.mIndex != pIndex)
+                                {
+                                    node2 = edge2.DstNode.mIndex;
+                                }
+                                else if ((undirected || reversed) &&
+                                    edge2.DstNode.mIndex == index &&
+                                    edge2.SrcNode.mIndex != pIndex)
+                                {
+                                    node2 = edge2.SrcNode.mIndex;
+                                }
+                                if (node2 != null)
+                                {
+                                    pathCount += sizes[node1] * sizes[node2];
+                                }
+                            }
+                        }
+                    }
                 }
             }
-            return v;
+            sizes[index] = size + 1;
+            if (pathCount > maxPathCount)
+            {
+                maxPathCount = pathCount;
+                center[0] = index;
+            }
+            return maxPathCount;
         }
 
         #region Node List Manipulation
@@ -838,7 +707,7 @@ namespace GraphForms.Algorithms
         /// </summary>
         public int NodeCount
         {
-            get { return this.mNodes.Count; }
+            get { return this.mNCount; }
         }
 
         /// <summary>
@@ -855,8 +724,38 @@ namespace GraphForms.Algorithms
         /// </exception>
         public int NodeCapacity
         {
-            get { return this.mNodes.Capacity; }
-            set { this.mNodes.Capacity = value; }
+            get { return this.mNodes.Length; }
+            set
+            {
+                if (value < this.mNCount)
+                    throw new ArgumentOutOfRangeException("NodeCapacity");
+                if (value != this.mNodes.Length)
+                {
+                    if (value > 0)
+                    {
+                        GNode[] nodes = new GNode[value];
+                        if (this.mNCount > 0)
+                        {
+                            Array.Copy(this.mNodes, 0, nodes, 0, 
+                                this.mNCount);
+                        }
+                        this.mNodes = nodes;
+                    }
+                    else
+                    {
+                        this.mNodes = sEmptyNodes;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the current "version" of this graph's internal node list,
+        /// which is incremented each time a node is inserted into or 
+        /// removed from this graph.</summary><seealso cref="EdgeVersion"/>
+        public uint NodeVersion
+        {
+            get { return this.mNVers; }
         }
 
         /// <summary>
@@ -869,10 +768,9 @@ namespace GraphForms.Algorithms
         {
             get
             {
-                int count = this.mNodes.Count;
-                Node[] nodes = new Node[count];
-                for (int i = 0; i < count; i++)
-                    nodes[i] = this.mNodes[i].mData;
+                Node[] nodes = new Node[this.mNCount];
+                for (int i = 0; i < this.mNCount; i++)
+                    nodes[i] = this.mNodes[i].Data;
                 return nodes;
             }
         }
@@ -888,8 +786,13 @@ namespace GraphForms.Algorithms
         /// <returns>The <typeparamref name="Node"/> instance at 
         /// <paramref name="nodeIndex"/> in this directional graph's internal
         /// list of <see cref="Nodes"/>.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// <paramref name="nodeIndex"/> is less than <c>0</c> or greater 
+        /// than or equal to <see cref="NodeCount"/>.</exception>
         public Node NodeAt(int nodeIndex)
         {
+            if (nodeIndex < 0 || nodeIndex >= this.mNCount)
+                throw new ArgumentOutOfRangeException("nodeIndex");
             return this.mNodes[nodeIndex].Data;
         }
 
@@ -901,7 +804,13 @@ namespace GraphForms.Algorithms
         /// <seealso cref="InternalEdges"/>
         public GNode[] InternalNodes
         {
-            get { return this.mNodes.ToArray(); }
+            get 
+            {
+                GNode[] nodes = new GNode[this.mNCount];
+                if (this.mNCount > 0)
+                    Array.Copy(this.mNodes, 0, nodes, 0, this.mNCount);
+                return nodes;
+            }
         }
 
         /// <summary>
@@ -915,8 +824,13 @@ namespace GraphForms.Algorithms
         /// <returns>The <see cref="GNode"/> instance at 
         /// <paramref name="nodeIndex"/> in this directional graph's internal
         /// list of <see cref="InternalNodes"/>.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// <paramref name="nodeIndex"/> is less than <c>0</c> or greater 
+        /// than or equal to <see cref="NodeCount"/>.</exception>
         public GNode InternalNodeAt(int nodeIndex)
         {
+            //if (nodeIndex < 0 || nodeIndex >= this.mNCount)
+            //    throw new ArgumentOutOfRangeException("nodeIndex");
             return this.mNodes[nodeIndex];
         }
 
@@ -954,9 +868,10 @@ namespace GraphForms.Algorithms
         /// </returns><seealso cref="IndexOfEdge(Node,Node)"/>
         public int IndexOfNode(Node node)
         {
-            for (int i = 0; i < this.mNodes.Count; i++)
+            EqualityComparer<Node> ec = EqualityComparer<Node>.Default;
+            for (int i = 0; i < this.mNCount; i++)
             {
-                if (this.mNodes[i].mData.Equals(node))
+                if (ec.Equals(this.mNodes[i].Data, node))
                     return i;
             }
             return -1;
@@ -997,50 +912,77 @@ namespace GraphForms.Algorithms
             // Don't allow duplicates
             if (this.IndexOfNode(node) < 0)
             {
-                this.mNodes.Add(new GNode(this, node));
+                // Ensure Capacity
+                if (this.mNCount == this.mNodes.Length)
+                {
+                    if (this.mNCount == 0)
+                    {
+                        this.mNodes = new GNode[4];
+                    }
+                    else
+                    {
+                        GNode[] nodes = new GNode[2 * this.mNCount];
+                        Array.Copy(this.mNodes, 0, nodes, 0, this.mNCount);
+                        this.mNodes = nodes;
+                    }
+                }
+                GNode gNode = new GNode(node, this.mNCount);
+                this.mNodes[this.mNCount++] = gNode;
+                this.mNVers++;
                 return true;
             }
             return false;
         }
 
         /// <summary>
-        /// Adds the <typeparamref name="Node"/> instances in the specified
-        /// array to the end of this <see cref="T:Digraph`2{Node,Edge}"/>,
-        /// if they aren't already contained in this graph.
-        /// </summary>
-        /// <param name="nodes">The array of <typeparamref name="Node"/>
-        /// instances that should be added to the end of this 
-        /// <see cref="T:Digraph`2{Node,Edge}"/>.</param>
-        /// <returns>The number of <typeparamref name="Node"/> instances that
-        /// are successfully added to the end of this 
-        /// <see cref="T:Digraph`2{Node,Edge}"/>.</returns>
-        public int AddNodeRange(Node[] nodes)
+        /// Inserts a <typeparamref name="Node"/> instance into this 
+        /// <see cref="T:Digraph`2"/> at the specified 
+        /// <paramref name="index"/>, if it isn't already contained 
+        /// in this graph.</summary>
+        /// <param name="index">The zero-based index at which 
+        /// <paramref name="node"/> should be inserted.</param>
+        /// <param name="node">The <typeparamref name="Node"/> instance
+        /// to insert into this graph.</param>
+        /// <returns>true if the given <paramref name="node"/> is inserted 
+        /// into this <see cref="T:Digraph`2{Node,Edge}"/> at the given 
+        /// <paramref name="index"/>, or false if it's already contained 
+        /// in this graph.</returns>
+        public bool InsertNode(int index, Node node)
         {
-            if (nodes == null || nodes.Length == 0)
-                return 0;
+            if (index < 0 || index > this.mNCount)
+                throw new ArgumentOutOfRangeException("index");
             // Don't allow duplicates
-            Node node;
-            List<GNode> gNodes = new List<GNode>(nodes.Length + 1);
-            int i, j, index;
-            for (i = 0; i < nodes.Length; i++)
+            if (this.IndexOfNode(node) < 0)
             {
-                node = nodes[i];
-                if (this.IndexOfNode(node) < 0)
+                // Ensure Capacity
+                if (this.mNCount == this.mNodes.Length)
                 {
-                    index = -1;
-                    for (j = 0; j < gNodes.Count && index < 0; j++)
+                    if (this.mNCount == 0)
                     {
-                        if (gNodes[j].mData.Equals(node))
-                            index = j;
+                        this.mNodes = new GNode[4];
                     }
-                    if (index < 0)
+                    else
                     {
-                        gNodes.Add(new GNode(this, nodes[i]));
+                        GNode[] nodes = new GNode[2 * this.mNCount];
+                        Array.Copy(this.mNodes, 0, nodes, 0, this.mNCount);
+                        this.mNodes = nodes;
                     }
                 }
+                if (index < this.mNCount)
+                {
+                    Array.Copy(this.mNodes, index, this.mNodes, index + 1, 
+                        this.mNCount - index);
+                }
+                this.mNodes[index] = new GNode(node, index);
+                this.mNCount++;
+                for (int i = index + 1; i < this.mNCount; i++)
+                {
+                    this.mNodes[i].mIndex = i;
+                }
+                this.mNVers++;
+                return true;
             }
-            this.mNodes.AddRange(gNodes);
-            return gNodes.Count;
+            return false;
         }
         #endregion
 
@@ -1077,36 +1019,148 @@ namespace GraphForms.Algorithms
         /// <seealso cref="M:IGraphEdge`1{Node}.Copy`1{Edge}(Node,Node)"/>
         public bool ReplaceNode(Node oldNode, Node newNode)
         {
-            if (newNode.Equals(oldNode))
+            EqualityComparer<Node> ec = EqualityComparer<Node>.Default;
+            if (ec.Equals(oldNode, newNode))
                 return true;
             // Don't allow duplicates
-            int i = this.IndexOfNode(newNode);
-            if (i >= 0)
+            int index = this.IndexOfNode(newNode);
+            if (index >= 0)
             {
                 // TODO: Should we remove the oldNode anyway?
                 return false;
             }
-            i = this.IndexOfNode(oldNode);
-            if (i < 0)
+            index = this.IndexOfNode(oldNode);
+            if (index < 0)
                 return false;
-            this.mNodes[i].mData = newNode;
-            Edge e;
-            List<GEdge> edges = this.mNodes[i].mDstEdges;
-            int count = edges.Count;
-            for (i = 0; i < count; i++)
+            GNode gNode = new GNode(newNode, index);
+            gNode.mLoopCount = this.mNodes[index].mLoopCount;
+            gNode.mSrcCount = this.mNodes[index].mSrcCount;
+            gNode.mDstCount = this.mNodes[index].mDstCount;
+            this.mNodes[index] = gNode;
+            if (this.mECount > 0 &&
+                gNode.TotalEdgeCount(true) > 0)
             {
-                e = edges[i].mData;
-                edges[i].mData.SetSrcNode(newNode);
-            }
-            edges = this.mNodes[i].mSrcEdges;
-            count = edges.Count;
-            for (i = 0; i < count; i++)
-            {
-                e = edges[i].mData;
-                edges[i].mData.SetDstNode(newNode);
+                GEdge gEdge;
+                for (int i = 0; i < this.mECount; i++)
+                {
+                    gEdge = this.mEdges[i];
+                    if (gEdge.SrcNode.mIndex == index)
+                    {
+                        gEdge.Data.SetSrcNode(newNode);
+                        if (gEdge.DstNode.mIndex == index)
+                        {
+                            this.mEdges[i] = new GEdge(
+                                gNode, gNode, gEdge.Data);
+                        }
+                        else
+                        {
+                            this.mEdges[i] = new GEdge(
+                                gNode, gEdge.DstNode, gEdge.Data);
+                        }
+                    }
+                    else if (gEdge.DstNode.mIndex == index)
+                    {
+                        gEdge.Data.SetDstNode(newNode);
+                        this.mEdges[i] = new GEdge(
+                            gEdge.SrcNode, gNode, gEdge.Data);
+                    }
+                }
             }
             return true;
         }
+
+        #region Hiding Nodes
+        /// <summary>
+        /// Sets to true the <see cref="GNode.Hidden"/> property of the 
+        /// <see cref="GNode"/> corresponding to the given 
+        /// <paramref name="node"/> in the graph if the given
+        /// <paramref name="node"/> is in the graph.</summary>
+        /// <param name="node">The <typeparamref name="Node"/> instance
+        /// to hide from algorithms that will process this graph.</param>
+        /// <seealso cref="UnhideNode(Node)"/>
+        public void HideNode(Node node)
+        {
+            int index = this.IndexOfNode(node);
+            if (index >= 0)
+            {
+                this.mNodes[index].mHidden = true;
+                this.mNVers++;
+            }
+        }
+        /// <summary>
+        /// Sets to true the <see cref="GNode.Hidden"/> property of the
+        /// <see cref="GNode"/> at the given <see cref="nodeIndex"/> in
+        /// this graph's internal list of nodes.
+        /// </summary>
+        /// <param name="nodeIndex">The index of the node in this graph
+        /// to hide from algorithms that will process this graph.</param>
+        /// <seealso cref="UnhideNodeAt(int)"/>
+        public void HideNodeAt(int nodeIndex)
+        {
+            if (nodeIndex < 0 || nodeIndex >= this.mNCount)
+                throw new ArgumentOutOfRangeException("nodeIndex");
+            this.mNodes[nodeIndex].mHidden = true;
+            this.mNVers++;
+        }
+        /// <summary>
+        /// Sets to true the <see cref="GNode.Hidden"/> property of every
+        /// <see cref="GNode"/> in this graph, making it appear empty to
+        /// any algorithm that will process it.</summary>
+        /// <seealso cref="UnhideAllNodes()"/>
+        public void HideAllNodes()
+        {
+            for (int i = 0; i < this.mNCount; i++)
+            {
+                this.mNodes[i].mHidden = true;
+            }
+            this.mNVers++;
+        }
+        /// <summary>
+        /// Sets to false the <see cref="GNode.Hidden"/> property of the 
+        /// <see cref="GNode"/> corresponding to the given 
+        /// <paramref name="node"/> in the graph if the given
+        /// <paramref name="node"/> is in the graph.</summary>
+        /// <param name="node">The <typeparamref name="Node"/> instance
+        /// to unhide from algorithms that will process this graph.</param>
+        /// <seealso cref="HideNode(Node)"/>
+        public void UnhideNode(Node node)
+        {
+            int index = this.IndexOfNode(node);
+            if (index >= 0)
+            {
+                this.mNodes[index].mHidden = false;
+                this.mNVers++;
+            }
+        }
+        /// <summary>
+        /// Sets to false the <see cref="GNode.Hidden"/> property of the
+        /// <see cref="GNode"/> at the given <see cref="nodeIndex"/> in
+        /// this graph's internal list of nodes.
+        /// </summary>
+        /// <param name="nodeIndex">The index of the node in this graph
+        /// to unhide from algorithms that will process this graph.</param>
+        /// <seealso cref="HideNodeAt(int)"/>
+        public void UnhideNodeAt(int nodeIndex)
+        {
+            if (nodeIndex < 0 || nodeIndex >= this.mNCount)
+                throw new ArgumentOutOfRangeException("nodeIndex");
+            this.mNodes[nodeIndex].mHidden = false;
+            this.mNVers++;
+        }
+        /// <summary>
+        /// Sets to false the <see cref="GNode.Hidden"/> property of every
+        /// <see cref="GNode"/> in this graph.</summary>
+        /// <seealso cref="HideAllNodes()"/>
+        public void UnhideAllNodes()
+        {
+            for (int i = 0; i < this.mNCount; i++)
+            {
+                this.mNodes[i].mHidden = false;
+            }
+            this.mNVers++;
+        }
+
+        #endregion
 
         #region Removing Nodes
         /// <summary>
@@ -1128,7 +1182,7 @@ namespace GraphForms.Algorithms
             int i = this.IndexOfNode(node);
             if (i < 0) 
                 return false;
-            this.InternalRemoveNodeAt(i, false);
+            this.CoreRemoveNodeAt(i, false);
             return true;
         }
 
@@ -1153,7 +1207,7 @@ namespace GraphForms.Algorithms
             int i = this.IndexOfNode(node);
             if (i < 0) 
                 return false;
-            this.InternalRemoveNodeAt(i, removeOrphans);
+            this.CoreRemoveNodeAt(i, removeOrphans);
             return true;
         }
 
@@ -1174,9 +1228,9 @@ namespace GraphForms.Algorithms
         /// <seealso cref="OrphanNodeAt(int)"/>
         public void RemoveNodeAt(int nodeIndex)
         {
-            if (nodeIndex < 0 || nodeIndex >= this.mNodes.Count)
+            if (nodeIndex < 0 || nodeIndex >= this.mNCount)
                 throw new ArgumentOutOfRangeException("nodeIndex");
-            this.InternalRemoveNodeAt(nodeIndex, false);
+            this.CoreRemoveNodeAt(nodeIndex, false);
         }
 
         /// <summary>
@@ -1197,44 +1251,146 @@ namespace GraphForms.Algorithms
         /// <seealso cref="OrphanNodeAt(int)"/>
         public void RemoveNodeAt(int nodeIndex, bool removeOrphans)
         {
-            if (nodeIndex < 0 || nodeIndex >= this.mNodes.Count)
+            if (nodeIndex < 0 || nodeIndex >= this.mNCount)
                 throw new ArgumentOutOfRangeException("nodeIndex");
-            this.InternalRemoveNodeAt(nodeIndex, removeOrphans);
+            this.CoreRemoveNodeAt(nodeIndex, removeOrphans);
         }
 
-        private void InternalRemoveNodeAt(int index, bool removeOrphans)
+        private void CoreRemoveNodeAt(int index, bool removeOrphans)
         {
-            int i, count = this.mNodes.Count;
-            for (i = 0; i < count; i++)
+            int i;
+            bool rem = false;
+            for (i = 0; i < this.mNCount; i++)
             {
-                this.mNodes[i].Index = i;
                 this.mNodes[i].Color = GraphColor.White;
             }
-            Node node = this.mNodes[index].mData;
-            if (removeOrphans)
+            if (this.mECount > 0)
             {
-                this.mNodes[index].Disconnect();
-                this.mNodes[index].Color = GraphColor.Black;
-                count = this.mNodes.Count;
-                for (i = this.mNodes.Count - 1; i >= 0; i--)
+                GEdge gEdge = this.mEdges[this.mECount - 1];
+                if (gEdge.SrcNode.mIndex == index)
                 {
-                    if (this.mNodes[i].Color == GraphColor.Black)
-                        this.mNodes.RemoveAt(i);
+                    this.mECount--;
+                    this.mEdges[this.mECount] = null;
+                    if (gEdge.DstNode.mIndex == index)
+                    {
+                        gEdge.SrcNode.mLoopCount--;
+                    }
+                    else
+                    {
+                        gEdge.SrcNode.mSrcCount--;
+                        gEdge.DstNode.mDstCount--;
+                    }
+                    rem = true;
+                }
+                else if (gEdge.DstNode.mIndex == index)
+                {
+                    this.mECount--;
+                    this.mEdges[this.mECount] = null;
+                    gEdge.SrcNode.mSrcCount--;
+                    gEdge.DstNode.mDstCount--;
+                    rem = true;
+                }
+                for (i = this.mECount - (rem ? 1 : 2); i >= 0; i--)
+                {
+                    gEdge = this.mEdges[i];
+                    if (gEdge.SrcNode.mIndex == index)
+                    {
+                        this.mECount--;
+                        Array.Copy(this.mEdges, i + 1, this.mEdges, i,
+                            this.mECount - i);
+                        this.mEdges[this.mECount] = null;
+                        if (gEdge.DstNode.mIndex == index)
+                        {
+                            gEdge.SrcNode.mLoopCount--;
+                        }
+                        else
+                        {
+                            gEdge.SrcNode.mSrcCount--;
+                            gEdge.DstNode.mDstCount--;
+                        }
+                        rem = true;
+                        // Mark the opposite node as a potential orphan
+                        gEdge.DstNode.Color = GraphColor.Gray;
+                    }
+                    else if (gEdge.DstNode.mIndex == index)
+                    {
+                        this.mECount--;
+                        Array.Copy(this.mEdges, i + 1, this.mEdges, i,
+                            this.mECount - i);
+                        this.mEdges[this.mECount] = null;
+                        gEdge.SrcNode.mSrcCount--;
+                        gEdge.DstNode.mDstCount--;
+                        rem = true;
+                        // Mark the opposite node as a potential orphan
+                        gEdge.SrcNode.Color = GraphColor.Gray;
+                    }
+                }
+                if (rem)
+                {
+                    this.mEVers++;
+                    if (removeOrphans)
+                    {
+                        // Mark newly orphaned nodes for removal
+                        GNode gNode;
+                        for (i = 0; i < this.mNCount; i++)
+                        {
+                            gNode = this.mNodes[i];
+                            if (gNode.Color == GraphColor.Gray &&
+                                gNode.mSrcCount + gNode.mDstCount == 0)
+                                gNode.Color = GraphColor.Black;
+                        }
+                        // Mark the node at the given index for removal
+                        this.mNodes[index].Color = GraphColor.Black;
+                        // Remove all nodes marked for removal
+                        rem = false;
+                        gNode = this.mNodes[this.mNCount - 1];
+                        if (gNode.Color == GraphColor.Black)
+                        {
+                            this.mNCount--;
+                            this.mNodes[this.mNCount] = null;
+                            rem = true;
+                        }
+                        for (i = this.mNCount - (rem ? 1 : 2); i >= 0; i--)
+                        {
+                            if (this.mNodes[i].Color == GraphColor.Black)
+                            {
+                                this.mNodes[i].mIndex = -1;
+                                this.mNCount--;
+                                Array.Copy(this.mNodes, i + 1,
+                                    this.mNodes, i, this.mNCount - i);
+                                this.mNodes[this.mNCount] = null;
+                            }
+                        }
+                        // Update the indexes of all the nodes
+                        for (i = 0; i < this.mNCount; i++)
+                        {
+                            this.mNodes[i].mIndex = i;
+                        }
+                        rem = true;
+                    }
+                    else
+                    {
+                        rem = false;
+                    }
                 }
             }
-            else
+            if (!rem)
             {
-                this.mNodes[index].Disconnect();
-                this.mNodes.RemoveAt(index);
+                this.mNodes[index].mIndex = -1;
+                this.mNCount--;
+                if (this.mNCount > 0)
+                {
+                    Array.Copy(this.mNodes, index + 1,
+                        this.mNodes, index, this.mNCount - i);
+                    // Update the indexes of the nodes
+                    for (i = index; i < this.mNCount; i++)
+                    {
+                        this.mNodes[i].mIndex = i;
+                    }
+                }
+                this.mNodes[this.mNCount] = null;
             }
-            count = this.mEdges.Count;
-            for (i = count - 1; i >= 0; i--)
-            {
-                if (this.mEdges[i].mSrcNode.Index == index)
-                    this.mEdges.RemoveAt(i);
-                else if (this.mEdges[i].mDstNode.Index == index)
-                    this.mEdges.RemoveAt(i);
-            }
+            this.mNVers++;
         }
         #endregion
 
@@ -1258,7 +1414,7 @@ namespace GraphForms.Algorithms
             int i = this.IndexOfNode(node);
             if (i < 0) 
                 return false;
-            this.InternalOrphanNodeAt(i);
+            this.CoreOrphanNodeAt(i);
             return true;
         }
 
@@ -1275,29 +1431,64 @@ namespace GraphForms.Algorithms
         /// <seealso cref="RemoveNodeAt(int,bool)"/>
         public void OrphanNodeAt(int nodeIndex)
         {
-            if (nodeIndex < 0 || nodeIndex >= this.mNodes.Count)
+            if (nodeIndex < 0 || nodeIndex >= this.mNCount)
                 throw new ArgumentOutOfRangeException("nodeIndex");
-            this.InternalOrphanNodeAt(nodeIndex);
+            this.CoreOrphanNodeAt(nodeIndex);
         }
 
-        private void InternalOrphanNodeAt(int index)
+        private void CoreOrphanNodeAt(int index)
         {
-            GNode n = this.mNodes[index];
-            if (n.mSrcEdges.Count > 0 || n.mDstEdges.Count > 0)
+            GNode gNode = this.mNodes[index];
+            if (this.mECount > 0 && gNode.mSrcCount + gNode.mDstCount > 0)
             {
-                int i, count = this.mNodes.Count;
-                for (i = 0; i < count; i++)
+                int i;
+                for (i = 0; i < this.mNCount; i++)
                 {
-                    this.mNodes[i].Index = i;
+                    this.mNodes[i].mIndex = i;
                 }
-                n.Disconnect();
-                for (i = this.mEdges.Count - 1; i >= 0; i--)
+                bool rem = false;
+                GEdge gEdge = this.mEdges[this.mECount - 1];
+                if (gEdge.SrcNode.mIndex == index &&
+                    gEdge.DstNode.mIndex != index)
                 {
-                    if (this.mEdges[i].mSrcNode.Index == index)
-                        this.mEdges.RemoveAt(i);
-                    else if (this.mEdges[i].mDstNode.Index == index)
-                        this.mEdges.RemoveAt(i);
+                    this.mECount--;
+                    this.mEdges[this.mECount] = null;
+                    gEdge.SrcNode.mSrcCount--;
+                    gEdge.DstNode.mDstCount--;
+                    rem = true;
                 }
+                else if (gEdge.DstNode.mIndex == index)
+                {
+                    this.mECount--;
+                    this.mEdges[this.mECount] = null;
+                    gEdge.SrcNode.mSrcCount--;
+                    gEdge.DstNode.mDstCount--;
+                    rem = true;
+                }
+                for (i = this.mECount - (rem ? 1 : 2); i >= 0; i--)
+                {
+                    gEdge = this.mEdges[i];
+                    if (gEdge.SrcNode.mIndex == index &&
+                        gEdge.DstNode.mIndex != index)
+                    {
+                        this.mECount--;
+                        Array.Copy(this.mEdges, i + 1, this.mEdges, i,
+                            this.mECount - i);
+                        this.mEdges[this.mECount] = null;
+                        gEdge.SrcNode.mSrcCount--;
+                        gEdge.DstNode.mDstCount--;
+                    }
+                    else if (gEdge.DstNode.mIndex == index)
+                    {
+                        this.mECount--;
+                        Array.Copy(this.mEdges, i + 1, this.mEdges, i,
+                            this.mECount - i);
+                        this.mEdges[this.mECount] = null;
+                        gEdge.SrcNode.mSrcCount--;
+                        gEdge.DstNode.mDstCount--;
+                    }
+                }
+                this.mEVers++;
             }
         }
 
@@ -1313,20 +1504,26 @@ namespace GraphForms.Algorithms
         /// <seealso cref="OrphanNode(Node)"/>
         public Node[] FindOrphanedNodes()
         {
-            if (this.mEdges.Count == 0)
-                return this.Nodes;
-            int count = this.mNodes.Count;
-            if (count == 0)
+            if (this.mNCount == 0)
                 return new Node[0];
-            List<Node> orphans = new List<Node>(count + 1);
-            GNode n;
+            if (this.mECount == 0)
+                return this.Nodes;
+            Node[] orphans1 = new Node[this.mNCount];
+            GNode gNode;
+            int count = 0;
             for (int i = 0; i < count; i++)
             {
-                n = this.mNodes[i];
-                if (n.mSrcEdges.Count == 0 && n.mDstEdges.Count == 0)
-                    orphans.Add(n.mData);
+                gNode = this.mNodes[i];
+                if (gNode.mSrcCount + gNode.mDstCount == 0)
+                    orphans1[count++] = gNode.Data;
             }
-            return orphans.ToArray();
+            if (count == 0)
+            {
+                return new Node[0];
+            }
+            Node[] orphans2 = new Node[count];
+            Array.Copy(orphans1, 0, orphans2, 0, count);
+            return orphans2;
         }
 
         /// <summary>
@@ -1341,20 +1538,26 @@ namespace GraphForms.Algorithms
         /// <seealso cref="OrphanNode(Node)"/>
         public GNode[] FindOrphanedInternalNodes()
         {
-            if (this.mEdges.Count == 0)
-                return this.mNodes.ToArray();
-            int count = this.mNodes.Count;
-            if (count == 0)
+            if (this.mNCount == 0)
                 return new GNode[0];
-            List<GNode> orphans = new List<GNode>(count + 1);
-            GNode n;
-            for (int i = 0; i < count; i++)
+            if (this.mECount == 0)
+                return this.InternalNodes;
+            GNode[] orphans1 = new GNode[this.mNCount];
+            GNode gNode;
+            int count = 0;
+            for (int i = 0; i < this.mNCount; i++)
             {
-                n = this.mNodes[i];
-                if (n.mSrcEdges.Count == 0 && n.mDstEdges.Count == 0)
-                    orphans.Add(n);
+                gNode = this.mNodes[i];
+                if (gNode.mSrcCount + gNode.mDstCount == 0)
+                    orphans1[count++] = gNode;
             }
-            return orphans.ToArray();
+            if (count == 0)
+            {
+                return new GNode[0];
+            }
+            GNode[] orphans2 = new GNode[count];
+            Array.Copy(orphans1, 0, orphans2, 0, count);
+            return orphans2;
         }
 
         /// <summary>
@@ -1370,16 +1573,25 @@ namespace GraphForms.Algorithms
         /// and <see cref="OrphanNode(Node)"/>.</remarks>
         public void ClearOrphanedNodes()
         {
-            if (this.mEdges.Count == 0)
+            if (this.mECount == 0)
                 this.ClearNodes();
-            GNode n;
-            for (int i = this.mNodes.Count - 1; i >= 0; i--)
+            bool rem = false;
+            GNode gNode = this.mNodes[this.mNCount - 1];
+            if (gNode.mSrcCount + gNode.mDstCount == 0)
             {
-                n = this.mNodes[i];
-                if (n.mSrcEdges.Count == 0 && n.mDstEdges.Count == 0)
+                this.mNCount--;
+                this.mNodes[this.mNCount] = null;
+                rem = true;
+            }
+            for (int i = this.mNCount - (rem ? 1 : 2); i >= 0; i--)
+            {
+                gNode = this.mNodes[i];
+                if (gNode.mSrcCount + gNode.mDstCount == 0)
                 {
-                    //n.Dispose();//No need; lists are already cleared
-                    this.mNodes.RemoveAt(i);
+                    this.mNCount--;
+                    Array.Copy(this.mNodes, i + 1, this.mNodes, i,
+                        this.mNCount - i);
+                    this.mNodes[this.mNCount] = null;
                 }
             }
         }
@@ -1394,20 +1606,22 @@ namespace GraphForms.Algorithms
         /// <seealso cref="ClearEdges()"/>.
         public void ClearNodes()
         {
-            if (this.mEdges.Count > 0)
+            if (this.mECount > 0)
             {
-                int i, count = this.mNodes.Count;
-                for (i = 0; i < count; i++)
-                {
-                    this.mNodes[i].Index = i;
-                }
-                for (i = 0; i < count; i++)
-                {
-                    this.mNodes[i].Disconnect();
-                }
+                Array.Clear(this.mEdges, 0, this.mECount);
+                this.mECount = 0;
+                this.mEVers++;
             }
-            this.mNodes.Clear();
-            this.mEdges.Clear();
+            if (this.mNCount > 0)
+            {
+                for (int i = 0; i < this.mNCount; i++)
+                {
+                    this.mNodes[i].mIndex = -1;
+                }
+                Array.Clear(this.mNodes, 0, this.mNCount);
+                this.mNCount = 0;
+                this.mNVers++;
+            }
         }
 
         #endregion
@@ -1421,7 +1635,7 @@ namespace GraphForms.Algorithms
         /// </summary><seealso cref="NodeCount"/>
         public int EdgeCount
         {
-            get { return this.mEdges.Count; }
+            get { return this.mECount; }
         }
 
         /// <summary>
@@ -1438,8 +1652,38 @@ namespace GraphForms.Algorithms
         /// </exception>
         public int EdgeCapacity
         {
-            get { return this.mEdges.Capacity; }
-            set { this.mEdges.Capacity = value; }
+            get { return this.mEdges.Length; }
+            set
+            {
+                if (value < this.mECount)
+                    throw new ArgumentOutOfRangeException("NodeCapacity");
+                if (value != this.mEdges.Length)
+                {
+                    if (value > 0)
+                    {
+                        GEdge[] edges = new GEdge[value];
+                        if (this.mECount > 0)
+                        {
+                            Array.Copy(this.mEdges, 0, edges, 0,
+                                this.mECount);
+                        }
+                        this.mEdges = edges;
+                    }
+                    else
+                    {
+                        this.mEdges = sEmptyEdges;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the current "version" of this graph's internal edge list,
+        /// which is incremented each time an edge is inserted into or 
+        /// removed from this graph.</summary><seealso cref="NodeVersion"/>
+        public uint EdgeVersion
+        {
+            get { return this.mEVers; }
         }
 
         /// <summary>
@@ -1452,10 +1696,9 @@ namespace GraphForms.Algorithms
         {
             get
             {
-                int count = this.mEdges.Count;
-                Edge[] edges = new Edge[count];
-                for (int i = 0; i < count; i++)
-                    edges[i] = this.mEdges[i].mData;
+                Edge[] edges = new Edge[this.mECount];
+                for (int i = 0; i < this.mECount; i++)
+                    edges[i] = this.mEdges[i].Data;
                 return edges;
             }
         }
@@ -1484,7 +1727,13 @@ namespace GraphForms.Algorithms
         /// <seealso cref="InternalNodes"/>
         public GEdge[] InternalEdges
         {
-            get { return this.mEdges.ToArray(); }
+            get
+            {
+                GEdge[] edges = new GEdge[this.mECount];
+                if (this.mECount > 0)
+                    Array.Copy(this.mEdges, 0, edges, 0, this.mECount);
+                return edges;
+            }
         }
 
         /// <summary>
@@ -1498,8 +1747,13 @@ namespace GraphForms.Algorithms
         /// <returns>The <see cref="GEdge"/> instance at 
         /// <paramref name="edgeIndex"/> in this directional graph's internal
         /// list of <see cref="InternalEdges"/>.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// <paramref name="edgeIndex"/> is less than <c>0</c> or greater 
+        /// than or equal to <see cref="EdgeCount"/>.</exception>
         public GEdge InternalEdgeAt(int edgeIndex)
         {
+            //if (edgeIndex < 0 || edgeIndex >= this.mECount)
+            //    throw new ArgumentOutOfRangeException("edgeIndex");
             return this.mEdges[edgeIndex];
         }
         #endregion
@@ -1524,11 +1778,12 @@ namespace GraphForms.Algorithms
         public int IndexOfEdge(Node srcNode, Node dstNode)
         {
             Edge edge;
-            for (int i = 0; i < this.mEdges.Count; i++)
+            EqualityComparer<Node> ec = EqualityComparer<Node>.Default;
+            for (int i = 0; i < this.mECount; i++)
             {
-                edge = this.mEdges[i].mData;
-                if (edge.SrcNode.Equals(srcNode) &&
-                    edge.DstNode.Equals(dstNode))
+                edge = this.mEdges[i].Data;
+                if (ec.Equals(edge.SrcNode, srcNode) &&
+                    ec.Equals(edge.DstNode, dstNode))
                     return i;
             }
             return -1;
@@ -1574,7 +1829,7 @@ namespace GraphForms.Algorithms
         public Edge FindEdge(Node srcNode, Node dstNode)
         {
             int index = this.IndexOfEdge(srcNode, dstNode);
-            return index < 0 ? default(Edge) : this.mEdges[index].mData;
+            return index < 0 ? default(Edge) : this.mEdges[index].Data;
         }
         #endregion
 
@@ -1592,7 +1847,7 @@ namespace GraphForms.Algorithms
         /// <seealso cref="AddEdge(Edge,bool)"/><seealso cref="AddNode(Node)"/>
         public void AddEdge(Edge edge)
         {
-            this.AddEdge(edge, true);
+            this.InsertEdge(this.mECount, edge, true, false);
         }
 
         /// <summary>
@@ -1614,40 +1869,195 @@ namespace GraphForms.Algorithms
         /// <seealso cref="AddEdge(Edge)"/><seealso cref="AddNode(Node)"/>
         public bool AddEdge(Edge edge, bool replace)
         {
-            // Replace if edge already exists
-            int index = this.IndexOfEdge(edge.SrcNode, edge.DstNode);
-            GNode src, dst;
-            if (index >= 0)
+            return this.InsertEdge(this.mECount, edge, replace, false);
+        }
+
+        /*public bool InsertEdge(int index, Edge edge)
+        {
+            return this.InsertEdge(index, edge, false, false);
+        }
+
+        public bool InsertEdge(int index, Edge edge, bool replace)
+        {
+            return this.InsertEdge(index, edge, replace, false);
+        }/* */
+
+        public bool InsertEdge(int index, Edge edge, bool replace, bool swap)
+        {
+            if (index > this.mECount)
             {
-                if (!replace)
-                    return false;
-                this.mEdges[index].mData = edge;
-                return true;
+                throw new ArgumentOutOfRangeException("index");
             }
-            index = this.IndexOfNode(edge.SrcNode);
-            if (index < 0)
+            Node node;
+            GNode gSrc, gDst;
+            EqualityComparer<Node> ec = EqualityComparer<Node>.Default;
+            // Take the easy way out if possible
+            if (this.mNCount == 0)
             {
-                src = new GNode(this, edge.SrcNode);
-                this.mNodes.Add(src);
+                // Ensure the capacity of the internal node list
+                if (this.mNodes.Length < 2)
+                    this.mNodes = new GNode[4];
+                // Ensure the capacity of the internal edge list
+                if (this.mEdges.Length < 1)
+                    this.mEdges = new GEdge[4];
+                // Insert the new nodes
+                gSrc = new GNode(edge.SrcNode, 0);
+                this.mNodes[0] = gSrc;
+                node = edge.DstNode;
+                if (ec.Equals(gSrc.Data, node))
+                {
+                    gDst = gSrc;
+                    this.mNCount = 1;
+                    gSrc.mLoopCount = 1;
+                }
+                else
+                {
+                    gDst = new GNode(node, 1);
+                    this.mNodes[1] = gDst;
+                    this.mNCount = 2;
+                    gSrc.mSrcCount = 1;
+                    gDst.mDstCount = 1;
+                }
+                this.mNVers++;
+                // Insert the new edge
+                this.mEdges[0] = new GEdge(gSrc, gDst, edge);
+                this.mECount = 1;
+                this.mEVers++;
+            }
+            int i;
+            // Attempt to find the edge's source node
+            gSrc = null;
+            node = edge.SrcNode;
+            for (i = 0; i < this.mNCount; i++)
+            {
+                if (ec.Equals(node, this.mNodes[i].Data))
+                {
+                    gSrc = this.mNodes[i];
+                    break;
+                }
+            }
+            // Attempt to find the edge's destination node
+            gDst = null;
+            if (ec.Equals(node, edge.DstNode))
+            {
+                gDst = gSrc;
             }
             else
             {
-                src = this.mNodes[index];
+                node = edge.DstNode;
+                for (i = 0; i < this.mNCount; i++)
+                {
+                    if (ec.Equals(node, this.mNodes[i].Data))
+                    {
+                        gDst = this.mNodes[i];
+                        break;
+                    }
+                }
             }
-            index = this.IndexOfNode(edge.DstNode);
-            if (index < 0)
+            // Check if the edge is already in this graph
+            if (gSrc != null && gDst != null)
             {
-                dst = new GNode(this, edge.DstNode);
-                this.mNodes.Add(dst);
+                GEdge gEdge;
+                // Attempt to locate the pre-existing edge
+                if (gSrc.mIndex == gDst.mIndex)
+                {
+                    for (i = 0; i < this.mECount; i++)
+                    {
+                        if (this.mEdges[i].SrcNode.mIndex == gSrc.mIndex)
+                        {
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    for (i = 0; i < this.mECount; i++)
+                    {
+                        gEdge = this.mEdges[i];
+                        if (gEdge.SrcNode.mIndex == gSrc.mIndex &&
+                            gEdge.DstNode.mIndex == gDst.mIndex)
+                        {
+                            break;
+                        }
+                    }
+                }
+                // Attempt to replace and swap the pre-existing edge
+                if (i < this.mECount)
+                {
+                    if (!replace)
+                    {
+                        return false;
+                    }
+                    this.mEdges[i] = new GEdge(gSrc, gDst, edge);
+                    if (i != index && swap)
+                    {
+                        gEdge = this.mEdges[index];
+                        this.mEdges[index] = this.mEdges[i];
+                        this.mEdges[i] = gEdge;
+                    }
+                    this.mEVers++;
+                    return true;
+                }
+            }
+            // Ensure the capacity of the internal node list
+            if (gSrc == null && gDst == null &&
+                this.mNCount >= this.mNodes.Length - 1)
+            {
+                GNode[] nodes = new GNode[2 * this.mNodes.Length];
+                Array.Copy(this.mNodes, 0, nodes, 0, this.mNCount);
+                this.mNodes = nodes;
+            }
+            else if (this.mNCount == this.mNodes.Length)
+            {
+                GNode[] nodes = new GNode[2 * this.mNodes.Length];
+                Array.Copy(this.mNodes, 0, nodes, 0, this.mNCount);
+                this.mNodes = nodes;
+            }
+            // Add the missing nodes to the end of the internal node list
+            if (gSrc == null)
+            {
+                gSrc = new GNode(edge.SrcNode, this.mNCount);
+                this.mNodes[this.mNCount++] = gSrc;
+            }
+            if (gDst == null)
+            {
+                gDst = new GNode(edge.DstNode, this.mNCount);
+                this.mNodes[this.mNCount++] = gDst;
+            }
+            // Increment the number of edges connected to each node
+            if (gSrc.mIndex == gDst.mIndex)
+            {
+                gSrc.mLoopCount++;
             }
             else
             {
-                dst = this.mNodes[index];
+                gSrc.mSrcCount++;
+                gDst.mDstCount++;
             }
-            GEdge e = new GEdge(src, dst, edge);
-            this.mEdges.Add(e);
-            src.mDstEdges.Add(e);
-            dst.mSrcEdges.Add(e);
+            this.mNVers++;
+            // Ensure the capacity of the internal edge list
+            if (this.mECount == this.mEdges.Length)
+            {
+                if (this.mECount == 0)
+                {
+                    this.mEdges = new GEdge[4];
+                }
+                else
+                {
+                    GEdge[] edges = new GEdge[2 * this.mECount];
+                    Array.Copy(this.mEdges, 0, edges, 0, this.mECount);
+                    this.mEdges = edges;
+                }
+            }
+            // Insert the new edge into the internal edge list
+            if (index < this.mECount)
+            {
+                Array.Copy(this.mEdges, index, this.mEdges, index + 1,
+                    this.mECount - index);
+            }
+            this.mEdges[index] = new GEdge(gSrc, gDst, edge);
+            this.mECount++;
+            this.mEVers++;
             return true;
         }
         #endregion
@@ -1674,7 +2084,7 @@ namespace GraphForms.Algorithms
             int index = this.IndexOfEdge(srcNode, dstNode);
             if (index < 0) 
                 return false;
-            this.InternalRemoveEdgeAt(index, false);
+            this.CoreRemoveEdgeAt(index, false);
             return true;
         }
 
@@ -1701,7 +2111,7 @@ namespace GraphForms.Algorithms
             int index = this.IndexOfEdge(srcNode, dstNode);
             if (index < 0) 
                 return false;
-            this.InternalRemoveEdgeAt(index, removeOrphans);
+            this.CoreRemoveEdgeAt(index, removeOrphans);
             return true;
         }
 
@@ -1720,9 +2130,9 @@ namespace GraphForms.Algorithms
         /// <seealso cref="OrphanNodeAt(int)"/>
         public void RemoveEdgeAt(int edgeIndex)
         {
-            if (edgeIndex < 0 || edgeIndex >= this.mEdges.Count)
+            if (edgeIndex < 0 || edgeIndex >= this.mECount)
                 throw new ArgumentOutOfRangeException("edgeIndex");
-            this.InternalRemoveEdgeAt(edgeIndex, false);
+            this.CoreRemoveEdgeAt(edgeIndex, false);
         }
 
         /// <summary>
@@ -1744,40 +2154,98 @@ namespace GraphForms.Algorithms
         /// <seealso cref="OrphanNodeAt(int)"/>
         public void RemoveEdgeAt(int edgeIndex, bool removeOrphans)
         {
-            if (edgeIndex < 0 || edgeIndex >= this.mEdges.Count)
+            if (edgeIndex < 0 || edgeIndex >= this.mECount)
                 throw new ArgumentOutOfRangeException("edgeIndex");
-            this.InternalRemoveEdgeAt(edgeIndex, removeOrphans);
+            this.CoreRemoveEdgeAt(edgeIndex, removeOrphans);
         }
 
-        private void InternalRemoveEdgeAt(int index, bool removeOrphans)
+        private void CoreRemoveEdgeAt(int index, bool removeOrphans)
         {
-            int count = this.mNodes.Count;
-            for (int i = 0; i < count; i++)
+            GEdge gEdge = this.mEdges[index];
+            if (gEdge.SrcNode.mIndex == gEdge.DstNode.mIndex)
             {
-                this.mNodes[i].Index = i;
+                gEdge.SrcNode.mLoopCount--;
             }
-            GEdge edge = this.mEdges[index];
-            this.mEdges.RemoveAt(index);
-            index = IndexOfDst(edge.mSrcNode.mDstEdges, edge.mDstNode.Index);
-            edge.mSrcNode.mDstEdges.RemoveAt(index);
-            index = IndexOfSrc(edge.mDstNode.mSrcEdges, edge.mSrcNode.Index);
-            edge.mDstNode.mSrcEdges.RemoveAt(index);
-            if (removeOrphans)
+            else
             {
-                GNode node;
-                index = Math.Max(edge.mSrcNode.Index, edge.mDstNode.Index);
-                node = this.mNodes[index];
-                if (node.mDstEdges.Count == 0 && node.mSrcEdges.Count == 0)
+                gEdge.SrcNode.mSrcCount--;
+                gEdge.DstNode.mDstCount--;
+                if (removeOrphans)
                 {
-                    this.mNodes.RemoveAt(index);
-                }
-                index = Math.Min(edge.mSrcNode.Index, edge.mDstNode.Index);
-                node = this.mNodes[index];
-                if (node.mDstEdges.Count == 0 && node.mSrcEdges.Count == 0)
-                {
-                    this.mNodes.RemoveAt(index);
+                    int i;
+                    GNode gSrc = gEdge.SrcNode;
+                    GNode gDst = gEdge.DstNode;
+                    if (gSrc.mSrcCount + gSrc.mDstCount == 0)
+                    {
+                        gSrc.mIndex = -1;
+                        if (gDst.mSrcCount + gDst.mDstCount == 0)
+                        {
+                            gDst.mIndex = -1;
+                            int min = Math.Max(gSrc.mIndex, gDst.mIndex);
+                            int max = Math.Max(gSrc.mIndex, gDst.mIndex);
+                            this.mNCount--;
+                            if (max < this.mNCount)
+                            {
+                                Array.Copy(this.mNodes, max + 1, 
+                                    this.mNodes, max, this.mNCount - max);
+                            }
+                            this.mNodes[this.mNCount] = null;
+                            this.mNCount--;
+                            if (min < this.mNCount)
+                            {
+                                Array.Copy(this.mNodes, min + 1, 
+                                    this.mNodes, min, this.mNCount - min);
+                            }
+                            this.mNodes[this.mNCount] = null;
+                            for (i = min; i < this.mNCount; i++)
+                            {
+                                this.mNodes[i].mIndex = i;
+                            }
+                        }
+                        else
+                        {
+                            this.mNCount--;
+                            if (gSrc.mIndex < this.mNCount)
+                            {
+                                Array.Copy(this.mNodes, gSrc.mIndex + 1,
+                                    this.mNodes, gSrc.mIndex, 
+                                    this.mNCount - gSrc.mIndex);
+                            }
+                            this.mNodes[this.mNCount] = null;
+                            for (i = gSrc.mIndex; i < this.mNCount; i++)
+                            {
+                                this.mNodes[i].mIndex = i;
+                            }
+                        }
+                        this.mNVers++;
+                    }
+                    else if (gDst.mSrcCount + gDst.mDstCount == 0)
+                    {
+                        gDst.mIndex = -1;
+                        this.mNCount--;
+                        if (gDst.mIndex < this.mNCount)
+                        {
+                            Array.Copy(this.mNodes, gDst.mIndex + 1,
+                                this.mNodes, gDst.mIndex,
+                                this.mNCount - gDst.mIndex);
+                        }
+                        this.mNodes[this.mNCount] = null;
+                        for (i = gDst.mIndex; i < this.mNCount; i++)
+                        {
+                            this.mNodes[i].mIndex = i;
+                        }
+                    }
+                    this.mNVers++;
                 }
             }
+            this.mECount--;
+            if (index < this.mECount)
+            {
+                Array.Copy(this.mEdges, index + 1, this.mEdges, index,
+                    this.mECount - index);
+            }
+            this.mEdges[this.mECount] = null;
+            this.mEVers++;
         }
         #endregion
 
@@ -1793,14 +2261,18 @@ namespace GraphForms.Algorithms
         /// <seealso cref="ClearNodes()"/>.
         public void ClearEdges()
         {
-            if (this.mEdges.Count > 0)
+            if (this.mECount > 0)
             {
-                this.mEdges.Clear();
-                int i, count = this.mNodes.Count;
-                for (i = 0; i < count; i++)
+                Array.Clear(this.mEdges, 0, this.mECount);
+                this.mECount = 0;
+                this.mEVers++;
+                GNode gNode;
+                for (int i = 0; i < this.mNCount; i++)
                 {
-                    this.mNodes[i].mSrcEdges.Clear();
-                    this.mNodes[i].mDstEdges.Clear();
+                    gNode = this.mNodes[i];
+                    gNode.mLoopCount = 0;
+                    gNode.mSrcCount = 0;
+                    gNode.mDstCount = 0;
                 }
             }
         }

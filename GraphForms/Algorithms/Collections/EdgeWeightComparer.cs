@@ -64,9 +64,9 @@ namespace GraphForms.Algorithms.Collections
                            Digraph<Node, Edge>.GEdge y)
         {
             if (this.bReversed)
-                return y.mData.Weight.CompareTo(x.mData.Weight);
+                return y.Data.Weight.CompareTo(x.Data.Weight);
             else
-                return x.mData.Weight.CompareTo(y.mData.Weight);
+                return x.Data.Weight.CompareTo(y.Data.Weight);
         }
         /// <summary>
         /// Compares the <see cref="P:IGraphEdge`1{Node}.Weight"/> values of

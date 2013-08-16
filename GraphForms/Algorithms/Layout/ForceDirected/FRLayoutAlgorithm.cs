@@ -3,7 +3,6 @@
 namespace GraphForms.Algorithms.Layout.ForceDirected
 {
     public abstract class FRLayoutAlgorithm<Node, Edge>
-        //: ForceDirectedLayoutAlgorithm<Node, Edge, FRLayoutParameters>
         : LayoutAlgorithm<Node, Edge>
         where Node : class, ILayoutNode
         where Edge : IGraphEdge<Node>, IUpdateable
@@ -34,27 +33,17 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         private float mLambda = 0.95f;
         private Cooling mCoolingFunction = Cooling.Exponential;
 
-        /*protected override FRLayoutParameters DefaultParameters
-        {
-            get { return new FRFreeLayoutParameters(); }
-        }
-
-        public FRLayoutAlgorithm(Digraph<Node, Edge> graph)
-            : base(graph, null)
-        {
-        }
-
-        public FRLayoutAlgorithm(Digraph<Node, Edge> graph,
-            FRLayoutParameters oldParameters)
-            : base(graph, oldParameters)
-        {
-        }/* */
+        private static readonly double[] sEmptyCoords = new double[0];
+        private double[] mNewXs;
+        private double[] mNewYs;
 
         public FRLayoutAlgorithm(Digraph<Node, Edge> graph,
             IClusterNode clusterNode)
             : base(graph, clusterNode)
         {
             this.MaxIterations = 200;
+            this.mNewXs = sEmptyCoords;
+            this.mNewYs = sEmptyCoords;
         }
 
         public FRLayoutAlgorithm(Digraph<Node, Edge> graph,
@@ -62,6 +51,8 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
             : base(graph, boundingBox)
         {
             this.MaxIterations = 200;
+            this.mNewXs = sEmptyCoords;
+            this.mNewYs = sEmptyCoords;
         }
 
         /// <summary>
@@ -181,38 +172,16 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         protected override void InitializeAlgorithm()
         {
             //base.InitializeAlgorithm();
-            this.mTemperature = this.InitialTemperature;//this.Parameters.InitialTemperature;
+            this.mTemperature = this.InitialTemperature;
             this.mMinimalTemperature = this.mTemperature * 0.01;
         }
-
-        /*protected override bool OnBeginIteration(bool paramsDirty, 
-            int lastNodeCount, int lastEdgeCount)
-        {
-            if (paramsDirty)
-            {
-                FRLayoutParameters param = this.Parameters;
-                // Update the node count just in case it changed,
-                // in order to force parameter recalculation.
-                param.NodeCount = this.mGraph.NodeCount;
-                // Don't worry about making NodeCount public,
-                // since the above action will erase any user changes 
-                // to the NodeCount value between iterations.
-
-                this.mMinimalTemperature = param.InitialTemperature * 0.01;
-                this.mCoA = param.ConstantOfAttraction;
-                this.mCoR = param.ConstantOfRepulsion;
-                this.mLambda = param.Lambda;
-                this.mCoolingFunction = param.CoolingFunction;
-            }
-            return base.OnBeginIteration(paramsDirty, lastNodeCount, lastEdgeCount);
-        }/* */
 
         protected override bool CanIterate()
         {
             return this.mTemperature > this.mMinimalTemperature;
         }
 
-        protected override void PerformIteration(uint iteration)//, int maxIterations)
+        protected override void PerformIteration(uint iteration)
         {
             this.IterateOne();
 
@@ -231,33 +200,35 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
         private void IterateOne()
         {
             int i, j;
-            //SizeF delta;
             double forceX, forceY, dx, dy, length, factor;
 
-            //float[] newXs = this.NewXPositions;
-            //float[] newYs = this.NewYPositions;
-            Digraph<Node, Edge>.GNode[] nodes = this.mGraph.InternalNodes;
-            Digraph<Node, Edge>.GEdge[] edges;
-            Node u, v;
+            Digraph<Node, Edge>.GEdge edge;
+            Digraph<Node, Edge>.GNode u, v;
+
+            i = this.mGraph.NodeCount;
+            if (this.mNewXs.Length < i)
+            {
+                this.mNewXs = new double[i];
+                this.mNewYs = new double[i];
+            }
 
             // Repulsive forces
-            for (i = 0; i < nodes.Length; i++)
+            for (i = this.mGraph.NodeCount - 1; i >= 0; i--)
             {
-                v = nodes[i].Data;
-                if (v.PositionFixed)
+                v = this.mGraph.InternalNodeAt(i);
+                if (v.Data.PositionFixed || v.Hidden)
                     continue;
-                nodes[i].Index = i;
+                //nodes[i].Index = i;
                 forceX = 0; forceY = 0;
-                for (j = 0; j < nodes.Length; j++)
+                for (j = this.mGraph.NodeCount - 1; j >= 0; j--)
                 {
                     // doesn't repulse itself
-                    if (j != i)
+                    u = this.mGraph.InternalNodeAt(j);
+                    if (j != i && !u.Hidden)
                     {
                         // calculating repulsive force
-                        u = nodes[j].mData;
-                        //delta = v.ItemTranslate(u);
-                        dx = v.X - u.X;//delta.Width;
-                        dy = v.Y - u.Y;//delta.Height;
+                        dx = v.Data.X - u.Data.X;
+                        dy = v.Data.Y - u.Data.Y;
                         length = Math.Max(dx * dx + dy * dy, 0.000001);
                         factor = this.mCoR / length;
 
@@ -265,72 +236,62 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                         forceY += dy * factor;
                     }
                 }
-                //v.NewX = (float)forceX;
-                //v.NewY = (float)forceY;
-                v.SetNewPosition((float)forceX, (float)forceY);
-                //newXs[i] = (float)forceX;
-                //newYs[i] = (float)forceY;
+                //v.Data.SetNewPosition((float)forceX, (float)forceY);
+                this.mNewXs[i] = forceX;
+                this.mNewYs[i] = forceY;
             }
 
             // Attractive forces
-            edges = this.mGraph.InternalEdges;
-            for (i = 0; i < edges.Length; i++)
+            for (i = this.mGraph.EdgeCount - 1; i >= 0; i--)
             {
-                v = edges[i].SrcNode.Data;
-                if (v.PositionFixed)
+                edge = this.mGraph.InternalEdgeAt(i);
+                if (edge.Hidden)
                     continue;
-                u = edges[i].DstNode.Data;
-                if (edges[i].SrcNode.Index == edges[i].DstNode.Index)
+                v = edge.SrcNode;
+                if (v.Data.PositionFixed || v.Hidden)
+                    continue;
+                u = edge.DstNode;
+                if (u.Index == v.Index)
                     continue;
 
                 // calculating attractive forces between two nodes
-                //delta = v.ItemTranslate(u);
-                dx = v.X - u.X;//delta.Width;
-                dy = v.Y - u.Y;//delta.Height;
+                dx = v.Data.X - u.Data.X;
+                dy = v.Data.Y - u.Data.Y;
                 length = Math.Sqrt(dx * dx + dy * dy);
-                factor = edges[i].Data.Weight;
+                factor = edge.Data.Weight;
                 factor = Math.Max(length / this.mCoA * factor, 0.000001);
 
-                //v.NewX = v.NewX - (float)(dx * factor);
-                //v.NewY = v.NewY - (float)(dy * factor);
-                v.SetNewPosition(v.NewX - (float)(dx / factor), 
-                                 v.NewY - (float)(dy / factor));
-                //j = edges[i].SrcNode.Index;
-                //newXs[j] = newXs[j] - (float)(dx / factor);
-                //newYs[j] = newYs[j] - (float)(dy / factor);
+                //v.SetNewPosition(v.NewX - (float)(dx / factor), 
+                //                 v.NewY - (float)(dy / factor));
+                forceX = this.mNewXs[v.Index] - dx / factor;
+                forceY = this.mNewYs[v.Index] - dy / factor;
+                this.mNewXs[v.Index] = forceX;
+                this.mNewYs[v.Index] = forceY;
             }
 
             // Limit Displacement
-            for (i = 0; i < nodes.Length; i++)
+            for (i = this.mGraph.NodeCount - 1; i >= 0; i--)
             {
                 // limit force to ambient temperature.
-                v = nodes[i].Data;
-                if (v.PositionFixed)
+                v = this.mGraph.InternalNodeAt(i);
+                if (v.Data.PositionFixed || v.Hidden)
                 {
-                    //v.NewX = v.X;
-                    //v.NewY = v.Y;
-                    v.SetNewPosition(v.X, v.Y);
-                    //newXs[i] = v.X;
-                    //newYs[i] = v.Y;
+                    //v.SetNewPosition(v.X, v.Y);
                     continue;
                 }
-                dx = v.NewX;
-                dy = v.NewY;
+                dx = this.mNewXs[i];//v.NewX;
+                dy = this.mNewYs[i];//v.NewY;
                 //dx = newXs[i];
                 //dy = newYs[i];
                 length = Math.Max(Math.Sqrt(dx * dx + dy * dy), 0.000001);
                 factor = Math.Min(length, this.mTemperature) / length;
 
                 // Add the force to the old position
-                //v.NewX = (float)(v.X + dx * factor);
-                //v.NewY = (float)(v.Y + dy * factor);
-                v.SetNewPosition((float)(v.X + dx * factor), 
-                                 (float)(v.Y + dy * factor));
-                //newXs[i] = (float)(v.X + dx * factor);
-                //newYs[i] = (float)(v.Y + dy * factor);
+                v.Data.SetPosition((float)(v.Data.X + dx * factor),
+                                   (float)(v.Data.Y + dy * factor));
 
                 // Constraining new position to within scene bounding box
-                // is already handled by ForceDirLayoutAlgorithm
+                // is already handled by LayoutAlgorithm base
             }
         }
     }

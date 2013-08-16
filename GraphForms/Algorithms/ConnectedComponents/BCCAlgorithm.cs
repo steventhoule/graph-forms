@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using GraphForms.Algorithms.Search;
 
 namespace GraphForms.Algorithms.ConnectedComponents
@@ -22,7 +21,7 @@ namespace GraphForms.Algorithms.ConnectedComponents
             public bool IsCut;
             public int GroupID;
             // Only used for strict articulation points?
-            public List<int> GIDs;
+            public int[] GIDs;
 
             public NodeData(Node data)
             {
@@ -32,7 +31,7 @@ namespace GraphForms.Algorithms.ConnectedComponents
             }
         }
 
-        private class EdgeData
+        /*private class EdgeData
         {
             public readonly Edge Data;
             public readonly int SrcIndex;
@@ -44,10 +43,13 @@ namespace GraphForms.Algorithms.ConnectedComponents
                 this.SrcIndex = srcIndex;
                 this.DstIndex = dstIndex;
             }
-        }
+        }/* */
 
-        private Stack<NodeData> mNodeStack;
-        private Stack<EdgeData> mEdgeStack;
+        //private Stack<NodeData> mNodeStack;
+        //private Stack<Digraph<Node, Edge>.GEdge> mEdgeStack;
+        private int mStackCount;
+        private NodeData[] mNodeStack;
+        private Digraph<Node, Edge>.GEdge[] mEdgeStack;
         private NodeData[] mDatas;
         private int mDepth;
         private bool mFlag = false;
@@ -56,17 +58,12 @@ namespace GraphForms.Algorithms.ConnectedComponents
         private List<Edge[]> mComponents;
         private List<Node[]> mCompGroups;
 
-        public BCCAlgorithm(Digraph<Node, Edge> graph)
-            : this(graph, false)
-        {
-        }
-
-        public BCCAlgorithm(Digraph<Node, Edge> graph,
-            bool reversed)
+        public BCCAlgorithm(Digraph<Node, Edge> graph, bool reversed)
             : base(graph, false, reversed)
         {
-            this.mNodeStack = new Stack<NodeData>(graph.NodeCount + 1);
-            this.mEdgeStack = new Stack<EdgeData>(graph.EdgeCount + 1);
+            this.mDatas = new NodeData[0];
+            this.mNodeStack = new NodeData[0];
+            this.mEdgeStack = new Digraph<Node, Edge>.GEdge[0];
             this.mArtNodes = new List<Node>();
             this.mComponents = new List<Edge[]>();
             this.mCompGroups = new List<Node[]>();
@@ -122,10 +119,10 @@ namespace GraphForms.Algorithms.ConnectedComponents
             {
                 if (this.mDatas[i].GIDs != null)
                 {
-                    List<int> gids = this.mDatas[i].GIDs;
+                    int[] gids = this.mDatas[i].GIDs;
                     index = 0;
                     size = this.mCompGroups[gids[0]].Length;
-                    for (j = 1; j < gids.Count; j++)
+                    for (j = 1; j < gids.Length; j++)
                     {
                         if (this.mCompGroups[gids[j]].Length > size)
                         {
@@ -215,47 +212,60 @@ namespace GraphForms.Algorithms.ConnectedComponents
         public override void Initialize()
         {
             base.Initialize();
+            int count = this.mGraph.NodeCount;
             this.mDepth = 0;
-            this.mNodeStack.Clear();
-            this.mEdgeStack.Clear();
-            Digraph<Node, Edge>.GNode[] nodes
-                = this.mGraph.InternalNodes;
-            this.mDatas = new NodeData[nodes.Length];
-            for (int i = 0; i < nodes.Length; i++)
+            //this.mNodeStack.Clear();
+            //this.mEdgeStack.Clear();
+            if (this.mDatas.Length < count)
             {
-                this.mDatas[i] = new NodeData(nodes[i].mData);
+                this.mDatas = new NodeData[count];
             }
+            for (int i = 0; i < count; i++)
+            {
+                this.mDatas[i] = new NodeData(this.mGraph.NodeAt(i));
+            }
+            count = this.mGraph.EdgeCount;
+            if (this.mNodeStack.Length < count)
+            {
+                this.mNodeStack = new NodeData[count];
+                this.mEdgeStack = new Digraph<Node, Edge>.GEdge[count];
+            }
+            this.mStackCount = 0;
         }
 
-        protected override void OnStartNode(Node n, int index)
+        protected override void OnStartNode(Digraph<Node, Edge>.GNode n)
         {
             this.mFlag = false;
-            base.OnStartNode(n, index);
         }
 
-        protected override void OnDiscoverNode(Node n, int index)
+        protected override void OnDiscoverNode(
+            Digraph<Node, Edge>.GNode n, uint depth)
         {
-            NodeData nData = this.mDatas[index];
+            NodeData nData = this.mDatas[n.Index];
             nData.Depth = this.mDepth;
             nData.LowLink = this.mDepth;
             this.mDepth++;
-            base.OnDiscoverNode(n, index);
         }
 
-        protected override void OnTreeEdge(Edge e, 
-            int srcIndex, int dstIndex, bool reversed)
+        protected override void OnTreeEdge(Digraph<Node, Edge>.GEdge e, 
+            bool reversed, uint depth)
         {
-            this.mEdgeStack.Push(new EdgeData(e, srcIndex, dstIndex));
-            NodeData vData = this.mDatas[reversed ? srcIndex : dstIndex];
-            vData.Parent = reversed ? dstIndex : srcIndex;
-            this.mNodeStack.Push(vData);
-            base.OnTreeEdge(e, srcIndex, dstIndex, reversed);
+            //this.mEdgeStack.Push(e);
+            this.mEdgeStack[this.mStackCount] = e;
+            NodeData vData 
+                = this.mDatas[reversed ? e.SrcNode.Index : e.DstNode.Index];//srcIndex : dstIndex];
+            vData.Parent = reversed ? e.DstNode.Index : e.SrcNode.Index;//dstIndex : srcIndex;
+            //this.mNodeStack.Push(vData);
+            this.mNodeStack[this.mStackCount] = vData;
+            this.mStackCount++;
         }
 
-        protected override void OnFinishEdge(Edge e, 
-            int srcIndex, int dstIndex, bool reversed)
+        protected override void OnFinishEdge(Digraph<Node, Edge>.GEdge e, 
+            bool reversed, uint depth)
         {
             NodeData uDat, vDat;
+            int srcIndex = e.SrcNode.Index;
+            int dstIndex = e.DstNode.Index;
             if (reversed)
             {
                 uDat = this.mDatas[dstIndex];
@@ -268,40 +278,56 @@ namespace GraphForms.Algorithms.ConnectedComponents
             }
             if (vDat.LowLink >= uDat.Depth)
             {
-                this.OnComponent(e, srcIndex, dstIndex, reversed);
+                this.OnComponent(e.Data, srcIndex, dstIndex, reversed);
             }
             uDat.LowLink = Math.Min(uDat.LowLink, vDat.LowLink);
-            base.OnFinishEdge(e, srcIndex, dstIndex, reversed);
         }
 
         private void OnComponent(Edge edge, int src, int dst, bool rev)
         {
-            List<Node> cGrp = new List<Node>(this.mNodeStack.Count + 1);
-            List<Edge> comp = new List<Edge>(this.mEdgeStack.Count + 1);
+            Node[] cGrp = new Node[this.mStackCount];
+            Edge[] comp = new Edge[this.mStackCount];
+            int cGrpCount = 0;
+            int compCount = 0;
             NodeData data;
-            EdgeData e = new EdgeData(edge, -1, -1);
-            while (e.SrcIndex != src || e.DstIndex != dst)
+            //EdgeData e = new EdgeData(edge, -1, -1);
+            //while (e.SrcIndex != src || e.DstIndex != dst)
+            Digraph<Node, Edge>.GEdge e;
+            do
             {
-                e = this.mEdgeStack.Pop();
-                comp.Add(e.Data);
-                data = this.mNodeStack.Pop();
+                this.mStackCount--;
+                e = this.mEdgeStack[this.mStackCount];//this.mEdgeStack.Pop();
+                comp[compCount++] = e.Data;
+                data = this.mNodeStack[this.mStackCount];//this.mNodeStack.Pop();
                 if (data.GroupID == -1)
                 {
-                    cGrp.Add(data.Data);
+                    cGrp[cGrpCount++] = data.Data;
                     data.GroupID = this.mCompGroups.Count;
                 }
                 else if (data.GroupID != this.mCompGroups.Count)
                 {
                     if (data.GIDs == null)
                     {
-                        data.GIDs = new List<int>();
-                        data.GIDs.Add(data.GroupID);
+                        data.GIDs = new int[2];
+                        data.GIDs[0] = data.GroupID;
+                        data.GIDs[1] = this.mCompGroups.Count;
                     }
-                    data.GIDs.Add(this.mCompGroups.Count);
+                    else
+                    {
+                        int count = data.GIDs.Length;
+                        int[] gids = new int[count + 1];
+                        Array.Copy(data.GIDs, 0, gids, 0, count);
+                        gids[count] = this.mCompGroups.Count;
+                        data.GIDs = gids;
+                    }
                 }
             }
-            this.mComponents.Add(comp.ToArray());
-            if (this.mEdgeStack.Count == 0)
+            while (e.SrcNode.Index != src || e.DstNode.Index != dst);
+
+            Edge[] comp2 = new Edge[compCount];
+            Array.Copy(comp, 0, comp2, 0, compCount);
+            this.mComponents.Add(comp2);
+            if (this.mStackCount == 0)//this.mEdgeStack.Count == 0)
             {
                 if (this.mFlag)
                 {
@@ -316,7 +342,9 @@ namespace GraphForms.Algorithms.ConnectedComponents
             {
                 this.OnArticulationNode(rev ? dst : src);
             }
-            this.mCompGroups.Add(cGrp.ToArray());
+            Node[] cGrp2 = new Node[cGrpCount];
+            Array.Copy(cGrp, 0, cGrp2, 0, cGrpCount);
+            this.mCompGroups.Add(cGrp2);
         }
 
         private void OnArticulationNode(int index)
@@ -328,29 +356,31 @@ namespace GraphForms.Algorithms.ConnectedComponents
             }
         }
 
-        protected override void OnGrayEdge(Edge e, 
-            int srcIndex, int dstIndex, bool reversed)
+        protected override void OnGrayEdge(Digraph<Node, Edge>.GEdge e, 
+            bool reversed, uint depth)
         {
             
             NodeData uDat;
             int v;
             if (reversed)
             {
-                uDat = this.mDatas[dstIndex];
-                v = srcIndex;
+                uDat = this.mDatas[e.DstNode.Index];//dstIndex];
+                v = e.SrcNode.Index;//srcIndex;
             }
             else
             {
-                uDat = this.mDatas[srcIndex];
-                v = dstIndex;
+                uDat = this.mDatas[e.SrcNode.Index];//srcIndex];
+                v = e.DstNode.Index;//dstIndex;
             }
             if (uDat.Parent != v)
             {
-                this.mEdgeStack.Push(new EdgeData(e, srcIndex, dstIndex));
-                this.mNodeStack.Push(this.mDatas[v]);
+                //this.mEdgeStack.Push(e);
+                //this.mNodeStack.Push(this.mDatas[v]);
+                this.mEdgeStack[this.mStackCount] = e;
+                this.mNodeStack[this.mStackCount] = this.mDatas[v];
+                this.mStackCount++;
                 uDat.LowLink = Math.Min(uDat.LowLink, this.mDatas[v].Depth);
             }
-            base.OnGrayEdge(e, srcIndex, dstIndex, reversed);
         }
     }
 }

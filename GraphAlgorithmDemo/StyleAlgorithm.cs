@@ -115,21 +115,21 @@ namespace GraphAlgorithmDemo
 
     public abstract class CCBaseStyleAlgorithm : StyleAlgorithm
     {
-        private ICCAlgorithm<CircleNode> mAlg;
+        private ICCAlgorithm<CircleNode, ArrowEdge> mAlg;
 
         public CCBaseStyleAlgorithm(bool directed, bool reversed)
             : base(directed, reversed)
         {
         }
 
-        protected abstract ICCAlgorithm<CircleNode> Create(
+        protected abstract ICCAlgorithm<CircleNode, ArrowEdge> Create(
             CircleNodeScene scene);
 
         public override void Compute(CircleNodeScene scene)
         {
             this.mAlg = this.Create(scene);
             this.mAlg.Compute();
-            CircleNode[] comp;
+            /*CircleNode[] comp;
             CircleNode[][] comps = this.mAlg.Components;
             int i, j, sC = sLineColors.Length;
             for (i = 0; i < comps.Length; i++)
@@ -144,6 +144,21 @@ namespace GraphAlgorithmDemo
             for (i = 0; i < comp.Length; i++)
             {
                 comp[i].MarkerColor = sLineColors[i % sC];
+            }/* */
+            CircleNode node;
+            int i, sC = sLineColors.Length;
+            Digraph<CircleNode, ArrowEdge> graph = scene.Graph;
+            int[] compIds = this.mAlg.ComponentIds;
+            for (i = 0; i < compIds.Length; i++)
+            {
+                node = graph.NodeAt(i);
+                node.BorderColor = sLineColors[compIds[i] % sC];
+            }
+            Digraph<CircleNode, ArrowEdge>.GNode[] roots
+                = this.mAlg.Roots;
+            for (i = 0; i < roots.Length; i++)
+            {
+                roots[i].Data.MarkerColor = sLineColors[i % sC];
             }
         }
     }
@@ -155,7 +170,7 @@ namespace GraphAlgorithmDemo
         {
         }
 
-        protected override ICCAlgorithm<CircleNode> Create(
+        protected override ICCAlgorithm<CircleNode, ArrowEdge> Create(
             CircleNodeScene scene)
         {
             return new CCAlgorithm<CircleNode, ArrowEdge>(
@@ -181,7 +196,7 @@ namespace GraphAlgorithmDemo
             get { return false; }
         }
 
-        protected override ICCAlgorithm<CircleNode> Create(
+        protected override ICCAlgorithm<CircleNode, ArrowEdge> Create(
             CircleNodeScene scene)
         {
             return new SCCAlgorithm<CircleNode, ArrowEdge>(
@@ -206,7 +221,7 @@ namespace GraphAlgorithmDemo
             get { return false; }
         }
 
-        protected override ICCAlgorithm<CircleNode> Create(
+        protected override ICCAlgorithm<CircleNode, ArrowEdge> Create(
             CircleNodeScene scene)
         {
             return new WCCAlgorithm<CircleNode, ArrowEdge>(

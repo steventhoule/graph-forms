@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace GraphForms.Algorithms.Layout.Tree
 {
@@ -19,5 +17,10 @@ namespace GraphForms.Algorithms.Layout.Tree
         /// Chooses a root such that the depth of the tree is minimized.
         /// </summary>
         Center,
+        /// <summary>
+        /// Chooses a root that has the most undirected paths from one
+        /// node to another going through it (the true tree root).
+        /// </summary>
+        PathCenter
     }
 }

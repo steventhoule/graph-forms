@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using GraphForms.Algorithms.Search;
 
 namespace GraphForms.Algorithms.Path
@@ -52,11 +50,6 @@ namespace GraphForms.Algorithms.Path
         private Node[] mPathNodes;
         private Edge[] mPathEdges;
 
-        public DFLongestPath(Digraph<Node, Edge> graph)
-            : base(graph, true, false)
-        {
-        }
-
         public DFLongestPath(Digraph<Node, Edge> graph,
             bool directed, bool reversed)
             : base(graph, directed, reversed)
@@ -98,17 +91,18 @@ namespace GraphForms.Algorithms.Path
             base.Initialize();
         }
 
-        protected override void OnStartNode(Node n, int index)
+        protected override void OnStartNode(Digraph<Node, Edge>.GNode n)
         {
-            this.mStartIndex = index;
+            this.mStartIndex = n.Index;
             this.mStart = new NodeData();
-            base.OnStartNode(n, index);
         }
 
-        protected override void OnFinishNode(Node n, int index)
+        protected override void OnFinishNode(
+            Digraph<Node, Edge>.GNode n, uint depth)
         {
-            if (this.bUndirected && this.mStartIndex == index)
+            if (this.bUndirected && this.mStartIndex == n.Index)
             {
+                int index = n.Index;
                 double len = this.mDatas[index].Length;
                 Edge next = this.mStart.Next;
                 int nextNode = this.mStart.NextNode;
@@ -122,13 +116,14 @@ namespace GraphForms.Algorithms.Path
                     nextNode = data.NextNode;
                 }
             }
-            base.OnFinishNode(n, index);
         }
 
-        protected override void OnFinishEdge(Edge e, 
-            int srcIndex, int dstIndex, bool reversed)
+        protected override void OnFinishEdge(Digraph<Node, Edge>.GEdge e, 
+            bool reversed, uint depth)
         {
             NodeData uData, vData;
+            int srcIndex = e.SrcNode.Index;
+            int dstIndex = e.DstNode.Index;
             if (reversed)
             {
                 uData = this.mDatas[dstIndex];
@@ -139,7 +134,8 @@ namespace GraphForms.Algorithms.Path
                 uData = this.mDatas[srcIndex];
                 vData = this.mDatas[dstIndex];
             }
-            double len = vData.Length + (this.bUseWeights ? e.Weight : 1);
+            double len = vData.Length 
+                       + (this.bUseWeights ? e.Data.Weight : 1.0);
             if (this.bUndirected && uData.NextNode != -1 &&
                 this.mStartIndex == (reversed ? dstIndex : srcIndex) &&
                 len > this.mStart.Length)
@@ -152,23 +148,24 @@ namespace GraphForms.Algorithms.Path
                 {
                     this.mStart = new NodeData();
                     this.mStart.Length = len;
-                    this.mStart.Next = e;
+                    this.mStart.Next = e.Data;
                     this.mStart.NextNode = reversed ? srcIndex : dstIndex;
                 }
             }
             if (len > uData.Length)
             {
                 uData.Length = len;
-                uData.Next = e;
+                uData.Next = e.Data;
                 uData.NextNode = reversed ? srcIndex : dstIndex;
             }
-            base.OnFinishEdge(e, srcIndex, dstIndex, reversed);
         }
 
-        protected override void OnBlackEdge(Edge e, 
-            int srcIndex, int dstIndex, bool reversed)
+        protected override void OnBlackEdge(Digraph<Node, Edge>.GEdge e, 
+            bool reversed, uint depth)
         {
             NodeData uData, vData;
+            int srcIndex = e.SrcNode.Index;
+            int dstIndex = e.DstNode.Index;
             if (reversed)
             {
                 uData = this.mDatas[dstIndex];
@@ -179,16 +176,16 @@ namespace GraphForms.Algorithms.Path
                 uData = this.mDatas[srcIndex];
                 vData = this.mDatas[dstIndex];
             }
-            double len = vData.Length + (this.bUseWeights ? e.Weight : 1);
+            double len = vData.Length 
+                       + (this.bUseWeights ? e.Data.Weight : 1.0);
             // Putting the mStart block here causes problems when the edge
             // is connected to a node in the longest path from the root
             if (len > uData.Length)
             {
                 uData.Length = len;
-                uData.Next = e;
+                uData.Next = e.Data;
                 uData.NextNode = reversed ? srcIndex : dstIndex;
             }
-            base.OnBlackEdge(e, srcIndex, dstIndex, reversed);
         }
 
         protected override void OnFinished()
@@ -199,9 +196,10 @@ namespace GraphForms.Algorithms.Path
 
         private void CompilePaths()
         {
-            int j, root = -1;
             double len = -1;
-            for (j = 0; j < this.mDatas.Length; j++)
+            int j, root = -1;
+            int count = this.mDatas.Length;
+            for (j = 0; j < count; j++)
             {
                 if (this.mDatas[j].Length > len)
                 {
@@ -209,21 +207,26 @@ namespace GraphForms.Algorithms.Path
                     len = this.mDatas[j].Length;
                 }
             }
-            List<int> pIndexes = new List<int>();
-            List<Node> pNodes = new List<Node>();
-            List<Edge> pEdges = new List<Edge>();
+            int[] pIndexes = new int[count];
+            Node[] pNodes = new Node[count];
+            Edge[] pEdges = new Edge[count];
+            count = 0;
             j = root;
             while (j != -1)
             {
-                pIndexes.Add(j);
-                pNodes.Add(this.mGraph.NodeAt(j));
-                pEdges.Add(this.mDatas[j].Next);
+                pIndexes[count] = j;
+                pNodes[count] = this.mGraph.NodeAt(j);
+                pEdges[count] = this.mDatas[j].Next;
+                count++;
                 j = this.mDatas[j].NextNode;
             }
-            this.mPathNodeIndexes = pIndexes.ToArray();
-            this.mPathNodes = pNodes.ToArray();
-            this.mPathEdges = new Edge[pEdges.Count - 1];
-            pEdges.CopyTo(0, this.mPathEdges, 0, pEdges.Count - 1);
+            this.mPathNodeIndexes = new int[count];
+            Array.Copy(pIndexes, 0, this.mPathNodeIndexes, 0, count);
+            this.mPathNodes = new Node[count];
+            Array.Copy(pNodes, 0, this.mPathNodes, 0, count);
+            count--;
+            this.mPathEdges = new Edge[count];
+            Array.Copy(pEdges, 0, this.mPathEdges, 0, count);
         }
     }
 }
