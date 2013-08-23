@@ -64,8 +64,6 @@ namespace GraphForms.Algorithms.Path
                     for (i = 0; i < count; i++)
                     {
                         edge = this.mGraph.InternalEdgeAt(i);
-                        if (edge.Hidden)
-                            continue;
                         node = rev ? edge.DstNode : edge.SrcNode;
                         if (node.Index != u)
                             continue;
@@ -113,8 +111,6 @@ namespace GraphForms.Algorithms.Path
                     for (i = 0; i < count; i++)
                     {
                         edge = this.mGraph.InternalEdgeAt(i);
-                        if (edge.Hidden)
-                            continue;
                         node = rev ? edge.DstNode : edge.SrcNode;
                         if (node.Index != u)
                             continue;

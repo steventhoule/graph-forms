@@ -141,7 +141,7 @@ namespace GraphForms.Algorithms.Layout
             this.mLastYs = new float[0];
         }
 
-        /// <summary>
+        /*/// <summary>
         /// The graph that this layout algorithm operates on,
         /// computing and setting the positions of its 
         /// <typeparamref name="Node"/> instances.
@@ -149,7 +149,7 @@ namespace GraphForms.Algorithms.Layout
         public Digraph<Node, Edge> Graph
         {
             get { return this.mGraph; }
-        }
+        }/* */
 
         /// <summary>
         /// If <see cref="mGraph"/> is actually a sub-graph, then
@@ -293,15 +293,23 @@ namespace GraphForms.Algorithms.Layout
         /// If none of the nodes have moved a squared distance greater than
         /// this tolerance value, the algorithm stops iterating and finishes.
         /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">The new tolerance
+        /// is less than zero.</exception>
         public double MovementTolerance
         {
             get { return this.mMovementTolerance; }
             set
             {
                 if (this.State != ComputeState.Running &&
-                    this.mAsyncState != ComputeState.Running &&
-                    value >= 0)
+                    this.mAsyncState != ComputeState.Running)
+                {
+                    if (value < 0)
+                    {
+                        throw new ArgumentOutOfRangeException(
+                            "MovementTolerance");
+                    }
                     this.mMovementTolerance = value;
+                }
             }
         }
 
@@ -372,11 +380,19 @@ namespace GraphForms.Algorithms.Layout
             if (this.mClusterNode == null)
             {
                 bbox = Box2F.Intersect(bbox, this.mBBox);
+                if (bbox.W == 0 || bbox.H == 0)
+                {
+                    bbox = this.mBBox;
+                }
             }
             else
             {
                 bbox = Box2F.Intersect(bbox, 
                     this.mClusterNode.LayoutBBox);
+                if (bbox.W == 0 || bbox.H == 0)
+                {
+                    bbox = this.mClusterNode.LayoutBBox;
+                }
             }
             this.ShuffleNodesInternal(bbox.X, bbox.Y, 
                 bbox.W, bbox.H, immediate);

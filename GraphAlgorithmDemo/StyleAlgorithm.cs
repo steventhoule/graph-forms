@@ -79,30 +79,33 @@ namespace GraphAlgorithmDemo
             this.mAlg = new BCCAlgorithm<CircleNode, ArrowEdge>(
                 scene.Graph, this.Reversed);
             this.mAlg.Compute();
-            ArrowEdge[] comp;
-            ArrowEdge[][] comps = this.mAlg.Components;
+            Digraph<CircleNode, ArrowEdge>.GEdge[] comp;
+            Digraph<CircleNode, ArrowEdge>.GEdge[][] comps 
+                = this.mAlg.Components;
             int i, j, sC = sLineColors.Length;
             for (i = 0; i < comps.Length; i++)
             {
                 comp = comps[i];
                 for (j = 0; j < comp.Length; j++)
                 {
-                    comp[j].LineColor = sLineColors[i % sC];
+                    comp[j].Data.LineColor = sLineColors[i % sC];
                 }
             }
-            CircleNode[] nodes = this.mAlg.ArticulationNodes;
+            Digraph<CircleNode, ArrowEdge>.GNode[] nodes 
+                = this.mAlg.ArticulationNodes;
             for (i = 0; i < nodes.Length; i++)
             {
-                nodes[i].MarkerColor = sLineColors[0];
+                nodes[i].Data.MarkerColor = sLineColors[0];
             }
             this.mAlg.ArticulateToLargerCompactGroups();
-            CircleNode[][] cGrps = this.mAlg.CompactGroups;
+            Digraph<CircleNode, ArrowEdge>.GNode[][] cGrps 
+                = this.mAlg.CompactGroups;
             for (i = 0; i < cGrps.Length; i++)
             {
                 nodes = cGrps[i];
                 for (j = 0; j < nodes.Length; j++)
                 {
-                    nodes[j].BorderColor = sLineColors[i % sC];
+                    nodes[j].Data.BorderColor = sLineColors[i % sC];
                 }
             }
         }
@@ -155,7 +158,7 @@ namespace GraphAlgorithmDemo
                 node.BorderColor = sLineColors[compIds[i] % sC];
             }
             Digraph<CircleNode, ArrowEdge>.GNode[] roots
-                = this.mAlg.Roots;
+                = this.mAlg.ComponentRoots;
             for (i = 0; i < roots.Length; i++)
             {
                 roots[i].Data.MarkerColor = sLineColors[i % sC];

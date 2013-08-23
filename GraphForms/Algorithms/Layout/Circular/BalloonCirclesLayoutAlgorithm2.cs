@@ -15,16 +15,28 @@ namespace GraphForms.Algorithms.Layout.Circular
         private class CircleLayouter
             : SingleCircleLayoutAlgorithm<Node, Edge>
         {
-            public CircleLayouter(Digraph<Node, Edge> graph,
-                IClusterNode clusterNode)
+            private BalloonCirclesLayoutAlgorithm2<Node, Edge> mOwner;
+
+            public CircleLayouter(
+                BalloonCirclesLayoutAlgorithm2<Node, Edge> owner, 
+                Digraph<Node, Edge> graph, IClusterNode clusterNode)
                 : base(graph, clusterNode)
             {
+                this.mOwner = owner;
             }
 
-            public CircleLayouter(Digraph<Node, Edge> graph,
-                Box2F boundingBox)
+            public CircleLayouter(
+                BalloonCirclesLayoutAlgorithm2<Node, Edge> owner, 
+                Digraph<Node, Edge> graph, Box2F boundingBox)
                 : base(graph, boundingBox)
             {
+                this.mOwner = owner;
+            }
+
+            protected override double GetBoundingRadius(
+                Digraph<Node, Edge>.GNode node)
+            {
+                return this.mOwner.GetBoundingRadius(node);
             }
 
             public void CallPerformIteration(uint iter)
@@ -37,6 +49,7 @@ namespace GraphForms.Algorithms.Layout.Circular
         {
             public readonly int CircleID;
             public double CircleAngle;
+            public double CircleRadius;
 
             public double StackAngle;
 
@@ -46,7 +59,7 @@ namespace GraphForms.Algorithms.Layout.Circular
                 this.CircleAngle = 0.0;
             }
 
-            public abstract Node Data { get; }
+            public abstract Digraph<Node, Edge>.GNode NData { get; }
 
             public abstract CircleLayouter Circle { get; }
 
@@ -74,7 +87,7 @@ namespace GraphForms.Algorithms.Layout.Circular
                 }
                 else
                 {
-                    this.bFixed = this.Data.PositionFixed;
+                    this.bFixed = this.NData.Data.PositionFixed;
                 }
             }
 
@@ -97,20 +110,23 @@ namespace GraphForms.Algorithms.Layout.Circular
                 if (owner.mClusterNode == null)
                 {
                     this.mCircle = new CircleLayouter(
-                        graph, owner.BoundingBox);
+                        owner, graph, owner.BoundingBox);
                 }
                 else
                 {
                     this.mCircle = new CircleLayouter(
-                        graph, owner.mClusterNode);
+                        owner, graph, owner.mClusterNode);
                 }
+                this.mCircle.NodeSequencer = owner.mNodeSequencer;
                 this.mCircle.NodeSpacing = owner.mNodeSpacing;
                 this.mCircle.Centering = CircleCentering.Predefined;
                 this.mCircle.MinRadius = owner.mMinRadius;
                 this.mCircle.FreeArc = owner.mFreeArc;
 
-                this.mCircle.AdjustCenter = true;
+                this.mCircle.AdaptToSizeChanges
+                    = owner.bAdaptToSizeChanges;
                 this.mCircle.AdjustAngle = false;
+                this.mCircle.AdjustCenter = owner.bAdjustRoots;
                 this.mCircle.SpringMultiplier = owner.mSpringMult;
                 this.mCircle.MagneticMultiplier = owner.mMagnetMult;
                 this.mCircle.MagneticExponent = owner.mMagnetExp;
@@ -129,7 +145,7 @@ namespace GraphForms.Algorithms.Layout.Circular
                 this.mCircle.CenterY = cy / count;
             }
 
-            public override Node Data
+            public override Digraph<Node, Edge>.GNode NData
             {
                 get { return null; }
             }
@@ -200,15 +216,16 @@ namespace GraphForms.Algorithms.Layout.Circular
 
         private class BalloonNode : GNode
         {
-            private Node mNode;
+            private Digraph<Node, Edge>.GNode mNode;
 
-            public BalloonNode(int circleID, Node node)
+            public BalloonNode(int circleID, 
+                Digraph<Node, Edge>.GNode node)
                 : base(circleID)
             {
                 this.mNode = node;
             }
 
-            public override Node Data
+            public override Digraph<Node, Edge>.GNode NData
             {
                 get { return this.mNode; }
             }
@@ -220,22 +237,22 @@ namespace GraphForms.Algorithms.Layout.Circular
 
             public override Box2F LayoutBBox
             {
-                get { return this.mNode.LayoutBBox; }
+                get { return this.mNode.Data.LayoutBBox; }
             }
 
             public override float X
             {
-                get { return this.mNode.X; }
+                get { return this.mNode.Data.X; }
             }
 
             public override float Y
             {
-                get { return this.mNode.Y; }
+                get { return this.mNode.Data.Y; }
             }
 
             public override void SetPosition(float x, float y)
             {
-                this.mNode.SetPosition(x, y);
+                this.mNode.Data.SetPosition(x, y);
             }
 
             /*public override bool PositionFixed
@@ -390,16 +407,15 @@ namespace GraphForms.Algorithms.Layout.Circular
                 }
             }
 
-            protected override double GetBoundingRadius(GNode node)
+            protected override double GetBoundingRadius(
+                GNode node, int nodeIndex)
             {
-                CircleLayouter circle = node.Circle;
-                return circle == null 
-                    ? base.GetBoundingRadius(node) : circle.BoundingRadius;
+                return node.CircleRadius;
             }
 
-            public CircleTree<GNode, GEdge> GetBalloonTree()
+            public GTree<GNode, GEdge, CircleGeom<GNode, GEdge>> GetTree()
             {
-                return this.BalloonTree;
+                return this.DataTree;
             }
 
             /*public void CalcCircleRadii()
@@ -500,7 +516,7 @@ namespace GraphForms.Algorithms.Layout.Circular
             }/* */
 
             protected override double GetMaximumTreeWedge(
-                CircleTree<GNode, GEdge> root)
+                GTree<GNode, GEdge, CircleGeom<GNode, GEdge>> root)
             {
                 if (root.NodeData.Circle == null)
                 {
@@ -514,27 +530,39 @@ namespace GraphForms.Algorithms.Layout.Circular
             }
 
             protected override void CalculateBranchPositions(
-                CircleTree<GNode, GEdge>[] branches)
+                GTree<GNode, GEdge, CircleGeom<GNode, GEdge>>[] branches)
             {
-                int i, j;
+                int i, j, index;
                 double a, dx, dy;
                 CircleLayouter circle;
                 GEdge edge;
-                CircleTree<GNode, GEdge> ct;
+                CircleGeom<GNode, GEdge> ct;
+                GTree<GNode, GEdge, CircleGeom<GNode, GEdge>> root;
                 // Calculate the relative rotation angle of each leaf's
                 // embedding circle based on the average of the angles of
                 // the group edge's nodes around its center.
+                // dx is -= and dy is += because 180° is added to the
+                // average angle to get the CircleAngle.
                 for (i = 0; i < branches.Length; i++)
                 {
-                    ct = branches[i];
-                    if (ct.BranchCount == 0 && ct.NodeData.Circle != null)
+                    root = branches[i];
+                    if (root.BranchCount == 0 && 
+                        root.NodeData.Circle != null)
                     {
-                        edge = ct.EdgeData;
-                        circle = ct.NodeData.Circle;
+                        edge = root.EdgeData;
+                        if (edge == null)
+                        {
+                            // The CircleAngle of a disconnected
+                            // leaf circles is irrelevant
+                            root.NodeData.CircleAngle = 0.0;
+                            continue;
+                        }
+                        circle = root.NodeData.Circle;
                         //wedge = 0.0;
                         dx = dy = 0.0;
-                        if (ct.NodeData.CircleID == edge.DstNode.CircleID)
+                        if (root.NodeData.CircleID == edge.DstNode.CircleID)
                         {
+                            // root is Src and leaf is Dst
                             for (j = 0; j < edge.ECount; j++)
                             {
                                 a = circle.AngleAt(edge.DstIndexes[j]);
@@ -545,6 +573,7 @@ namespace GraphForms.Algorithms.Layout.Circular
                         }
                         else
                         {
+                            // root is Dst and leaf is Src
                             for (j = 0; j < edge.ECount; j++)
                             {
                                 a = circle.AngleAt(edge.SrcIndexes[j]);
@@ -557,29 +586,44 @@ namespace GraphForms.Algorithms.Layout.Circular
                         while (wedge < -Math.PI)
                             wedge += 2 * Math.PI;
                         ct.NodeData.CircleAngle = wedge;/* */
-                        ct.NodeData.CircleAngle = Math.Atan2(
+                        root.NodeData.CircleAngle = Math.Atan2(
                             dy / edge.ECount, dx / edge.ECount);
                     }
                 }
                 // Check if the root is a single node instead of a group of
                 // nodes and can be calculated the original way.
-                ct = branches[0].Root;
-                if (ct.NodeData.Circle == null)
+                root = branches[0].Root;
+                if (root.NodeData.Circle == null)
                 {
                     base.CalculateBranchPositions(branches);
                     return;
                 }
-                circle = ct.NodeData.Circle;
+                // Check if all the root's branches are disconnected, and
+                // if so, fall back to calculating the original way.
+                i = branches.Length - 1;
+                while (i >= 0 && branches[i].EdgeData == null)
+                {
+                    i--;
+                }
+                if (i < 0)
+                {
+                    base.CalculateBranchPositions(branches);
+                    return;
+                }
+                circle = root.NodeData.Circle;
                 // Calculate the relative rotation angle of the root's
                 // embedding circle based on the average of the angles of
                 // the group edge's nodes around its center.
-                if (ct.Root != null)
+                // dx is -= and dy is += because 180° is added to the
+                // average angle to get the CircleAngle.
+                if (root.Root != null && root.EdgeData != null)
                 {
-                    edge = ct.EdgeData;
+                    edge = root.EdgeData;
                     //wedge = 0.0;
                     dx = dy = 0.0;
-                    if (ct.NodeData.CircleID == edge.DstNode.CircleID)
+                    if (root.NodeData.CircleID == edge.DstNode.CircleID)
                     {
+                        // root is Dst and root.Root is Src
                         for (j = 0; j < edge.ECount; j++)
                         {
                             a = circle.AngleAt(edge.DstIndexes[j]);
@@ -590,6 +634,7 @@ namespace GraphForms.Algorithms.Layout.Circular
                     }
                     else
                     {
+                        // root is Src and root.Root is Dst
                         for (j = 0; j < edge.ECount; j++)
                         {
                             a = circle.AngleAt(edge.SrcIndexes[j]);
@@ -602,8 +647,55 @@ namespace GraphForms.Algorithms.Layout.Circular
                     while (wedge < -Math.PI)
                         wedge += 2 * Math.PI;
                     ct.NodeData.CircleAngle = wedge;/* */
-                    ct.NodeData.CircleAngle = Math.Atan2(
-                            dy / edge.ECount, dx / edge.ECount);
+                    root.NodeData.CircleAngle = Math.Atan2(
+                        dy / edge.ECount, dx / edge.ECount);
+                }
+                else if (root.Root != null)
+                {
+                    // If root.EdgeData == null (it is disconnected),
+                    // calculate its CircleAngle from the average of the
+                    // angles of the nodes in its embedding circle that are
+                    // connected to one or more of its branches.
+                    index = 0;
+                    dx = dy = 0.0;
+                    for (i = 0; i < branches.Length; i++)
+                    {
+                        root = branches[i];
+                        edge = root.EdgeData;
+                        if (edge == null)
+                        {
+                            continue;
+                        }
+                        index += edge.ECount;
+                        if (root.NodeData.CircleID == edge.DstNode.CircleID)
+                        {
+                            // root is Src and branch is Dst
+                            for (j = 0; j < edge.ECount; j++)
+                            {
+                                a = circle.AngleAt(edge.SrcIndexes[j]);
+                                dx += Math.Cos(a);
+                                dy += Math.Sin(a);
+                            }
+                        }
+                        else
+                        {
+                            // root is Dst and branch is Src
+                            for (j = 0; j < edge.ECount; j++)
+                            {
+                                a = circle.AngleAt(edge.DstIndexes[j]);
+                                dx += Math.Cos(a);
+                                dy += Math.Sin(a);
+                            }
+                        }
+                    }
+                    root.NodeData.CircleAngle = Math.Atan2(
+                        dy / index, dx / index);
+                }
+                else
+                {
+                    // The CircleAngle of the root of the
+                    // entire balloon tree is irrelevant.
+                    root.NodeData.CircleAngle = 0.0;
                 }
                 // Set the ideal angles based on the average of the
                 // angles of the group edge's nodes around the center
@@ -611,12 +703,20 @@ namespace GraphForms.Algorithms.Layout.Circular
                 double[] branchAngles = new double[branches.Length];
                 for (i = 0; i < branches.Length; i++)
                 {
-                    ct = branches[i];
-                    edge = ct.EdgeData;
+                    root = branches[i];
+                    edge = root.EdgeData;
+                    if (edge == null)
+                    {
+                        // Ensure branches with null edges are placed at the
+                        // end of the branch list when sorted by ideal angle.
+                        branchAngles[i] = 2 * Math.PI;
+                        continue;
+                    }
                     //wedge = 0.0;
                     dx = dy = 0.0;
-                    if (ct.NodeData.CircleID == edge.DstNode.CircleID)
+                    if (root.NodeData.CircleID == edge.DstNode.CircleID)
                     {
+                        // root is Src and branch is Dst
                         for (j = 0; j < edge.ECount; j++)
                         {
                             a = circle.AngleAt(edge.SrcIndexes[j]);
@@ -627,6 +727,7 @@ namespace GraphForms.Algorithms.Layout.Circular
                     }
                     else
                     {
+                        // root is Dst and branch is Src
                         for (j = 0; j < edge.ECount; j++)
                         {
                             a = circle.AngleAt(edge.DstIndexes[j]);
@@ -641,7 +742,7 @@ namespace GraphForms.Algorithms.Layout.Circular
                         wedge -= 2 * Math.PI;
                     branchAngles[i] = wedge;/* */
                     a = Math.Atan2(dy / edge.ECount, dx / edge.ECount)
-                        + ct.Root.NodeData.CircleAngle;
+                        + root.Root.NodeData.CircleAngle;
                     while (a < -Math.PI)
                         a += 2 * Math.PI;
                     while (a > Math.PI)
@@ -650,12 +751,12 @@ namespace GraphForms.Algorithms.Layout.Circular
                 }
                 // Set the initial distance of each branch based on MinEdgeLen
                 Box2F bbox;
-                double rootRad = branches[0].Root.Radius 
+                double rootRad = branches[0].Root.GeomData.Radius 
                     + this.MinimumEdgeLength;
                 double maxDist = -double.MaxValue;
                 for (i = 0; i < branches.Length; i++)
                 {
-                    ct = branches[i];
+                    ct = branches[i].GeomData;
                     bbox = ct.CalculateBoundingBox();
                     ct.Distance = rootRad - bbox.X;
                     if (ct.Distance > maxDist)
@@ -666,23 +767,99 @@ namespace GraphForms.Algorithms.Layout.Circular
                 {
                     for (i = 0; i < branches.Length; i++)
                     {
-                        ct = branches[i];
+                        ct = branches[i].GeomData;
                         ct.Distance = maxDist;
-                        ct.CalculateAngles();
+                        ct.CalculateBoundingWedge();
                     }
                 }
                 else
                 {
                     for (i = 0; i < branches.Length; i++)
                     {
-                        branches[i].CalculateAngles();
+                        branches[i].GeomData.CalculateBoundingWedge();
                     }
                 }
                 // Sort the branches to their final order counterclockwise
                 // around their root starting at -pi (-180 degrees).
                 Array.Sort(branchAngles, branches, 0, branches.Length, null);
+                // Set the ideal angles of branches with null edges based on
+                // where they fit best between branches with non-null edges.
+                j = branchAngles.Length - 1;
+                while (j >= 0 && branchAngles[j] == 2 * Math.PI)
+                {
+                    j--;
+                }
+                j++;
+                // Sort the branches with null edges by decreasing wedge size
+                for (i = j; i < branchAngles.Length; i++)
+                {
+                    ct = branches[i].GeomData;
+                    branchAngles[i] = ct.LowerWedge + ct.UpperWedge;
+                }
+                Array.Sort(branchAngles, 
+                           branches, j, branches.Length - j, null);
+                // Insert branches with null edges into gaps between the
+                // wedges of branches with non-null edges until there are
+                // no more gaps that can be filled.
+                index = 0;
+                while (j < branchAngles.Length && index != -1)
+                {
+                    ct = branches[j].GeomData;
+                    j--;
+                    index = -1;
+                    maxDist = -double.MaxValue;
+                    for (i = 0; i < j; i++)
+                    {
+                        a = branchAngles[i + 1] 
+                            - branches[i + 1].GeomData.LowerWedge 
+                            - branchAngles[i] 
+                            - branches[i].GeomData.UpperWedge;
+                        if (a > 0.0)
+                        {
+                            a = a - branchAngles[j + 1];
+                            if (a > maxDist)
+                            {
+                                index = i;
+                                maxDist = a;
+                            }
+                        }
+                    }
+                    j++;
+                    if (index != -1)
+                    {
+                        index++;
+                        root = branches[j];
+                        Array.Copy(branches, index, 
+                                   branches, index + 1, j - index);
+                        Array.Copy(branchAngles, index, 
+                                   branchAngles, index + 1, j - index);
+                        branches[index] = root;
+                        ct = branches[index - 1].GeomData;
+                        a = branchAngles[index - 1] + ct.UpperWedge 
+                            + root.GeomData.LowerWedge;
+                        if (a > branchAngles[index + 1])
+                        {
+                            a = (branchAngles[index - 1] 
+                               + branchAngles[index + 1]) / 2.0;
+                        }
+                        branchAngles[index] = a;
+                        j++;
+                    }
+                }
+                // Spread out the remaining branches with null edges
+                ct = branches[j - 1].GeomData;
+                a = branchAngles[j - 1] + ct.UpperWedge;
+                while (j < branchAngles.Length)
+                {
+                    ct = branches[j].GeomData;
+                    a += ct.LowerWedge;
+                    branchAngles[j] = a;
+                    a += ct.UpperWedge;
+                    j++;
+                }
                 // Get the max allowable wedge that the branches can occupy
-                double maxWedge = this.GetMaximumTreeWedge(branches[0].Root);
+                root = branches[0].Root;
+                double maxWedge = this.GetMaximumTreeWedge(root);
                 while (maxWedge < 0.0)
                     maxWedge += 2 * Math.PI;
                 while (maxWedge > 2 * Math.PI)
@@ -697,13 +874,13 @@ namespace GraphForms.Algorithms.Layout.Circular
                         ratio = Math.Sin(wedge);
                         for (i = 0; i < branches.Length; i++)
                         {
-                            ct = branches[i];
+                            ct = branches[i].GeomData;
                             a = Math.Max(ct.LowerWedge, ct.UpperWedge);
                             //while (a > wedge)
                             for (j = 0; j < 50 && a > wedge; j++)
                             {
                                 ct.Distance = ct.Distance * Math.Sin(a) / ratio;
-                                ct.CalculateAngles();
+                                ct.CalculateBoundingWedge();
                                 a = Math.Max(ct.LowerWedge, ct.UpperWedge);
                             }
                             if (ct.Distance > maxDist)
@@ -713,7 +890,7 @@ namespace GraphForms.Algorithms.Layout.Circular
                         {
                             for (i = 0; i < branches.Length; i++)
                             {
-                                branches[i].Distance = maxDist;
+                                branches[i].GeomData.Distance = maxDist;
                             }
                         }
                         // Calculate the final angles of the branches
@@ -721,12 +898,12 @@ namespace GraphForms.Algorithms.Layout.Circular
                         for (i = 0; i < branches.Length; i++)
                         {
                             a += wedge;
-                            branches[i].Angle = a;
+                            branches[i].GeomData.Angle = a;
                             a += wedge;
                         }
                         break;
                     case CircleSpacing.SNS:
-                        int k, index;
+                        int k;
                         for (j = 0; j < 50; j++)
                         {
                             // Set the initial angles of the branches as
@@ -740,12 +917,12 @@ namespace GraphForms.Algorithms.Layout.Circular
                             }/* */
                             index = 0;
                             a = branchAngles[0];
-                            ct = branches[0];
+                            ct = branches[0].GeomData;
                             ct.Angle = a;
                             wedge = ct.LowerWedge + ct.UpperWedge;
                             for (i = 1; i < branches.Length; i++)
                             {
-                                ct = branches[i];
+                                ct = branches[i].GeomData;
                                 if (branchAngles[i] != a)
                                 {
                                     if (i - index == 1)
@@ -757,12 +934,12 @@ namespace GraphForms.Algorithms.Layout.Circular
                                         a = a - wedge / 2.0;
                                         for (k = index; k < i; k++)
                                         {
-                                            ct = branches[k];
+                                            ct = branches[k].GeomData;
                                             a += ct.LowerWedge;
                                             ct.Angle = a;
                                             a += ct.UpperWedge;
                                         }
-                                        ct = branches[i];
+                                        ct = branches[i].GeomData;
                                     }
                                     index = i;
                                     a = branchAngles[i];
@@ -779,7 +956,7 @@ namespace GraphForms.Algorithms.Layout.Circular
                                 a = a - wedge / 2.0;
                                 for (k = index; k < i; k++)
                                 {
-                                    ct = branches[k];
+                                    ct = branches[k].GeomData;
                                     a += ct.LowerWedge;
                                     ct.Angle = a;
                                     a += ct.UpperWedge;
@@ -787,27 +964,37 @@ namespace GraphForms.Algorithms.Layout.Circular
                             }/* */
                             // Remove wedge overlap at the tail
                             // by moving the last branch clockwise
-                            ct = branches[branches.Length - 1];
+                            // by rotating everything clockwise
+                            ct = branches[branches.Length - 1].GeomData;
                             if (ct.Angle + ct.UpperWedge > maxWedge / 2.0)
                             {
-                                ct.Angle = maxWedge / 2.0 - ct.UpperWedge;
+                                //ct.Angle = maxWedge / 2.0 - ct.UpperWedge;
+                                a = ct.Angle + ct.UpperWedge - maxWedge / 2;
+                                for (i = branches.Length - 1; i >= 0; i--)
+                                {
+                                    ct = branches[i].GeomData;
+                                    ct.Angle = ct.Angle - a;
+                                    branchAngles[i] = branchAngles[i] - a;
+                                }
+                                root.NodeData.CircleAngle -= a;
                             }
                             // Remove wedge overlap in the body/middle
                             for (i = branches.Length - 2; i >= 1; i--)
                             {
-                                ct = branches[i];
                                 // Eliminate clockwise overlap
                                 // by moving the branch counterclockwise
-                                a = branches[i - 1].Angle
-                                  + branches[i - 1].UpperWedge;
+                                ct = branches[i - 1].GeomData;
+                                a = ct.Angle + ct.UpperWedge;
+                                ct = branches[i].GeomData;
                                 if (ct.Angle - ct.LowerWedge < a)
                                 {
                                     ct.Angle = a + ct.LowerWedge;
                                 }
                                 // Eliminate counterclockwise overlap
                                 // by moving the branch clockwise
-                                a = branches[i + 1].Angle
-                                  - branches[i + 1].LowerWedge;
+                                ct = branches[i + 1].GeomData;
+                                a = ct.Angle - ct.LowerWedge;
+                                ct = branches[i].GeomData;
                                 if (ct.Angle + ct.UpperWedge > a)
                                 {
                                     ct.Angle = a - ct.UpperWedge;
@@ -817,9 +1004,9 @@ namespace GraphForms.Algorithms.Layout.Circular
                             {
                                 // Eliminate counterclockwise overlap at the
                                 // head by moving the 1st branch clockwise
-                                ct = branches[0];
-                                a = branches[1].Angle 
-                                  - branches[1].LowerWedge;
+                                ct = branches[1].GeomData;
+                                a = ct.Angle - ct.LowerWedge;
+                                ct = branches[0].GeomData;
                                 if (ct.Angle + ct.UpperWedge > a)
                                 {
                                     ct.Angle = a - ct.UpperWedge;
@@ -827,27 +1014,46 @@ namespace GraphForms.Algorithms.Layout.Circular
                             }
                             // Calculate the current minimum possible wedge
                             wedge = 0.0;
-                            for (i = 0; i < branches.Length; i++)
+                            for (i = branches.Length - 1; i >= 0; i--)
                             {
-                                ct = branches[i];
+                                ct = branches[i].GeomData;
                                 wedge = ct.LowerWedge + ct.UpperWedge;
                             }
                             // Remove wedge overlap at the head by 
+                            // rotating everything counterclockwise or by
                             // eliminating gaps between wedges until it fits
-                            if (ct.Angle - ct.LowerWedge < maxWedge / -2.0 &&
+                            if (ct.Angle - ct.LowerWedge < maxWedge / -2 &&
                                 wedge <= maxWedge)
                             {
-                                ct.Angle = ct.LowerWedge - maxWedge / 2.0;
-                                for (i = 1; i < branches.Length; i++)
+                                a = ct.LowerWedge - ct.Angle - maxWedge / 2;
+                                // Try rotating everything counterclockwise
+                                ct = branches[branches.Length - 1].GeomData;
+                                if (ct.Angle + ct.UpperWedge + a <= maxWedge / 2)
                                 {
-                                    ct = branches[i];
-                                    // Eliminate clockwise overlap
-                                    // by moving the branch counterclockwise
-                                    a = branches[i - 1].Angle
-                                      + branches[i - 1].UpperWedge;
-                                    if (ct.Angle - ct.LowerWedge < a)
+                                    // Rotate everything counterclockwise
+                                    for (i = branches.Length - 1; i >= 0; i--)
                                     {
-                                        ct.Angle = a + ct.LowerWedge;
+                                        ct = branches[i].GeomData;
+                                        ct.Angle = ct.Angle + a;
+                                        branchAngles[i] = branchAngles[i] + a;
+                                    }
+                                    root.NodeData.CircleAngle += a;
+                                }
+                                else
+                                {
+                                    // Eliminate gaps between wedges
+                                    ct = branches[0].GeomData;
+                                    ct.Angle = ct.LowerWedge - maxWedge / 2;
+                                    for (i = 1; i < branches.Length; i++)
+                                    {
+                                        // Eliminate clockwise overlap by
+                                        // moving the branch counterclockwise
+                                        a = ct.Angle + ct.UpperWedge;
+                                        ct = branches[i].GeomData;
+                                        if (ct.Angle - ct.LowerWedge < a)
+                                        {
+                                            ct.Angle = a + ct.LowerWedge;
+                                        }
                                     }
                                 }
                             }
@@ -856,7 +1062,7 @@ namespace GraphForms.Algorithms.Layout.Circular
                             ratio = 0.0;
                             for (i = 0; i < branches.Length; i++)
                             {
-                                ct = branches[i];
+                                ct = branches[i].GeomData;
                                 a = ct.Angle;
                                 while (a < -Math.PI)
                                     a += 2 * Math.PI;
@@ -884,9 +1090,9 @@ namespace GraphForms.Algorithms.Layout.Circular
                                      / maxWedge;
                                 for (i = 0; i < branches.Length; i++)
                                 {
-                                    ct = branches[i];
+                                    ct = branches[i].GeomData;
                                     ct.Distance = ct.Distance * ratio;
-                                    ct.CalculateAngles();
+                                    ct.CalculateBoundingWedge();
                                 }
                             }
                         }
@@ -899,35 +1105,43 @@ namespace GraphForms.Algorithms.Layout.Circular
                 this.PerformIteration(iter);
             }
 
-            public CircleTree<PrintArray<Node>, int> DebugTree
+            public GTree<PrintArray<Node>, int, 
+                CircleGeom<PrintArray<Node>, int>> DebugTree
             {
                 get
                 {
-                    if (this.BalloonTree == null)
-                        return null;
-                    return this.BuildDebugTree(this.BalloonTree);
+                    //if (this.DataTree == null)
+                    //    return null;
+                    return this.BuildDebugTree(this.DataTree);
                 }
             }
 
-            private CircleTree<PrintArray<Node>, int> BuildDebugTree(
-                CircleTree<GNode, GEdge> root)
+            private GTree<PrintArray<Node>, int, 
+                CircleGeom<PrintArray<Node>, int>> BuildDebugTree(
+                GTree<GNode, GEdge, CircleGeom<GNode, GEdge>> root)
             {
                 PrintArray<Node> data = new PrintArray<Node>();
                 CircleLayouter circle = root.NodeData.Circle;
                 if (circle == null)
                 {
-                    data.Data = new Node[] { root.NodeData.Data };
+                    data.Data = new Node[] { root.NodeData.NData.Data };
                 }
                 else
                 {
                     data.Data = circle.Graph.Nodes;
                 }
-                CircleTree<PrintArray<Node>, int> child, parent 
-                    = new CircleTree<PrintArray<Node>, int>(data, 0, 
-                        root.Radius, root.BranchCount);
-                parent.Angle = root.Angle;
-                parent.Distance = root.Distance;
-                CircleTree<GNode, GEdge>[] branches
+                CircleGeom<PrintArray<Node>, int> geom
+                    = new CircleGeom<PrintArray<Node>, int>(
+                        root.GeomData.Radius);
+                GTree<PrintArray<Node>, int, 
+                    CircleGeom<PrintArray<Node>, int>> child, parent 
+                    = new GTree<PrintArray<Node>, int, 
+                        CircleGeom<PrintArray<Node>, int>>(
+                            root.NodeIndex, data, 0, geom, root.BranchCount);
+                geom.SetOwner(parent);
+                geom.Angle = root.GeomData.Angle;
+                geom.Distance = root.GeomData.Distance;
+                GTree<GNode, GEdge, CircleGeom<GNode, GEdge>>[] branches
                     = root.Branches;
                 for (int i = 0; i < branches.Length; i++)
                 {
@@ -941,9 +1155,9 @@ namespace GraphForms.Algorithms.Layout.Circular
             {
                 get
                 {
-                    if (this.BalloonTree == null)
-                        return null;
-                    GNode root = this.BalloonTree.NodeData;
+                    //if (this.DataTree == null)
+                    //    return null;
+                    GNode root = this.DataTree.NodeData;
                     return new Vec2F(root.X, root.Y);
                 }
             }
@@ -959,27 +1173,34 @@ namespace GraphForms.Algorithms.Layout.Circular
         // Balloon Tree Generating Parameters
         private LayoutStyle mGroupingMethod = LayoutStyle.BccCompact;
 
+        private NodeSequencer<Node, Edge> mNodeSequencer 
+            = new NodeSequencer<Node,Edge>();
+
         // Circle Position Calculation Paramaters
         private CircleSpacing mNodeSpacing = CircleSpacing.SNS;
         private double mMinRadius = 10;
         private double mFreeArc = 5;
 
-        // Circle Physical Animation Parameters
-        private bool bAdjustAngles = false;
+        // Balloon Tree Sorting Parameters
+        private bool bInSketchMode = false;
+
+        // Physical Animation Parameters
+        private bool bAdaptToSizeChanges = false;
+        private bool bAdjustRoots = true;
+        private bool bAdjustAngle = false;
         private double mSpringMult = 10;
         private double mMagnetMult = 100;
         private double mMagnetExp = 1;
-
-        // Balloon Tree Sorting Parameters
-        private bool bInSketchMode = false;
+        private double mRootAngle = 0;
 
         // Flags and Calculated Values
         private BalloonLayouter mLayouter;
         private int[] mGroupIds;
-        private GNode[] mGroupNodes;
+        private Digraph<GNode, GEdge>.GNode[] mGroupNodes;
 
         private bool bLayouterDirty = true;
         private bool bCircleDirty = true;
+        private bool bPhysicsDirty = true;
 
         public BalloonCirclesLayoutAlgorithm2(Digraph<Node, Edge> graph,
             IClusterNode clusterNode)
@@ -988,7 +1209,13 @@ namespace GraphForms.Algorithms.Layout.Circular
             Digraph<GNode, GEdge> bGraph = new Digraph<GNode, GEdge>(
                     graph.NodeCount, graph.EdgeCount);
             this.mLayouter = new BalloonLayouter(bGraph, clusterNode);
-            this.mLayouter.SpanningTreeGeneration = SpanningTreeGen.Prim;
+            this.mLayouter.SpanningTreeGeneration = SpanningTreeGen.Boruvka;
+            this.mLayouter.AdaptToSizeChanges = this.bAdaptToSizeChanges;
+            this.mLayouter.AdjustRootCenters = this.bAdjustRoots;
+            this.mLayouter.AdjustRootAngle = this.bAdjustAngle;
+            this.mLayouter.SpringMultiplier = this.mSpringMult;
+            this.mLayouter.MagneticMultiplier = this.mMagnetMult;
+            this.mLayouter.MagneticExponent = this.mMagnetExp;
         }
 
         public BalloonCirclesLayoutAlgorithm2(Digraph<Node, Edge> graph,
@@ -998,7 +1225,13 @@ namespace GraphForms.Algorithms.Layout.Circular
             Digraph<GNode, GEdge> bGraph = new Digraph<GNode, GEdge>(
                     graph.NodeCount, graph.EdgeCount);
             this.mLayouter = new BalloonLayouter(bGraph, boundingBox);
-            this.mLayouter.SpanningTreeGeneration = SpanningTreeGen.Prim;
+            this.mLayouter.SpanningTreeGeneration = SpanningTreeGen.Boruvka;
+            this.mLayouter.AdaptToSizeChanges = this.bAdaptToSizeChanges;
+            this.mLayouter.AdjustRootCenters = this.bAdjustRoots;
+            this.mLayouter.AdjustRootAngle = this.bAdjustAngle;
+            this.mLayouter.SpringMultiplier = this.mSpringMult;
+            this.mLayouter.MagneticMultiplier = this.mMagnetMult;
+            this.mLayouter.MagneticExponent = this.mMagnetExp;
         }
 
         #region Parameters
@@ -1012,6 +1245,19 @@ namespace GraphForms.Algorithms.Layout.Circular
                 {
                     this.mGroupingMethod = value;
                     this.bLayouterDirty = true;
+                    this.bCircleDirty = true;
+                }
+            }
+        }
+
+        public NodeSequencer<Node, Edge> NodeSequencer
+        {
+            get { return this.mNodeSequencer; }
+            set
+            {
+                if (this.mNodeSequencer != value)
+                {
+                    this.mNodeSequencer = value;
                     this.bCircleDirty = true;
                 }
             }
@@ -1064,57 +1310,6 @@ namespace GraphForms.Algorithms.Layout.Circular
                 {
                     this.mFreeArc = value;
                     this.bCircleDirty = true;
-                }
-            }
-        }
-        #endregion
-
-        #region Circle Physical Animation Parameters
-
-        public bool AdjustCircleAngles
-        {
-            get { return this.bAdjustAngles; }
-            set
-            {
-                if (this.bAdjustAngles != value)
-                {
-                    this.bAdjustAngles = value;
-                }
-            }
-        }
-
-        public double CircleSpringMultiplier
-        {
-            get { return this.mSpringMult; }
-            set
-            {
-                if (this.mSpringMult != value)
-                {
-                    this.mSpringMult = value;
-                }
-            }
-        }
-
-        public double CircleMagneticMultiplier
-        {
-            get { return this.mMagnetMult; }
-            set
-            {
-                if (this.mMagnetMult != value)
-                {
-                    this.mMagnetMult = value;
-                }
-            }
-        }
-
-        public double CircleMagneticExponent
-        {
-            get { return this.mMagnetExp; }
-            set
-            {
-                if (this.mMagnetExp != value)
-                {
-                    this.mMagnetExp = value;
                 }
             }
         }
@@ -1255,7 +1450,21 @@ namespace GraphForms.Algorithms.Layout.Circular
         }
         #endregion
 
-        #region Balloon Tree Physical Animation Parameters
+        #region Physical Animation Parameters
+
+        public bool AdaptToSizeChanges
+        {
+            get { return this.mLayouter.AdaptToSizeChanges; }
+            set
+            {
+                if (this.bAdaptToSizeChanges != value)
+                {
+                    this.bAdaptToSizeChanges = value;
+                    this.mLayouter.AdaptToSizeChanges = value;
+                    this.bPhysicsDirty = true;
+                }
+            }
+        }
         /// <summary>
         /// Gets or sets whether the roots of any leaf/subtree nodes with
         /// fixed positions are first repositioned to attempt to set the
@@ -1263,32 +1472,72 @@ namespace GraphForms.Algorithms.Layout.Circular
         /// to those calculated for the balloon tree.</summary>
         public bool AdjustRootCenters
         {
-            get { return this.mLayouter.AdjustRootCenters; }
-            set { this.mLayouter.AdjustRootCenters = value; }
+            get { return this.bAdjustRoots; }
+            set
+            {
+                if (this.bAdjustRoots != value)
+                {
+                    this.bAdjustRoots = value;
+                    this.mLayouter.AdjustRootCenters = value;
+                    this.bPhysicsDirty = true;
+                }
+            }
         }
 
         public bool AdjustRootAngle
         {
-            get { return this.mLayouter.AdjustRootAngle; }
-            set { this.mLayouter.AdjustRootAngle = value; }
+            get { return this.bAdjustAngle; }
+            set
+            {
+                if (this.bAdjustAngle != value)
+                {
+                    this.bAdjustAngle = value;
+                    this.mLayouter.AdjustRootAngle = value;
+                    this.bPhysicsDirty = true;
+                }
+            }
         }
 
         public double SpringMultiplier
         {
-            get { return this.mLayouter.SpringMultiplier; }
-            set { this.mLayouter.SpringMultiplier = value; }
+            get { return this.mSpringMult; }
+            set
+            {
+                if (this.mSpringMult != value)
+                {
+                    this.mSpringMult = value;
+                    this.mLayouter.SpringMultiplier = value;
+                    this.bPhysicsDirty = true;
+                }
+            }
         }
 
         public double MagneticMultiplier
         {
-            get { return this.mLayouter.MagneticMultiplier; }
-            set { this.mLayouter.MagneticMultiplier = value; }
+            get { return this.mMagnetMult; }
+            set
+            {
+                if (this.mMagnetMult != value)
+                {
+                    this.mMagnetMult = value;
+                    this.mLayouter.MagneticMultiplier = value;
+                    this.bPhysicsDirty = true;
+                }
+            }
         }
 
         public double MagneticExponent
         {
-            get { return this.mLayouter.MagneticExponent; }
-            set { this.mLayouter.MagneticExponent = value; }
+            get { return this.mMagnetExp; }
+            set
+            {
+                if (this.mMagnetExp != value)
+                {
+                    this.mMagnetExp = value;
+                    this.mLayouter.MagneticExponent = value;
+                    this.bPhysicsDirty = true;
+                }
+            }
         }
         /// <summary>
         /// Gets or sets the angle which the entire balloon tree is rotated
@@ -1302,8 +1551,19 @@ namespace GraphForms.Algorithms.Layout.Circular
         /// </remarks>
         public double RootAngle
         {
-            get { return this.mLayouter.RootAngle; }
-            set { this.mLayouter.RootAngle = value; }
+            get { return this.mRootAngle; }
+            set
+            {
+                if (this.mRootAngle != value)
+                {
+                    this.mRootAngle = value;
+                    this.mLayouter.RootAngle = value;
+                    // Do not set this.bPhysicsDirty = true here,
+                    // because the root angles of the circle layouters
+                    // are set on each iteration based on their current
+                    // relative angle to their root in the balloon tree.
+                }
+            }
         }
         #endregion
 
@@ -1341,14 +1601,22 @@ namespace GraphForms.Algorithms.Layout.Circular
         /// </summary>
         public double DegRootAngle
         {
-            get { return this.mLayouter.DegRootAngle; }
-            set { this.mLayouter.DegRootAngle = value; }
+            get { return 180.0 * this.mRootAngle / Math.PI; }
+            set
+            {
+                value = Math.PI * value / 180.0;
+                if (this.mRootAngle != value)
+                {
+                    this.mRootAngle = value;
+                }
+            }
         }
         #endregion
 
         #endregion
 
-        public CircleTree<PrintArray<Node>, int> DebugTree
+        public GTree<PrintArray<Node>, int, 
+            CircleGeom<PrintArray<Node>, int>> DebugTree
         {
             get
             {
@@ -1399,14 +1667,15 @@ namespace GraphForms.Algorithms.Layout.Circular
             if (this.bCircleDirty && !this.bLayouterDirty)
             {
                 // This is also done in the BalloonCircle
-                // constructor in InitBalloonGraph()
+                // constructor, invoked in InitBalloonGraph()
                 for (i = this.mGroupNodes.Length - 1; i >= 0; i--)
                 {
                     if (this.mGroupNodes[i] != null)
                     {
-                        circle = this.mGroupNodes[i].Circle;
+                        circle = this.mGroupNodes[i].Data.Circle;
                         if (circle != null)
                         {
+                            circle.NodeSequencer = this.mNodeSequencer;
                             circle.NodeSpacing = this.mNodeSpacing;
                             circle.MinRadius = this.mMinRadius;
                             circle.FreeArc = this.mFreeArc;
@@ -1438,25 +1707,78 @@ namespace GraphForms.Algorithms.Layout.Circular
             {
                 this.mLayouter.SetCircleAngles();
             }/* */
-
-            this.bCircleDirty = false;
+            if (this.bPhysicsDirty && !this.bLayouterDirty)
+            {
+                // This is also done in the BalloonCircle
+                // constructor, invoked in InitBalloonGraph()
+                for (i = this.mGroupNodes.Length - 1; i >= 0; i--)
+                {
+                    if (this.mGroupNodes[i] != null)
+                    {
+                        circle = this.mGroupNodes[i].Data.Circle;
+                        if (circle != null)
+                        {
+                            circle.AdaptToSizeChanges 
+                                = this.bAdaptToSizeChanges;
+                            circle.AdjustCenter = this.bAdjustRoots;
+                            circle.SpringMultiplier = this.mSpringMult;
+                            circle.MagneticMultiplier = this.mMagnetMult;
+                            circle.MagneticExponent = this.mMagnetExp;
+                        }
+                    }
+                }
+            }
+            if (this.bCircleDirty || this.bAdaptToSizeChanges)
+            {
+                GNode bNode;
+                for (i = this.mGroupNodes.Length - 1; i >= 0; i--)
+                {
+                    if (this.mGroupNodes[i] != null)
+                    {
+                        bNode = this.mGroupNodes[i].Data;
+                        circle = bNode.Circle;
+                        if (circle == null)
+                        {
+                            bNode.CircleRadius 
+                                = this.GetBoundingRadius(bNode.NData);
+                        }
+                        else
+                        {
+                            bNode.CircleRadius = circle.BoundingRadius;
+                        }
+                    }
+                }
+            }
             this.bLayouterDirty = false;
+            this.bCircleDirty = false;
+            this.bPhysicsDirty = false;
         }
 
-        private CircleTree<GNode, GEdge>[] mStackQueue
-            = new CircleTree<GNode, GEdge>[0];
+        protected virtual double GetBoundingRadius(Digraph<Node, Edge>.GNode node)
+        {
+            Box2F bbox = node.Data.LayoutBBox;
+            return Math.Sqrt(bbox.W * bbox.W + bbox.H * bbox.H) / 2;
+        }
+
+        private GTree<GNode, GEdge, CircleGeom<GNode, GEdge>>[] mStackQueue
+            = new GTree<GNode, GEdge, CircleGeom<GNode, GEdge>>[0];
 
         protected override void PerformIteration(uint iteration)
         {
-            int i, sqIndex, sqCount;
+            Node n;
             GNode node;
-            double ang, cx, cy;
+            GEdge edge;
+            int i, j, sqIndex, sqCount;
+            double a, ang, cx, cy;
+            Digraph<Node, Edge> subGraph;
+            double gAng, gDst, dx, dy, r, force, fx, fy;
             CircleLayouter circle;
-            CircleTree<GNode, GEdge> ct;
-            CircleTree<GNode, GEdge>[] branches;
+            GTree<GNode, GEdge, CircleGeom<GNode, GEdge>> ct, root;
+            GTree<GNode, GEdge, CircleGeom<GNode, GEdge>>[] branches;
             
             Digraph<GNode, GEdge> bGraph = this.mLayouter.Graph;
-            CircleTree<GNode, GEdge> bTree = this.mLayouter.GetBalloonTree();
+            GTree<GNode, GEdge, CircleGeom<GNode, GEdge>> bTree 
+                = this.mLayouter.GetTree();
             // Figure out whether the position of each balloon circle is
             // "fixed" (whether it contains a fixed node) at the start, 
             // so that the calculation doesn't have to be run each time 
@@ -1464,110 +1786,488 @@ namespace GraphForms.Algorithms.Layout.Circular
             for (i = this.mGroupNodes.Length - 1; i >= 0; i--)
             {
                 if (this.mGroupNodes[i] != null)
-                    this.mGroupNodes[i].CalcPositionFixed();
+                    this.mGroupNodes[i].Data.CalcPositionFixed();
             }
 
+            node = bTree.NodeData;
+            if (!node.PositionFixed)
+            {
+                // Pull the root of the entire balloon tree
+                // towards its calculated center.
+                Box2F bbox = null;
+                double cw, ch;
+                cx = cy = cw = ch = 0.0;
+                switch (this.mLayouter.RootCentering)
+                {
+                    case CircleCentering.BBoxCenter:
+                        bbox = this.mClusterNode == null
+                            ? this.BoundingBox
+                            : this.mClusterNode.LayoutBBox;
+                        if (bbox != null)
+                        {
+                            cx = bbox.X;
+                            cy = bbox.Y;
+                            cw = bbox.W;
+                            ch = bbox.H;
+                        }
+                        break;
+                    case CircleCentering.Centroid:
+                        cx = this.mLayouter.CentroidX;
+                        cy = this.mLayouter.CentroidY;
+                        bbox = this.mClusterNode == null
+                            ? this.BoundingBox
+                            : this.mClusterNode.LayoutBBox;
+                        if (bbox != null)
+                        {
+                            // Calculate a bounding box centered at the
+                            // current centroid and enclosed within the
+                            // bounding box of this layout algorithm.
+                            // TODO: What if the centroid is outside the
+                            // bounding box of this layout algorithm?
+                            dx = Math.Min(Math.Abs(cx - bbox.X),
+                                          Math.Abs(bbox.Right - cx));
+                            dy = Math.Min(Math.Abs(cy - bbox.Y),
+                                          Math.Abs(bbox.Bottom - cy));
+                            cx = cx - dx;
+                            cy = cy - dy;
+                            cw = 2.0 * dx;
+                            ch = 2.0 * dy;
+                        }
+                        break;
+                    // No need to calculate for Predefined, as the center 
+                    // is the current position of the root node
+                }
+                if (bbox != null)
+                {
+                    ang = Math.Sqrt(cw * cw + ch * ch) / 2;
+                    fx = fy = 0.0;
+                    // Spring Force from Top Left Corner
+                    dx = cx - node.X;
+                    dy = cy - node.Y;
+                    r = Math.Sqrt(dx * dx + dy * dy);
+                    if (r > 0.0)
+                    {
+                        force = this.mSpringMult * Math.Log(r / ang);
+                        fx += force * dx / r;
+                        fy += force * dy / r;
+                    }
+                    // Spring Force from Top Right Corner
+                    dx += cw;
+                    r = Math.Sqrt(dx * dx + dy * dy);
+                    if (r > 0.0)
+                    {
+                        force = this.mSpringMult * Math.Log(r / ang);
+                        fx += force * dx / r;
+                        fy += force * dy / r;
+                    }
+                    // Spring Force from Bottom Right Corner
+                    dy += ch;
+                    r = Math.Sqrt(dx * dx + dy * dy);
+                    if (r > 0.0)
+                    {
+                        force = this.mSpringMult * Math.Log(r / ang);
+                        fx += force * dx / r;
+                        fy += force * dy / r;
+                    }
+                    // Spring Force from Bottom Left Corner
+                    dx -= cw;
+                    r = Math.Sqrt(dx * dx + dy * dy);
+                    if (r > 0.0)
+                    {
+                        force = this.mSpringMult * Math.Log(r / ang);
+                        fx += force * dx / r;
+                        fy += force * dy / r;
+                    }
+                    // Apply force to root position
+                    node.SetPosition(node.X + (float)fx,
+                                     node.Y + (float)fy);
+                }
+            }
             if (this.mStackQueue.Length < bGraph.NodeCount)
             {
-                this.mStackQueue
-                    = new CircleTree<GNode, GEdge>[bGraph.NodeCount];
+                this.mStackQueue = new GTree<GNode, GEdge, 
+                    CircleGeom<GNode, GEdge>>[bGraph.NodeCount];
             }
-
-            // Pull the centers of balloon circles containing  
-            // fixed nodes towards those fixed nodes.
-            bTree.NodeData.StackAngle = this.mLayouter.RootAngle;
-            sqCount = 1;
-            this.mStackQueue[0] = bTree;
-            while (sqCount > 0)
+            if (this.bAdjustRoots)
             {
-                ct = this.mStackQueue[--sqCount];
-                node = ct.NodeData;
-                ang = node.StackAngle + ct.Angle;
-                if (node.PositionFixed)
+                // Pull the centers of balloon circles containing  
+                // fixed nodes towards those fixed nodes.
+                bTree.NodeData.StackAngle = this.mRootAngle;
+                sqCount = 1;
+                this.mStackQueue[0] = bTree;
+                while (sqCount > 0)
                 {
-                    circle = node.Circle;
-                    if (circle != null)
+                    ct = this.mStackQueue[--sqCount];
+                    node = ct.NodeData;
+                    ang = node.StackAngle + ct.GeomData.Angle;
+                    if (node.PositionFixed)
                     {
-                        // "Fixed" circles need to calculate their
-                        // centers before the balloon tree operates
-                        // on them because it uses their centers to
-                        // adjust the positions of their tree roots.
-                        circle.Angle = ang + node.CircleAngle;
-                        circle.AdjustAngle = this.bAdjustAngles;
-                        circle.SpringMultiplier = this.mSpringMult;
-                        circle.MagneticMultiplier = this.mMagnetMult;
-                        circle.MagneticExponent = this.mMagnetExp;
-                        circle.CallPerformIteration(iteration);
-                        // If the root of the entire balloon tree
-                        // is a "fixed" circle, then the balloon 
-                        // tree's root angle can be adjusted by it,
-                        // but only after it has already been calculated
-                        // by the "fixed" root circle's layout algorithm.
-                        if (this.bAdjustAngles && ct.Root == null &&
-                            this.mLayouter.AdjustRootAngle)
+                        root = ct.Root;
+                        circle = node.Circle;
+                        if (circle != null)
                         {
-                            this.mLayouter.RootAngle
-                                = circle.Angle - node.CircleAngle;
+                            // "Fixed" circles need to calculate their
+                            // centers before the balloon tree operates
+                            // on them because it uses their centers to
+                            // adjust the positions of their tree roots.
+                            circle.RootAngle = ang + node.CircleAngle;
+                            circle.AdjustAngle
+                                = this.bAdjustAngle && root == null;
+                            circle.CallPerformIteration(iteration);
+                            // If the root of the entire balloon tree
+                            // is a "fixed" circle, then the balloon 
+                            // tree's root angle can be adjusted by it,
+                            // but only after it has already been calculated
+                            // by the "fixed" root circle's layout algorithm.
+                            if (this.bAdjustAngle && root == null)
+                            {
+                                gAng = circle.RootAngle 
+                                    - node.CircleAngle - ct.GeomData.Angle;
+                                while (gAng < -Math.PI)
+                                    gAng += 2 * Math.PI;
+                                while (gAng > Math.PI)
+                                    gAng -= 2 * Math.PI;
+                                this.mRootAngle = gAng;
+                                circle.AdjustAngle = false;
+                            }
+                        }
+                        while (root != null)
+                        {
+                            // Calculate force on root
+                            cx = root.NodeData.X;
+                            cy = root.NodeData.Y;
+                            if (root.Root == null)
+                            {
+                                //ang = this.mRootAngle;
+                                ang = this.mRootAngle;
+                            }
+                            else
+                            {
+                                node = root.Root.NodeData;
+                                ang = Math.Atan2(cy - node.Y,
+                                                 cx - node.X);
+                            }
+                            node = ct.NodeData;
+                            // TODO: make sure all the signs (+/-) are right
+                            dx = cx - node.X;
+                            dy = cy - node.Y;
+                            if (dx == 0 && dy == 0)
+                            {
+                                fx = fy = ct.GeomData.Distance / 10;
+                            }
+                            else
+                            {
+                                if (this.bAdjustAngle && root.Root == null)
+                                {
+                                    gAng = Math.Atan2(-dy, -dx)
+                                            - ct.GeomData.Angle;
+                                    while (gAng < -Math.PI)
+                                        gAng += 2 * Math.PI;
+                                    while (gAng > Math.PI)
+                                        gAng -= 2 * Math.PI;
+                                    this.mRootAngle = gAng;
+                                    fx = fy = 0;
+                                    r = Math.Sqrt(dx * dx + dy * dy);
+                                }
+                                else
+                                {
+                                    r = dx * dx + dy * dy;
+                                    // Magnetic Torque
+                                    force = ct.GeomData.Angle + ang;
+                                    // dx and dy have to be negated here in
+                                    // order to get the same results as the 
+                                    // single step method that uses Cos/Sin
+                                    force = Math.Atan2(-dy, -dx) - force;
+                                    while (force < -Math.PI)
+                                        force += 2 * Math.PI;
+                                    while (force > Math.PI)
+                                        force -= 2 * Math.PI;
+                                    force = this.mMagnetMult *
+                                        Math.Pow(force, this.mMagnetExp) / r;
+                                    fx = force * -dy;
+                                    fy = force * dx;
+                                    r = Math.Sqrt(r);
+                                }
+                                // Spring Force
+                                force = this.mSpringMult *
+                                    Math.Log(r / ct.GeomData.Distance);
+                                fx += force * dx / r;
+                                fy += force * dy / r;
+                            }
+                            // Apply force to root position
+                            node = root.NodeData;
+                            node.SetPosition(node.X - (float)fx,
+                                             node.Y - (float)fy);
+                            // Progress up the ancestry chain
+                            ct = root;
+                            root = ct.Root;
+                        }
+                    }
+                    else if (ct.BranchCount > 0)
+                    {
+                        branches = ct.Branches;
+                        for (i = branches.Length - 1; i >= 0; i--)
+                        {
+                            ct = branches[i];
+                            ct.NodeData.StackAngle = ang;
+                            this.mStackQueue[sqCount++] = ct;
                         }
                     }
                 }
-                if (ct.BranchCount > 0)
+            }
+            // Pull movable singular nodes and balloon circles attached to
+            // nodes in a balloon circle towards the average position of
+            // those nodes in the balloon circle.
+            sqIndex = 0;
+            sqCount = 1;
+            this.mStackQueue[0] = bTree;
+            while (sqIndex < sqCount)
+            {
+                root = this.mStackQueue[sqIndex++];
+                node = root.NodeData;
+                cx = node.X;
+                cy = node.Y;
+                if (root.Root == null)
                 {
-                    branches = ct.Branches;
-                    for (i = branches.Length - 1; i >= 0; i--)
+                    ang = this.mRootAngle;
+                }
+                else
+                {
+                    node = root.Root.NodeData;
+                    ang = Math.Atan2(cy - node.Y, cx - node.X);
+                    node = root.NodeData;
+                }
+                circle = node.Circle;
+                if (circle != null && !node.PositionFixed)
+                {
+                    circle.RootAngle = ang + node.CircleAngle;
+                    circle.CallPerformIteration(iteration);
+                }
+                branches = root.Branches;
+                for (j = 0; j < branches.Length; j++)
+                {
+                    ct = branches[j];
+                    this.mStackQueue[sqCount++] = ct;
+                    node = ct.NodeData;
+                    if (node.PositionFixed)
                     {
-                        ct = branches[i];
-                        ct.NodeData.StackAngle = ang;
-                        this.mStackQueue[sqCount++] = ct;
+                        continue;
+                    }
+                    if (ct.EdgeData != null && circle != null)
+                    {
+                        edge = ct.EdgeData;
+                        node = root.NodeData;
+                        // Calculate the goal angle and distance of ct
+                        cx = cy = 0;
+                        if (node.CircleID == edge.DstNode.CircleID)
+                        {
+                            // ct is Src and ct.Root is Dst
+                            for (i = 0; i < edge.ECount; i++)
+                            {
+                                a = circle.AngleAt(edge.DstIndexes[i]);
+                                cx += Math.Cos(a);
+                                cy += Math.Sin(a);
+                            }
+                        }
+                        else
+                        {
+                            // ct is Dst and ct.Root is Src
+                            for (i = 0; i < edge.ECount; i++)
+                            {
+                                a = circle.AngleAt(edge.SrcIndexes[i]);
+                                cx += Math.Cos(a);
+                                cy += Math.Sin(a);
+                            }
+                        }
+                        cx /= edge.ECount;
+                        cy /= edge.ECount;
+                        a = Math.Atan2(cy, cx) + node.CircleAngle;
+                        r = circle.Radius * Math.Sqrt(cx * cx + cy * cy);
+                        while (a < -Math.PI)
+                            a += 2 * Math.PI;
+                        while (a > Math.PI)
+                            a -= 2 * Math.PI;
+                        if (a == ct.GeomData.Angle)
+                        {
+                            gAng = 0;
+                            gDst = ct.GeomData.Distance - r;
+                        }
+                        else
+                        {
+                            force = ct.GeomData.Distance;
+                            a = a - ct.GeomData.Angle;
+                            while (a < -Math.PI)
+                                a += 2 * Math.PI;
+                            while (a > Math.PI)
+                                a -= 2 * Math.PI;
+                            gDst = Math.Sqrt(r * r + force * force
+                                - 2 * r * force * Math.Cos(a));
+                            gAng = (gDst * gDst + r * r - force * force) /
+                                   (2 * gDst * r);
+                            gAng = Math.Acos(//gAng
+                                gAng > 1 ? 1 : (gAng < -1 ? -1 : gAng));
+                            gAng = a > 0 ? gAng - Math.PI : Math.PI - gAng;
+                        }
+                        // Calculate the average of current positions of the
+                        // nodes in the balloon circle
+                        cx = cy = 0.0;
+                        subGraph = circle.Graph;
+                        if (node.CircleID == edge.DstNode.CircleID)
+                        {
+                            // ct is Src and ct.Root is Dst
+                            for (i = 0; i < edge.ECount; i++)
+                            {
+                                n = subGraph.NodeAt(edge.DstIndexes[i]);
+                                cx += n.X;
+                                cy += n.Y;
+                            }
+                        }
+                        else
+                        {
+                            // ct is Dst and ct.Root is Src
+                            for (i = 0; i < edge.ECount; i++)
+                            {
+                                n = subGraph.NodeAt(edge.SrcIndexes[i]);
+                                cx += n.X;
+                                cy += n.Y;
+                            }
+                        }
+                        cx /= edge.ECount;
+                        cy /= edge.ECount;
+                        a = Math.Atan2(cy - circle.CenterY,
+                                       cx - circle.CenterX);
+                        // Apply the force to ct to pull it towards its
+                        // goal angle and distance from (cx,cy)
+                        node = ct.NodeData;
+                        fx = node.X;
+                        fy = node.Y;
+                        dx = cx - fx;
+                        dy = cy - fy;
+                        if (dx == 0 && dy == 0)
+                        {
+                            force = gDst / 10;
+                            fx += force;
+                            fy += force;
+                        }
+                        else
+                        {
+                            r = dx * dx + dy * dy;
+                            // Magnetic Torque
+                            force = gAng + a;
+                            // dx and dy have to be negated here in
+                            // order to get the same results as the 
+                            // single step method that uses Cos/Sin
+                            force = Math.Atan2(-dy, -dx) - force;
+                            while (force < -Math.PI)
+                                force += 2 * Math.PI;
+                            while (force > Math.PI)
+                                force -= 2 * Math.PI;
+                            force = this.mMagnetMult *
+                                Math.Pow(force, this.mMagnetExp) / r;
+                            fx += force * -dy;
+                            fy += force * dx;
+                            // Spring Force
+                            r = Math.Sqrt(r);
+                            force = this.mSpringMult *
+                                Math.Log(r / gDst);
+                            fx += force * dx / r;
+                            fy += force * dy / r;
+                        }
+                        node.SetPosition((float)fx, (float)fy);
+
+                        node = root.NodeData;
+                        cx = node.X;
+                        cy = node.Y;
+                    }
+                    else
+                    {
+                        // TODO: make sure all the signs (+/-) are right
+                        fx = node.X;
+                        fy = node.Y;
+                        dx = cx - fx;
+                        dy = cy - fy;
+                        if (dx == 0 && dy == 0)
+                        {
+                            force = ct.GeomData.Distance / 10;
+                            fx += force;
+                            fy += force;
+                        }
+                        else
+                        {
+                            r = dx * dx + dy * dy;
+                            // Magnetic Torque
+                            force = ct.GeomData.Angle + ang;
+                            // dx and dy have to be negated here in
+                            // order to get the same results as the 
+                            // single step method that uses Cos/Sin
+                            force = Math.Atan2(-dy, -dx) - force;
+                            while (force < -Math.PI)
+                                force += 2 * Math.PI;
+                            while (force > Math.PI)
+                                force -= 2 * Math.PI;
+                            force = this.mMagnetMult *
+                                Math.Pow(force, this.mMagnetExp) / r;
+                            fx += force * -dy;
+                            fy += force * dx;
+                            // Spring Force
+                            r = Math.Sqrt(r);
+                            force = this.mSpringMult *
+                                Math.Log(r / ct.GeomData.Distance);
+                            fx += force * dx / r;
+                            fy += force * dy / r;
+                        }
+                        // Add force to position
+                        node.SetPosition((float)fx, (float)fy);
                     }
                 }
             }
 
             // Run the balloon tree layout algorithm to adjust the centers
             // of the movable singular nodes and balloon circles
-            this.mLayouter.CallPerformIteration(iteration);
+            //this.mLayouter.CallPerformIteration(iteration);
 
             // Readjust the root circle just in case
             // one of its branches was also fixed.
-            if (bTree.NodeData.PositionFixed && 
+            /*if (bTree.NodeData.PositionFixed && 
                 this.mLayouter.AdjustRootAngle)
             {
                 circle = bTree.NodeData.Circle;
                 if (circle != null)
                 {
-                    circle.Angle = this.mLayouter.RootAngle
+                    circle.Angle = this.mRootAngle
                         + bTree.NodeData.CircleAngle;
                     circle.CallPerformIteration(iteration);
                 }
-            }
+            }/* */
 
             // Pull the nodes in balloon circles towards their new centers
             // that were calculated by the balloon tree layout algorithm.
-            sqIndex = 0;
+            /*sqIndex = 0;
             sqCount = 1;
             this.mStackQueue[0] = bTree;
             while (sqIndex < sqCount)
             {
                 ct = this.mStackQueue[sqIndex++];
-                cx = ct.NodeData.X;
-                cy = ct.NodeData.Y;
-                if (ct.Root == null)
-                {
-                    ang = this.mLayouter.RootAngle;
-                }
-                else
-                {
-                    node = ct.Root.NodeData;
-                    ang = Math.Atan2(cy - node.Y, cx - node.X);
-                }
                 node = ct.NodeData;
                 if (!node.PositionFixed)
                 {
+                    if (ct.Root == null)
+                    {
+                        ang = this.mRootAngle;
+                    }
+                    else
+                    {
+                        cx = node.X;
+                        cy = node.Y;
+                        node = ct.Root.NodeData;
+                        ang = Math.Atan2(cy - node.Y, cx - node.X);
+                        node = ct.NodeData;
+                    }
                     circle = node.Circle;
                     if (circle != null)
                     {
                         circle.Angle = ang + node.CircleAngle;
-                        circle.AdjustAngle = this.bAdjustAngles;
+                        circle.AdaptToSizeChanges = this.bAdaptToSizeChanges;
                         circle.SpringMultiplier = this.mSpringMult;
                         circle.MagneticMultiplier = this.mMagnetMult;
                         circle.MagneticExponent = this.mMagnetExp;
@@ -1582,7 +2282,7 @@ namespace GraphForms.Algorithms.Layout.Circular
                         this.mStackQueue[sqCount++] = branches[i];
                     }
                 }
-            }
+            }/* */
         }
 
         private void InitBalloonGraph()
@@ -1593,7 +2293,7 @@ namespace GraphForms.Algorithms.Layout.Circular
                 = new BCCAlgorithm<Node, Edge>(this.mGraph, false);
             bccAlg.Compute();
 
-            Node[][] bccGroups;
+            Digraph<Node, Edge>.GNode[][] bccGroups;
             int bccGroupCount;
             if (this.mGroupingMethod == LayoutStyle.BccCompact)
             {
@@ -1608,7 +2308,8 @@ namespace GraphForms.Algorithms.Layout.Circular
                 bccGroupCount = bccAlg.IsolatedGroupCount;
                 this.mGroupIds = bccAlg.IsolatedGroupIds;
             }
-            this.mGroupNodes = new GNode[bccGroupCount];
+            this.mGroupNodes 
+                = new Digraph<GNode, GEdge>.GNode[bccGroupCount];
             for (i = 0; i < count; i++)
             {
                 if (this.mGraph.InternalNodeAt(i).Hidden)
@@ -1618,10 +2319,10 @@ namespace GraphForms.Algorithms.Layout.Circular
             bccGraph.ClearNodes();
 
             int[] circleIs = new int[count];
-            GEdge[][] bccEdges = new GEdge[bccGroupCount][];
+            //GEdge[][] bccEdges = new GEdge[bccGroupCount][];
             GNode bccNode;
             Digraph<Node, Edge> subGraph;
-            Node[] bccGroup;
+            Digraph<Node, Edge>.GNode[] bccGroup;
             for (i = 0; i < bccGroupCount; i++)
             {
                 bccGroup = bccGroups[i];
@@ -1632,25 +2333,32 @@ namespace GraphForms.Algorithms.Layout.Circular
                 else if (bccGroup.Length == 1)
                 {
                     bccNode = new BalloonNode(i, bccGroup[0]);
-                    circleIs[this.mGraph.IndexOfNode(bccGroup[0])] = 0;
+                    circleIs[bccGroup[0].Index] = 0;
                 }
                 else
                 {
                     subGraph = new Digraph<Node, Edge>(
-                        bccGroup.Length, bccGroup.Length / 2);
+                        bccGroup.Length, bccGroup.Length);
                     for (j = 0; j < bccGroup.Length; j++)
                     {
-                        subGraph.AddNode(bccGroup[j]);
-                        circleIs[this.mGraph.IndexOfNode(bccGroup[j])] = j;
+                        subGraph.AddNode(bccGroup[j].Data);
+                        circleIs[bccGroup[j].Index] = j;
                     }
                     bccNode = new BalloonCircle(i, subGraph, this);
                 }
                 // TODO: Make sure excluding null nodes doesn't cause other
                 // bad stuff to happen later on.
-                if (bccNode != null)
+                if (bccNode == null)
+                {
+                    this.mGroupNodes[i] = null;
+                }
+                else
+                {
                     bccGraph.AddNode(bccNode);
-                this.mGroupNodes[i] = bccNode;
-                bccEdges[i] = new GEdge[bccGroupCount];
+                    this.mGroupNodes[i] 
+                        = bccGraph.InternalNodeAt(bccGraph.NodeCount - 1);
+                }
+                //bccEdges[i] = new GEdge[bccGroupCount];
             }
 
             int si, di;
@@ -1663,14 +2371,16 @@ namespace GraphForms.Algorithms.Layout.Circular
                 edge = this.mGraph.InternalEdgeAt(i);
                 si = this.mGroupIds[edge.SrcNode.Index];
                 di = this.mGroupIds[edge.DstNode.Index];
-                if (si == di && edge.SrcNode.Index != edge.DstNode.Index)
+                if (si == di && si != -1 && 
+                    edge.SrcNode.Index != edge.DstNode.Index)
                 {
-                    this.mGroupNodes[si].Circle.Graph.AddEdge(edge.Data);
+                    subGraph = this.mGroupNodes[si].Data.Circle.Graph;
+                    subGraph.AddEdge(edge.Data);
                 }
-                else if (si != di)
+                else if (si != di && si != -1 && di != -1)
                 {
                     reversed = false;
-                    bccEdge = bccEdges[si][di];
+                    /*bccEdge = bccEdges[si][di];
                     if (bccEdge == null)
                     {
                         // Check for a balloon edge in the reverse direction
@@ -1680,11 +2390,46 @@ namespace GraphForms.Algorithms.Layout.Circular
                     if (bccEdge == null)
                     {
                         // Add a new balloon edge in the forward direction
-                        bccEdge = new GEdge(this.mGroupNodes[si], 
-                                            this.mGroupNodes[di]);
+                        bccEdge = new GEdge(this.mGroupNodes[si].Data, 
+                                            this.mGroupNodes[di].Data);
                         bccGraph.AddEdge(bccEdge);
                         reversed = false;
                         bccEdges[si][di] = bccEdge;
+                    }/* */
+                    bccEdge = null;
+                    // Check for balloon edge in forward direction
+                    for (j = bccGraph.EdgeCount - 1; j >= 0; j--)
+                    {
+                        bccEdge = bccGraph.EdgeAt(j);
+                        if (bccEdge.SrcNode.CircleID == si &&
+                            bccEdge.DstNode.CircleID == di)
+                        {
+                            break;
+                        }
+                    }
+                    if (j < 0)
+                    {
+                        // Check for balloon edge in reverse direction
+                        for (j = bccGraph.EdgeCount - 1; j >= 0; j--)
+                        {
+                            bccEdge = bccGraph.EdgeAt(j);
+                            if (bccEdge.SrcNode.CircleID == di &&
+                                bccEdge.DstNode.CircleID == si)
+                            {
+                                break;
+                            }
+                        }
+                        if (j < 0)
+                        {
+                            // Add new balloon edge in forward direction
+                            bccEdge = new GEdge(this.mGroupNodes[si].Data,
+                                                this.mGroupNodes[di].Data);
+                            bccGraph.AddEdge(bccEdge);
+                        }
+                        else
+                        {
+                            reversed = true;
+                        }
                     }
                     if (reversed)
                     {
@@ -1712,7 +2457,8 @@ namespace GraphForms.Algorithms.Layout.Circular
                     si = this.mGroupIds[gNode.Index];
                     if (si != -1)
                     {
-                        this.mLayouter.AddRoot(this.mGroupNodes[si]);
+                        this.mLayouter.AddRoot(
+                            this.mGroupNodes[si].Index, false);
                     }
                 }
             }
@@ -1724,7 +2470,7 @@ namespace GraphForms.Algorithms.Layout.Circular
             int i = this.mGroupIds[root.Index];
             if (i != -1)
             {
-                this.mLayouter.AddRoot(this.mGroupNodes[i], true);
+                this.mLayouter.AddRoot(this.mGroupNodes[i].Index, true);
             }
             base.OnRootInserted(index, root);
         }
@@ -1734,7 +2480,7 @@ namespace GraphForms.Algorithms.Layout.Circular
             int i = this.mGroupIds[root.Index];
             if (i != -1)
             {
-                this.mLayouter.RemoveRoot(this.mGroupNodes[i], true);
+                this.mLayouter.RemoveRoot(this.mGroupNodes[i].Index, true);
             }
             base.OnRootRemoved(root);
         }

@@ -133,8 +133,6 @@ namespace GraphForms.Algorithms.Search
                     for (i = 0; i < edgeCount; i++)
                     {
                         e = this.mGraph.InternalEdgeAt(i);
-                        if (e.Hidden)
-                            continue;
                         v = rev ? e.DstNode : e.SrcNode;
                         if (v.Index != u.Index)
                             continue;

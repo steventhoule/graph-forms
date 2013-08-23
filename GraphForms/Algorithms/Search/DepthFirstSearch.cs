@@ -125,8 +125,6 @@ namespace GraphForms.Algorithms.Search
                     for (i = edgeIndex; i < edgeCount; i++)
                     {
                         e = this.mGraph.InternalEdgeAt(i);
-                        if (e.Hidden)
-                            continue;
                         v = rev ? e.DstNode : e.SrcNode;
                         if (v.Index != u.Index)
                             continue;
@@ -195,8 +193,6 @@ namespace GraphForms.Algorithms.Search
                     if (this.State == ComputeState.Aborting)
                         return;
                     e = this.mGraph.InternalEdgeAt(i);
-                    if (e.Hidden)
-                        continue;
                     v = reversed ? e.DstNode : e.SrcNode;
                     if (v.Index != u.Index)
                         continue;

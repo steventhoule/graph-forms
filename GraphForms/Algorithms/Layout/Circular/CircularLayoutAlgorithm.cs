@@ -405,7 +405,7 @@ namespace GraphForms.Algorithms.Layout.Circular
                 = new BCCAlgorithm<Node, Edge>(graph, false);
             bccAlg.Compute();
             bccAlg.ArticulateToLargerCompactGroups();
-            Node[][] bccGroups = bccAlg.CompactGroups;
+            Digraph<Node, Edge>.GNode[][] bccGroups = bccAlg.CompactGroups;
             int bccGroupCount = bccAlg.CompactGroupCount;
             int[] bccGroupIds = bccAlg.CompactGroupIds;
             Digraph<BCCNode, BCCEdge> bccGraph 
@@ -416,14 +416,14 @@ namespace GraphForms.Algorithms.Layout.Circular
             BCCEdge[][] bccEdges = new BCCEdge[bccGroupCount][];
             BCCNode[] bccNodes = new BCCNode[bccGroupCount];
             BCCNode bccNode;
-            Node[] bccGroup;
+            Digraph<Node, Edge>.GNode[] bccGroup;
             for (i = 0; i < bccGroupCount; i++)
             {
                 bccGroup = bccGroups[i];
                 bccNode = new BCCNode(i, bccGroup.Length, nodes.Length);
                 for (j = 0; j < bccGroup.Length; j++)
                 {
-                    bccNode.Subgraph.AddNode(bccGroup[j]);
+                    bccNode.Subgraph.AddNode(bccGroup[j].Data);
                 }
                 bccGraph.AddNode(bccNode);
                 bccNodes[i] = bccNode;

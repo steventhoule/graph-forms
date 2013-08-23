@@ -23,6 +23,7 @@ namespace GraphForms.Algorithms.Layout.Circular
         private double mCenterY = 0;
 
         // Physical Animation Parameters
+        private bool bAdaptToSizeChanges = false;
         private bool bAdjustCenter = true;
         private bool bAdjustAngle = false;
         private double mSpringMult = 10;
@@ -31,9 +32,6 @@ namespace GraphForms.Algorithms.Layout.Circular
         private double mAngle = 0;
 
         // Flags and Calculated Values
-        private uint mLastNVers;
-        private uint mLastEVers;
-
         private bool bEmbedCircleDirty = true;
         private int mEmbedCircleLength;
         private Digraph<Node, Edge>.GNode[] mEmbedCircle;
@@ -50,10 +48,6 @@ namespace GraphForms.Algorithms.Layout.Circular
             IClusterNode clusterNode)
             : base(graph, clusterNode)
         {
-            uint vers = graph.NodeVersion;
-            this.mLastNVers = vers == 0 ? uint.MaxValue : vers - 1;
-            vers = graph.EdgeVersion;
-            this.mLastEVers = vers == 0 ? uint.MaxValue : vers - 1;
             this.mEmbedCircle = new Digraph<Node, Edge>.GNode[0];
             this.mAngles = new double[0];
             this.mHalfSizes = new double[0];
@@ -63,10 +57,6 @@ namespace GraphForms.Algorithms.Layout.Circular
             Box2F boundingBox)
             : base(graph, boundingBox)
         {
-            uint vers = graph.NodeVersion;
-            this.mLastNVers = vers == 0 ? uint.MaxValue : vers - 1;
-            vers = graph.EdgeVersion;
-            this.mLastEVers = vers == 0 ? uint.MaxValue : vers - 1;
             this.mEmbedCircle = new Digraph<Node, Edge>.GNode[0];
             this.mAngles = new double[0];
             this.mHalfSizes = new double[0];
@@ -228,6 +218,17 @@ namespace GraphForms.Algorithms.Layout.Circular
         #endregion
 
         #region Physical Animation Parameters
+        public bool AdaptToSizeChanges
+        {
+            get { return this.bAdaptToSizeChanges; }
+            set
+            {
+                if (this.bAdaptToSizeChanges != value)
+                {
+                    this.bAdaptToSizeChanges = value;
+                }
+            }
+        }
         /// <summary>
         /// Gets or sets whether the center of the embedding circle is
         /// first repositioned to attempt to set the radii and angle
@@ -302,7 +303,7 @@ namespace GraphForms.Algorithms.Layout.Circular
         /// the final graph will appear as if it has been rotated by the
         /// negation of this angle on a conventional 2D Euclidean manifold. 
         /// </remarks>
-        public double Angle
+        public double RootAngle
         {
             get { return this.mAngle; }
             set
@@ -317,10 +318,10 @@ namespace GraphForms.Algorithms.Layout.Circular
 
         #region Angle Parameters in Degrees
         /// <summary>
-        /// Gets or sets the <see cref="Angle"/> parameter of this layout
-        /// algorithm in degrees instead of radians for debugging.
+        /// Gets or sets the <see cref="RootAngle"/> parameter of this 
+        /// layout algorithm in degrees instead of radians for debugging.
         /// </summary>
-        public double DegAngle
+        public double DegRootAngle
         {
             get { return 180.0 * this.mAngle / Math.PI; }
             set
@@ -473,22 +474,23 @@ namespace GraphForms.Algorithms.Layout.Circular
 
         private void CalculatePositions()
         {
-            Box2F bbox;
-            int i, count = this.mGraph.NodeCount;
+            //Box2F bbox;
+            int i;//, count = this.mGraph.NodeCount;
             double perimeter, ang, a, size;
-            if (this.mHalfSizes.Length < count)
+            /*if (this.mHalfSizes.Length < count)
             {
                 this.mHalfSizes = new double[count];
-            }
+            }/* */
 
             // calculate the size of the circle
             perimeter = 0;
             for (i = 0; i < this.mEmbedCircleLength; i++)
             {
-                bbox = this.mEmbedCircle[i].Data.LayoutBBox;
-                size = Math.Sqrt(bbox.W * bbox.W + bbox.H * bbox.H);
-                perimeter += size;
-                this.mHalfSizes[this.mEmbedCircle[i].Index] = size / 4;
+                //bbox = this.mEmbedCircle[i].Data.LayoutBBox;
+                //size = Math.Sqrt(bbox.W * bbox.W + bbox.H * bbox.H);
+                //perimeter += size;
+                //this.mHalfSizes[this.mEmbedCircle[i].Index] = size / 4;
+                perimeter += 4 * this.mHalfSizes[this.mEmbedCircle[i].Index];
             }
             perimeter += this.mEmbedCircleLength * this.mFreeArc;
 
@@ -505,10 +507,10 @@ namespace GraphForms.Algorithms.Layout.Circular
             {
                 size = this.mHalfSizes[this.mEmbedCircle[i].Index];
                 perimeter = Math.Max(2 * size, perimeter);
-                size += this.mFreeArc;
-                a = Math.Sin(size / this.mRadius) * 4;
+                //size += this.mFreeArc;
+                a = Math.Sin((size + this.mFreeArc) / this.mRadius) * 4;
                 ang += a;
-                this.mHalfSizes[this.mEmbedCircle[i].Index] = size;
+                //this.mHalfSizes[this.mEmbedCircle[i].Index] = size;
             }
 
             //base.EndIteration(0, 0.5, "Precalculation done.");
@@ -532,7 +534,8 @@ namespace GraphForms.Algorithms.Layout.Circular
                 case CircleSpacing.SNS:
                     for (i = 0; i < this.mEmbedCircleLength; i++)
                     {
-                        size = this.mHalfSizes[this.mEmbedCircle[i].Index];
+                        size = this.mHalfSizes[this.mEmbedCircle[i].Index]
+                             + this.mFreeArc;
                         a = Math.Sin(size / this.mRadius) * 2;
                         ang += a;
                         this.mAngles[this.mEmbedCircle[i].Index] = ang;
@@ -547,20 +550,46 @@ namespace GraphForms.Algorithms.Layout.Circular
             //base.EndIteration(1, 1, "Calculation done.");
         }
 
-        private void PerformPrecalculations()
+        protected virtual double GetBoundingRadius(
+            Digraph<Node, Edge>.GNode node)
         {
-            bool nDirty = this.mGraph.NodeVersion != this.mLastNVers;
+            Box2F bbox = node.Data.LayoutBBox;
+            return Math.Sqrt(bbox.W * bbox.W + bbox.H * bbox.H) / 2.0;
+        }
+
+        protected override void PerformPrecalculations(
+            uint lastNodeVersion, uint lastEdgeVersion)
+        {
+            int i;
+            bool nDirty = this.mGraph.NodeVersion != lastNodeVersion;
             if (this.bEmbedCircleDirty || nDirty ||
-                this.mGraph.EdgeVersion != this.mLastEVers)
+                this.mGraph.EdgeVersion != lastEdgeVersion)
             {
                 this.CalculateEmbeddingCircle();
-                this.bEmbedCircleDirty = false;
                 this.bPositionsDirty = true;
+            }
+            if (this.bPositionsDirty || this.bAdaptToSizeChanges)
+            {
+                double size;
+                Digraph<Node, Edge>.GNode node;
+                if (this.mHalfSizes.Length < this.mGraph.NodeCount)
+                {
+                    this.mHalfSizes = new double[this.mGraph.NodeCount];
+                }
+                for (i = 0; i < this.mEmbedCircleLength; i++)
+                {
+                    node = this.mEmbedCircle[i];
+                    size = this.GetBoundingRadius(node) / 2.0;
+                    if (this.mHalfSizes[node.Index] != size)
+                    {
+                        this.mHalfSizes[node.Index] = size;
+                        this.bPositionsDirty = true;
+                    }
+                }
             }
             if (this.bPositionsDirty)
             {
                 this.CalculatePositions();
-                this.bPositionsDirty = false;
             }
             if (nDirty && this.mEmbedCircleLength > 0)
             {
@@ -570,7 +599,7 @@ namespace GraphForms.Algorithms.Layout.Circular
                 // force to itself in the direction of the change in position
                 // from the old centroid to the new one.
                 this.mCentroidX = this.mCentroidY = 0.0;
-                for (int i = 0; i < this.mEmbedCircleLength; i++)
+                for (i = 0; i < this.mEmbedCircleLength; i++)
                 {
                     this.mCentroidX += this.mEmbedCircle[i].Data.X;
                     this.mCentroidY += this.mEmbedCircle[i].Data.Y;
@@ -605,8 +634,8 @@ namespace GraphForms.Algorithms.Layout.Circular
             while (this.mCenterY < bbox.Y)
                 this.mCenterY += h;
             /* */
-            this.mLastNVers = this.mGraph.NodeVersion;
-            this.mLastEVers = this.mGraph.EdgeVersion;
+            this.bEmbedCircleDirty = false;
+            this.bPositionsDirty = false;
         }
 
         protected override void PerformIteration(uint iteration)
@@ -617,10 +646,10 @@ namespace GraphForms.Algorithms.Layout.Circular
             // Pull the center towards fixed nodes
             if (this.bAdjustCenter)
             {
-                for (i = 0; i < nCount; i++)
+                for (i = 0; i < this.mEmbedCircleLength; i++)
                 {
-                    gNode = this.mGraph.InternalNodeAt(i);
-                    if (!gNode.Hidden && gNode.Data.PositionFixed)
+                    gNode = this.mEmbedCircle[i];
+                    if (gNode.Data.PositionFixed)
                     {
                         dx = this.mCenterX - gNode.Data.X;
                         dy = this.mCenterY - gNode.Data.Y;
@@ -673,10 +702,10 @@ namespace GraphForms.Algorithms.Layout.Circular
                 }
             }
             // Pull movable nodes towards the center
-            for (i = 0; i < nCount; i++)
+            for (i = 0; i < this.mEmbedCircleLength; i++)
             {
-                gNode = this.mGraph.InternalNodeAt(i);
-                if (!gNode.Data.PositionFixed && !gNode.Hidden)
+                gNode = this.mEmbedCircle[i];
+                if (!gNode.Data.PositionFixed)
                 {
                     fx = gNode.Data.X;
                     fy = gNode.Data.Y;

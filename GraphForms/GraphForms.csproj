@@ -69,12 +69,11 @@
   <ItemGroup>
     <Compile Include="Algorithms\AGraphAlgorithm.cs" />
     <Compile Include="Algorithms\ARootedAlgorithm.cs" />
-    <Compile Include="Algorithms\Collections\CircleTree.cs" />
+    <Compile Include="Algorithms\Collections\CircleGeom.cs" />
     <Compile Include="Algorithms\Collections\EdgeWeightComparer.cs" />
     <Compile Include="Algorithms\Collections\FibonacciNode.cs" />
-    <Compile Include="Algorithms\Collections\HeapDirection.cs" />
     <Compile Include="Algorithms\Collections\GTree.cs" />
-    <Compile Include="Algorithms\Collections\IGTreeGeom.cs" />
+    <Compile Include="Algorithms\Collections\HeapDirection.cs" />
     <Compile Include="Algorithms\ConnectedComponents\BCCAlgorithm.cs" />
     <Compile Include="Algorithms\ConnectedComponents\CCAlgorithm.cs" />
     <Compile Include="Algorithms\ConnectedComponents\ICCAlgorithm.cs" />
@@ -100,8 +99,10 @@
     <Compile Include="Algorithms\Layout\LayoutDirection.cs" />
     <Compile Include="Algorithms\Layout\LayoutLinearSpring.cs" />
     <Compile Include="Algorithms\Layout\LayoutAlgorithm.cs" />
+    <Compile Include="Algorithms\Layout\Tree\ATreeLayoutAlgorithm.cs" />
     <Compile Include="Algorithms\Layout\Tree\BalloonTreeLayoutAlgorithm.cs" />
     <Compile Include="Algorithms\Layout\Circular\CircularLayoutAlgorithm.cs" />
+    <Compile Include="Algorithms\Collections\RectGeom.cs" />
     <Compile Include="Algorithms\Layout\Tree\SimpleTreeLayoutAlgorithm.cs" />
     <Compile Include="Algorithms\Layout\Tree\TreeRootFinding.cs" />
     <Compile Include="Algorithms\NodeSequencer.cs" />

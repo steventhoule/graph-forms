@@ -382,10 +382,10 @@ namespace GraphAlgorithmDemo
         {
             get
             {
-                //RectangleF bbox = this.BoundingBox;
-                //return new Box2F(bbox.X, bbox.Y, bbox.Width, bbox.Height);
-                return new Box2F(this.mMinX, this.mMinY,
-                    this.mMaxX - this.mMinX, this.mMaxY - this.mMinY);
+                RectangleF bbox = this.SceneBoundingBox;
+                return new Box2F(bbox.X, bbox.Y, bbox.Width, bbox.Height);
+                //return new Box2F(this.mMinX, this.mMinY,
+                //    this.mMaxX - this.mMinX, this.mMaxY - this.mMinY);
             }
         }
 
@@ -438,7 +438,7 @@ namespace GraphAlgorithmDemo
                 if (btlfc != null)
                 {
                     Graphics g = e.Graphics;
-                    CircleTree<CircleNode, ArrowEdge> ct = btlfc.CircleTree;
+                    GTree<CircleNode, ArrowEdge, CircleGeom<CircleNode, ArrowEdge>> ct = btlfc.CircleTree;
                     if (ct != null)
                     {
                         float dx = ct.NodeData.X;
@@ -456,7 +456,7 @@ namespace GraphAlgorithmDemo
                 if (bclfc != null)
                 {
                     Graphics g = e.Graphics;
-                    CircleTree<PrintArray<CircleNode>, int> ct = bclfc.DebugTree;
+                    GTree<PrintArray<CircleNode>, int, CircleGeom<PrintArray<CircleNode>, int>> ct = bclfc.DebugTree;
                     if (ct != null)
                     {
                         Vec2F pos = bclfc.DebugRootPosition;
@@ -474,7 +474,7 @@ namespace GraphAlgorithmDemo
         }
 
         private void DrawBalloonTreeConvexHull(Graphics g,
-            CircleTree<CircleNode, ArrowEdge> root)
+            GTree<CircleNode, ArrowEdge, CircleGeom<CircleNode, ArrowEdge>> root)
         {
             bool drawHull = true;
             if (this.bDrawSelectedConvexHullOnly)
@@ -489,10 +489,10 @@ namespace GraphAlgorithmDemo
             float dx, dy, px, py, len;
             double a1, a2, hyp;
             // Draw the convex hull of the root itself
-            CircleTree<CircleNode, ArrowEdge>.CHArc[] cvHull = root.ConvexHull;
+            CircleGeom<CircleNode, ArrowEdge>.CHArc[] cvHull = root.GeomData.ConvexHull;
             if (drawHull && cvHull.Length == 1)
             {
-                CircleTree<CircleNode, ArrowEdge>.CHArc ch1 = cvHull[0];
+                CircleGeom<CircleNode, ArrowEdge>.CHArc ch1 = cvHull[0];
                 dx = (float)(ch1.Dst * Math.Cos(ch1.Ang) - ch1.Rad);
                 dy = (float)(ch1.Dst * Math.Sin(ch1.Ang) - ch1.Rad);
                 len = (float)(2.0 * ch1.Rad);
@@ -500,7 +500,7 @@ namespace GraphAlgorithmDemo
             }
             if (drawHull && cvHull.Length > 1)
             {
-                CircleTree<CircleNode, ArrowEdge>.CHArc arc 
+                CircleGeom<CircleNode, ArrowEdge>.CHArc arc 
                     = cvHull[cvHull.Length - 1];
                 if (arc.Dst == 0)
                 {
@@ -592,18 +592,18 @@ namespace GraphAlgorithmDemo
                 float ang;
                 px = root.NodeData.X;
                 py = root.NodeData.Y;
-                CircleTree<CircleNode, ArrowEdge> ct;
-                CircleTree<CircleNode, ArrowEdge>[] branches
+                CircleGeom<CircleNode, ArrowEdge> ct;
+                GTree<CircleNode, ArrowEdge, CircleGeom<CircleNode, ArrowEdge>>[] branches
                     = root.Branches;
                 for (i = 0; i < branches.Length; i++)
                 {
-                    ct = branches[i];
+                    ct = branches[i].GeomData;
                     dx = (float)(ct.Distance * Math.Cos(ct.Angle));
                     dy = (float)(ct.Distance * Math.Sin(ct.Angle));
                     ang = (float)ct.DegAngle;
                     g.TranslateTransform(dx, dy);
                     g.RotateTransform(ang);
-                    this.DrawBalloonTreeConvexHull(g, ct);
+                    this.DrawBalloonTreeConvexHull(g, branches[i]);
                     g.RotateTransform(-ang);
                     g.TranslateTransform(-dx, -dy);
                 }
@@ -611,7 +611,7 @@ namespace GraphAlgorithmDemo
         }
 
         private void DrawBalloonCirclesConvexHull(Graphics g,
-           CircleTree<PrintArray<CircleNode>, int> root)
+           GTree<PrintArray<CircleNode>, int, CircleGeom<PrintArray<CircleNode>, int>> root)
         {
             int i;
             bool drawHull = true;
@@ -635,11 +635,11 @@ namespace GraphAlgorithmDemo
             float dx, dy, px, py, len;
             double a1, a2, hyp;
             // Draw the convex hull of the root itself
-            CircleTree<PrintArray<CircleNode>, int>.CHArc[] cvHull 
-                = root.ConvexHull;
+            CircleGeom<PrintArray<CircleNode>, int>.CHArc[] cvHull 
+                = root.GeomData.ConvexHull;
             if (drawHull && cvHull.Length == 1)
             {
-                CircleTree<PrintArray<CircleNode>, int>.CHArc ch1 
+                CircleGeom<PrintArray<CircleNode>, int>.CHArc ch1 
                     = cvHull[0];
                 dx = (float)(ch1.Dst * Math.Cos(ch1.Ang) - ch1.Rad);
                 dy = (float)(ch1.Dst * Math.Sin(ch1.Ang) - ch1.Rad);
@@ -648,7 +648,7 @@ namespace GraphAlgorithmDemo
             }
             if (drawHull && cvHull.Length > 1)
             {
-                CircleTree<PrintArray<CircleNode>, int>.CHArc arc
+                CircleGeom<PrintArray<CircleNode>, int>.CHArc arc
                     = cvHull[cvHull.Length - 1];
                 if (arc.Dst == 0)
                 {
@@ -738,18 +738,18 @@ namespace GraphAlgorithmDemo
             if (root.BranchCount > 0)
             {
                 float ang;
-                CircleTree<PrintArray<CircleNode>, int> ct;
-                CircleTree<PrintArray<CircleNode>, int>[] branches 
+                CircleGeom<PrintArray<CircleNode>, int> ct;
+                GTree<PrintArray<CircleNode>, int, CircleGeom<PrintArray<CircleNode>, int>>[] branches 
                     = root.Branches;
                 for (i = 0; i < branches.Length; i++)
                 {
-                    ct = branches[i];
+                    ct = branches[i].GeomData;
                     dx = (float)(ct.Distance * Math.Cos(ct.Angle));
                     dy = (float)(ct.Distance * Math.Sin(ct.Angle));
                     ang = (float)ct.DegAngle;
                     g.TranslateTransform(dx, dy);
                     g.RotateTransform(ang);
-                    this.DrawBalloonCirclesConvexHull(g, ct);
+                    this.DrawBalloonCirclesConvexHull(g, branches[i]);
                     g.RotateTransform(-ang);
                     g.TranslateTransform(-dx, -dy);
                 }

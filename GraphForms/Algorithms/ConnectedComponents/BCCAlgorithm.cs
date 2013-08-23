@@ -13,7 +13,7 @@ namespace GraphForms.Algorithms.ConnectedComponents
     {
         private class NodeData
         {
-            public Node Data;
+            public Digraph<Node, Edge>.GNode Data;
             public int Depth;
             public int LowLink;
             public int Parent;
@@ -23,7 +23,7 @@ namespace GraphForms.Algorithms.ConnectedComponents
             // Only used for strict articulation points?
             public int[] GIDs;
 
-            public NodeData(Node data)
+            public NodeData(Digraph<Node, Edge>.GNode data)
             {
                 this.Data = data;
                 this.Parent = -1;
@@ -54,9 +54,9 @@ namespace GraphForms.Algorithms.ConnectedComponents
         private int mDepth;
         private bool mFlag = false;
 
-        private List<Node> mArtNodes;
-        private List<Edge[]> mComponents;
-        private List<Node[]> mCompGroups;
+        private List<Digraph<Node, Edge>.GNode> mArtNodes;
+        private List<Digraph<Node, Edge>.GEdge[]> mComponents;
+        private List<Digraph<Node, Edge>.GNode[]> mCompGroups;
 
         public BCCAlgorithm(Digraph<Node, Edge> graph, bool reversed)
             : base(graph, false, reversed)
@@ -64,22 +64,22 @@ namespace GraphForms.Algorithms.ConnectedComponents
             this.mDatas = new NodeData[0];
             this.mNodeStack = new NodeData[0];
             this.mEdgeStack = new Digraph<Node, Edge>.GEdge[0];
-            this.mArtNodes = new List<Node>();
-            this.mComponents = new List<Edge[]>();
-            this.mCompGroups = new List<Node[]>();
+            this.mArtNodes = new List<Digraph<Node, Edge>.GNode>();
+            this.mComponents = new List<Digraph<Node, Edge>.GEdge[]>();
+            this.mCompGroups = new List<Digraph<Node, Edge>.GNode[]>();
         }
 
-        public Edge[][] Components
+        public Digraph<Node, Edge>.GEdge[][] Components
         {
             get { return this.mComponents.ToArray(); }
         }
 
-        public Node[] ArticulationNodes
+        public Digraph<Node, Edge>.GNode[] ArticulationNodes
         {
             get { return this.mArtNodes.ToArray(); }
         }
 
-        public Node[][] CompactGroups
+        public Digraph<Node, Edge>.GNode[][] CompactGroups
         {
             get
             {
@@ -114,58 +114,69 @@ namespace GraphForms.Algorithms.ConnectedComponents
                 case ComputeState.Aborting:
                     throw new InvalidOperationException();
             }
-            int j, index, size;
+            int j, index, size, gid;
+            Digraph<Node, Edge>.GNode[] nodes, compGroup;
             for (int i = 0; i < this.mDatas.Length; i++)
             {
                 if (this.mDatas[i].GIDs != null)
                 {
                     int[] gids = this.mDatas[i].GIDs;
                     index = 0;
-                    size = this.mCompGroups[gids[0]].Length;
+                    compGroup = this.mCompGroups[gids[0]];
+                    size = compGroup.Length;
                     for (j = 1; j < gids.Length; j++)
                     {
-                        if (this.mCompGroups[gids[j]].Length > size)
+                        compGroup = this.mCompGroups[gids[j]];
+                        if (compGroup.Length > size)
                         {
-                            size = this.mCompGroups[gids[j]].Length;
+                            size = compGroup.Length;
                             index = j;
                         }
                     }
                     if (index != 0)
                     {
-                        size = this.mDatas[i].GroupID;
-                        //this.mCompGroups[size].Remove(this.mDatas[i].Data);
-                        int len = this.mCompGroups[size].Length;
-                        j = Array.IndexOf<Node>(this.mCompGroups[size], 
-                            this.mDatas[i].Data, 0, len);
-                        Node[] nodes = new Node[len - 1];
-                        Array.Copy(this.mCompGroups[size], 0, nodes, 0, j);
-                        Array.Copy(this.mCompGroups[size], j + 1, nodes, j, 
-                            len - j - 1);
+                        gid = this.mDatas[i].GroupID;
+                        //this.mCompGroups[gid].Remove(this.mDatas[i].Data);
+                        compGroup = this.mCompGroups[gid];
+                        size = this.mDatas[i].Data.Index;
+                        for (j = compGroup.Length - 1; j >= 0; j--)
+                        {
+                            if (compGroup[j].Index == size)
+                                break;
+                        }
+                        size = compGroup.Length - 1;
+                        nodes = new Digraph<Node, Edge>.GNode[size];
+                        Array.Copy(compGroup, 0, nodes, 0, j);
+                        Array.Copy(compGroup, j + 1, nodes, j, size - j);
+                        this.mCompGroups[gid] = nodes;
+
+                        gid = this.mDatas[i].GIDs[index];
+                        //this.mCompGroups[gid].Add(this.mDatas[i].Data);
+                        compGroup = this.mCompGroups[gid];
+                        size = compGroup.Length;
+                        nodes = new Digraph<Node, Edge>.GNode[size + 1];
+                        Array.Copy(compGroup, 0, nodes, 0, size);
+                        nodes[size] = this.mDatas[i].Data;
                         this.mCompGroups[size] = nodes;
 
-                        size = this.mDatas[i].GIDs[index];
-                        //this.mCompGroups[size].Add(this.mDatas[i].Data);
-                        len = this.mCompGroups[size].Length;
-                        nodes = new Node[len + 1];
-                        Array.Copy(this.mCompGroups[size], 0, nodes, 0, len);
-                        nodes[len] = this.mDatas[i].Data;
-                        this.mCompGroups[size] = nodes;
-
-                        this.mDatas[i].GroupID = size;
+                        this.mDatas[i].GIDs[index] = this.mDatas[i].GroupID;
+                        this.mDatas[i].GIDs[0] = gid;
+                        this.mDatas[i].GroupID = gid;
                     }
                 }
             }
         }
 
-        public Node[][] IsolatedGroups
+        public Digraph<Node, Edge>.GNode[][] IsolatedGroups
         {
             get
             {
                 int i, count = this.mArtNodes.Count + this.mComponents.Count;
-                List<Node>[] grps = new List<Node>[count];
+                List<Digraph<Node, Edge>.GNode>[] grps 
+                    = new List<Digraph<Node, Edge>.GNode>[count];
                 for (i = 0; i < count; i++)
                 {
-                    grps[i] = new List<Node>(2);
+                    grps[i] = new List<Digraph<Node, Edge>.GNode>(2);
                 }
                 count = this.mComponents.Count;
                 for (i = 0; i < this.mDatas.Length; i++)
@@ -180,7 +191,8 @@ namespace GraphForms.Algorithms.ConnectedComponents
                     }
                 }
                 count = this.mArtNodes.Count + this.mComponents.Count;
-                Node[][] isoGroups = new Node[count][];
+                Digraph<Node, Edge>.GNode[][] isoGroups 
+                    = new Digraph<Node, Edge>.GNode[count][];
                 for (i = 0; i < count; i++)
                 {
                     isoGroups[i] = grps[i].ToArray();
@@ -222,7 +234,7 @@ namespace GraphForms.Algorithms.ConnectedComponents
             }
             for (int i = 0; i < count; i++)
             {
-                this.mDatas[i] = new NodeData(this.mGraph.NodeAt(i));
+                this.mDatas[i] = new NodeData(this.mGraph.InternalNodeAt(i));
             }
             count = this.mGraph.EdgeCount;
             if (this.mNodeStack.Length < count)
@@ -285,8 +297,10 @@ namespace GraphForms.Algorithms.ConnectedComponents
 
         private void OnComponent(Edge edge, int src, int dst, bool rev)
         {
-            Node[] cGrp = new Node[this.mStackCount];
-            Edge[] comp = new Edge[this.mStackCount];
+            Digraph<Node, Edge>.GNode[] cGrp 
+                = new Digraph<Node, Edge>.GNode[this.mStackCount];
+            Digraph<Node, Edge>.GEdge[] comp 
+                = new Digraph<Node, Edge>.GEdge[this.mStackCount];
             int cGrpCount = 0;
             int compCount = 0;
             NodeData data;
@@ -297,7 +311,7 @@ namespace GraphForms.Algorithms.ConnectedComponents
             {
                 this.mStackCount--;
                 e = this.mEdgeStack[this.mStackCount];//this.mEdgeStack.Pop();
-                comp[compCount++] = e.Data;
+                comp[compCount++] = e;
                 data = this.mNodeStack[this.mStackCount];//this.mNodeStack.Pop();
                 if (data.GroupID == -1)
                 {
@@ -324,7 +338,8 @@ namespace GraphForms.Algorithms.ConnectedComponents
             }
             while (e.SrcNode.Index != src || e.DstNode.Index != dst);
 
-            Edge[] comp2 = new Edge[compCount];
+            Digraph<Node, Edge>.GEdge[] comp2 
+                = new Digraph<Node, Edge>.GEdge[compCount];
             Array.Copy(comp, 0, comp2, 0, compCount);
             this.mComponents.Add(comp2);
             if (this.mStackCount == 0)//this.mEdgeStack.Count == 0)
@@ -342,7 +357,8 @@ namespace GraphForms.Algorithms.ConnectedComponents
             {
                 this.OnArticulationNode(rev ? dst : src);
             }
-            Node[] cGrp2 = new Node[cGrpCount];
+            Digraph<Node, Edge>.GNode[] cGrp2 
+                = new Digraph<Node, Edge>.GNode[cGrpCount];
             Array.Copy(cGrp, 0, cGrp2, 0, cGrpCount);
             this.mCompGroups.Add(cGrp2);
         }

@@ -48,12 +48,12 @@ namespace GraphForms.Algorithms
             /// this <see cref="GEdge"/> instance represents.
             /// </remarks>
             public readonly Edge Data;
-            /// <summary>
+            /*/// <summary>
             /// If true, all graph processing algorithms in this library,
             /// including both graph theory and layout algorithms,
             /// will ignore this edge and skip over it.
             /// </summary>
-            public bool Hidden;
+            public bool Hidden;/* */
             /*/// <summary>
             /// Marks the state of visitation of this <see cref="GEdge"/>
             /// instance when it is being traversed by a search algorithm or
@@ -80,7 +80,7 @@ namespace GraphForms.Algorithms
                 this.SrcNode = srcNode;
                 this.DstNode = dstNode;
                 this.Data = data;
-                this.Hidden = false;
+                //this.Hidden = false;
             }
 
             public override string ToString()
@@ -354,8 +354,7 @@ namespace GraphForms.Algorithms
             for (i = 0; i < this.mECount; i++)
             {
                 edge = this.mEdges[i];
-                if (!edge.Hidden && 
-                    edge.SrcNode.mIndex != edge.DstNode.mIndex)
+                if (edge.SrcNode.mIndex != edge.DstNode.mIndex)
                 {
                     if (!edge.DstNode.Hidden && (undirected || !reversed))
                     {
@@ -391,8 +390,7 @@ namespace GraphForms.Algorithms
                 for (i = 0; i < this.mECount; i++)
                 {
                     edge = this.mEdges[i];
-                    if (!edge.Hidden &&
-                        edge.SrcNode.mIndex != edge.DstNode.mIndex)
+                    if (edge.SrcNode.mIndex != edge.DstNode.mIndex)
                     {
                         if (edge.DstNode.mIndex == v && 
                             !edge.SrcNode.Hidden &&
@@ -494,18 +492,16 @@ namespace GraphForms.Algorithms
                 if (i > 0)
                 {
                     edge1 = this.mEdges[i - 1];
-                    if (edge1.SrcNode.mIndex == ni)
+                    n1 = edge1.SrcNode.mIndex;
+                    if (n1 == ni)
                         n1 = edge1.DstNode.mIndex;
-                    else
-                        n1 = edge1.SrcNode.mIndex;
                     size += sizes[n1];
                 }
                 while (i < this.mECount)
                 {
                     edge1 = this.mEdges[i];
                     i++;
-                    if (!edge1.Hidden &&
-                        !edge1.SrcNode.Hidden && !edge1.DstNode.Hidden)
+                    if (!edge1.SrcNode.Hidden && !edge1.DstNode.Hidden)
                     {
                         n1 = -1;
                         if (edge1.SrcNode.mIndex == ni &&
@@ -545,8 +541,7 @@ namespace GraphForms.Algorithms
                 for (i = 0; i < this.mECount; i++)
                 {
                     edge1 = this.mEdges[i];
-                    if (!edge1.Hidden &&
-                        !edge1.SrcNode.Hidden && !edge1.DstNode.Hidden)
+                    if (!edge1.SrcNode.Hidden && !edge1.DstNode.Hidden)
                     {
                         n1 = -1;
                         if (edge1.SrcNode.mIndex == ni &&
@@ -565,7 +560,7 @@ namespace GraphForms.Algorithms
                             for (j = i + 1; j < this.mECount; j++)
                             {
                                 edge2 = this.mEdges[j];
-                                if (!edge2.Hidden && !edge2.SrcNode.Hidden &&
+                                if (!edge2.SrcNode.Hidden &&
                                     !edge2.DstNode.Hidden)
                                 {
                                     n2 = -1;
@@ -617,7 +612,7 @@ namespace GraphForms.Algorithms
             for (m = 0; m < this.mECount; m++)
             {
                 edge1 = this.mEdges[m];
-                if (!edge1.Hidden)
+                //if (!edge1.Hidden)
                 {
                     node1 = -1;
                     if ((undirected || !reversed) &&
@@ -645,7 +640,7 @@ namespace GraphForms.Algorithms
             for (m = 0; m < this.mECount; m++)
             {
                 edge1 = this.mEdges[m];
-                if (!edge1.Hidden)
+                //if (!edge1.Hidden)
                 {
                     node1 = -1;
                     if ((undirected || !reversed) &&
@@ -665,7 +660,7 @@ namespace GraphForms.Algorithms
                         for (n = m + 1; n < this.mECount; n++)
                         {
                             edge2 = this.mEdges[m];
-                            if (!edge2.Hidden)
+                            //if (!edge2.Hidden)
                             {
                                 node2 = -1;
                                 if ((undirected || !reversed) &&
@@ -829,8 +824,8 @@ namespace GraphForms.Algorithms
         /// than or equal to <see cref="NodeCount"/>.</exception>
         public GNode InternalNodeAt(int nodeIndex)
         {
-            //if (nodeIndex < 0 || nodeIndex >= this.mNCount)
-            //    throw new ArgumentOutOfRangeException("nodeIndex");
+            if (nodeIndex < 0 || nodeIndex >= this.mNCount)
+                throw new ArgumentOutOfRangeException("nodeIndex");
             return this.mNodes[nodeIndex];
         }
 
@@ -1752,8 +1747,8 @@ namespace GraphForms.Algorithms
         /// than or equal to <see cref="EdgeCount"/>.</exception>
         public GEdge InternalEdgeAt(int edgeIndex)
         {
-            //if (edgeIndex < 0 || edgeIndex >= this.mECount)
-            //    throw new ArgumentOutOfRangeException("edgeIndex");
+            if (edgeIndex < 0 || edgeIndex >= this.mECount)
+                throw new ArgumentOutOfRangeException("edgeIndex");
             return this.mEdges[edgeIndex];
         }
         #endregion

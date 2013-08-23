@@ -36,7 +36,7 @@ namespace GraphForms.Algorithms.Path
                     {
                         edge = this.mGraph.InternalEdgeAt(i);
                         // TODO: Also check if edge.SrcNode.Hidden?
-                        if (edge.Hidden || edge.DstNode.Hidden)
+                        if (edge.DstNode.Hidden || edge.SrcNode.Hidden)
                             continue;
                         si = edge.SrcNode.Index;
                         di = edge.DstNode.Index;
@@ -56,7 +56,7 @@ namespace GraphForms.Algorithms.Path
                     {
                         edge = this.mGraph.InternalEdgeAt(i);
                         // TODO: Also check if edge.DstNode.Hidden?
-                        if (edge.Hidden || edge.SrcNode.Hidden)
+                        if (edge.SrcNode.Hidden || edge.DstNode.Hidden)
                             continue;
                         si = edge.SrcNode.Index;
                         di = edge.DstNode.Index;
@@ -76,8 +76,7 @@ namespace GraphForms.Algorithms.Path
             for (i = 0; i < edgeCount; i++)
             {
                 edge = this.mGraph.InternalEdgeAt(i);
-                if (edge.Hidden || 
-                    edge.SrcNode.Hidden || edge.DstNode.Hidden)
+                if (edge.SrcNode.Hidden || edge.DstNode.Hidden)
                     continue;
                 si = edge.SrcNode.Index;
                 di = edge.DstNode.Index;

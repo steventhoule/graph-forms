@@ -81,8 +81,6 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                 for (j = this.mGraph.EdgeCount - 1; j >= 0; j--)
                 {
                     edge = this.mGraph.InternalEdgeAt(j);
-                    if (edge.Hidden)
-                        continue;
                     if (edge.DstNode.Index == i ||
                         edge.SrcNode.Index == i)
                     {
@@ -93,8 +91,6 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                 for (j = this.mGraph.EdgeCount - 1; j >= 0; j--)
                 {
                     edge = this.mGraph.InternalEdgeAt(j);
-                    if (edge.Hidden)
-                        continue;
                     if (edge.SrcNode.Index == i)
                         n = edge.DstNode;
                     else if (edge.DstNode.Index == i)

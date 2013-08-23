@@ -16,7 +16,7 @@ namespace GraphForms.Algorithms.Collections
     /// each circle.</typeparam>
     /// <typeparam name="Edge">The type of data that connects each circle
     /// back to its root in this tree.</typeparam>
-    public class CircleTree<Node, Edge>
+    public class CircleGeom<Node, Edge>
     {
         /// <summary><para>
         /// This data structure represents an individual arc in the convex
@@ -232,18 +232,20 @@ namespace GraphForms.Algorithms.Collections
         private CHAngComp mCHAngComp;
 
         #region Fields and Constructors
-        private Node mNodeData;
-        private Edge mEdgeData;
+        private GTree<Node, Edge, CircleGeom<Node, Edge>> mOwner;
+        //private Node mNodeData;
+        //private Edge mEdgeData;
 
-        private CircleTree<Node, Edge> mRoot;
+        /*private CircleTree<Node, Edge> mRoot;
         private int mIndex;
         private CircleTree<Node, Edge>[] mBranches;
-        private int mBCount;
+        private int mBCount;/* */
 
         private double mRad;
         private double mDst;
         private double mAng;
 
+        private uint mLastBVers;
         private bool bCHDirty;
         private CHArc[] mConvexHull;
         private CHArc mCHCircle;
@@ -251,8 +253,10 @@ namespace GraphForms.Algorithms.Collections
         private bool bWedgeDirty;
         private double mUpperWedge;
         private double mLowerWedge;
+        private double mUpperLength;
+        private double mLowerLength;
 
-        /// <summary>
+        /*/// <summary>
         /// Creates a new circle tree with the given <paramref name="nData"/>
         /// that has a circle of the given <paramref name="radius"/> at its 
         /// center.</summary>
@@ -268,7 +272,7 @@ namespace GraphForms.Algorithms.Collections
         public CircleTree(Node nData, Edge eData, double radius)
             : this(nData, eData, radius, 0)
         {
-        }
+        }/* */
         /// <summary>
         /// Creates a new circle tree with the given <paramref name="nData"/>
         /// that has a circle of the given <paramref name="radius"/> at its 
@@ -285,11 +289,12 @@ namespace GraphForms.Algorithms.Collections
         /// <exception cref="ArgumentOutOfRangeException">
         /// <paramref name="radius"/> is less than or equal to zero or 
         /// <paramref name="capacity"/> is less than zero.</exception>
-        public CircleTree(Node nData, Edge eData, double radius, int capacity)
+        public CircleGeom(double radius)
+        //public CircleTree(Node nData, Edge eData, double radius, int capacity)
         {
             if (radius <= 0.0)
                 throw new ArgumentOutOfRangeException("radius");
-            if (capacity < 0)
+            /*if (capacity < 0)
                 throw new ArgumentOutOfRangeException("capacity");
 
             this.mNodeData = nData;
@@ -298,7 +303,7 @@ namespace GraphForms.Algorithms.Collections
             this.mRoot = null;
             this.mIndex = -1;
             this.mBranches = new CircleTree<Node, Edge>[capacity];
-            this.mBCount = 0;
+            this.mBCount = 0;/* */
 
             this.mRad = radius;
             this.mDst = 0.0;
@@ -311,10 +316,12 @@ namespace GraphForms.Algorithms.Collections
             this.bWedgeDirty = true;
             this.mUpperWedge = 0.0;
             this.mLowerWedge = 0.0;
+            this.mUpperLength = 0.0;
+            this.mLowerLength = 0.0;
         }
         #endregion
 
-        private void InvalidateParent()
+        /*private void InvalidateParent()
         {
             CircleTree<Node, Edge> p = this.mRoot;
             while (p != null && !p.bCHDirty)
@@ -322,9 +329,44 @@ namespace GraphForms.Algorithms.Collections
                 p.bCHDirty = true;
                 p = p.mRoot;
             }
+        }/* */
+
+        private void InvalidateParent()
+        {
+            GTree<Node, Edge, CircleGeom<Node, Edge>> p = this.mOwner.Root;
+            while (p != null && !p.GeomData.bCHDirty)
+            {
+                p.GeomData.bCHDirty = true;
+                p = p.Root;
+            }
         }
 
-        /// <summary>
+        public GTree<Node, Edge, CircleGeom<Node, Edge>> Owner
+        {
+            get { return this.mOwner; }
+        }
+
+        public void SetOwner(GTree<Node, Edge, CircleGeom<Node, Edge>> owner)
+        {
+            if (owner == null)
+                throw new ArgumentNullException("owner");
+            if (this.mOwner != owner)
+            {
+                if (owner.GeomData != this)
+                {
+                    throw new ArgumentException(
+                        "Owner must have this instance as its GeomData", 
+                        "owner");
+                }
+                this.mOwner = owner;
+                this.mLastBVers = owner.BranchVersion;
+                this.bCHDirty = true;
+                this.bWedgeDirty = true;
+                this.InvalidateParent();
+            }
+        }
+
+        /*/// <summary>
         /// The node data stored in this circle tree instance, which usually
         /// represents something inside the circle at the center of this
         /// circle tree.</summary>
@@ -475,6 +517,7 @@ namespace GraphForms.Algorithms.Collections
             }
         }
         #endregion
+        /* */
 
         #region Circle Properties
         /// <summary>
@@ -576,7 +619,16 @@ namespace GraphForms.Algorithms.Collections
         /// </summary>
         public bool ConvexHullDirty
         {
-            get { return this.bCHDirty; }
+            get 
+            {
+                if (this.mLastBVers != this.mOwner.BranchVersion)
+                {
+                    this.mLastBVers = this.mOwner.BranchVersion;
+                    this.bCHDirty = true;
+                    this.InvalidateParent();
+                }
+                return this.bCHDirty; 
+            }
         }
         /// <summary>
         /// The convex hull that encloses the circle at the center of this
@@ -592,7 +644,7 @@ namespace GraphForms.Algorithms.Collections
         {
             get
             {
-                if (this.bCHDirty)
+                if (this.ConvexHullDirty)
                     this.CalculateConvexHull();
                 return this.mConvexHull;
             }
@@ -611,7 +663,7 @@ namespace GraphForms.Algorithms.Collections
         {
             get
             {
-                if (this.bCHDirty)
+                if (this.ConvexHullDirty)
                     this.CalculateConvexHull();
                 return new CHArc(this.mCHCircle);
             }
@@ -635,9 +687,12 @@ namespace GraphForms.Algorithms.Collections
             // TODO: Will any of these calculations be FUBAR'd if the
             // radius, distance, or angle for any of the circles are
             // really really small?
-            if (this.mBCount == 0)
+            //if (this.mBCount == 0)
+            if (this.mOwner.BranchCount == 0)
             {
-                this.mCHCircle = new CHArc(this.mNodeData, this.mRad);
+                //this.mCHCircle = new CHArc(this.mNodeData, this.mRad);
+                this.mCHCircle 
+                    = new CHArc(this.mOwner.NodeData, this.mRad);
                 this.mCHCircle.LowerWedge = Math.PI;
                 this.mCHCircle.UpperWedge = Math.PI;
                 this.mConvexHull = new CHArc[] { this.mCHCircle };
@@ -652,25 +707,32 @@ namespace GraphForms.Algorithms.Collections
             CHArc ch1 = null;
             CHArc ch2 = null;
             CHArc ch3 = null;
-            CircleTree<Node, Edge> child;
+            CircleGeom<Node, Edge> child;
+            GTree<Node, Edge, CircleGeom<Node, Edge>>[] branches
+                = this.mOwner.Branches;
             // Temp holder for child convex hulls, sorted by
             // decreasing radius (largest first)
             CHArc[] chByRad;
-            for (i = 0; i < this.mBCount; i++)
+            //for (i = 0; i < this.mBCount; i++)
+            for (i = 0; i < branches.Length; i++)
             {
-                child = this.mBranches[i];
-                if (child.bCHDirty)
+                //child = this.mBranches[i];
+                child = branches[i].GeomData;
+                if (child.ConvexHullDirty)
                     child.CalculateConvexHull();
                 chByRad = child.mConvexHull;
                 len += chByRad.Length;
             }
             chByRad = new CHArc[len];
-            chByRad[0] = new CHArc(this.mNodeData, this.mRad);
+            //chByRad[0] = new CHArc(this.mNodeData, this.mRad);
+            chByRad[0] = new CHArc(this.mOwner.NodeData, this.mRad);
             chByRad[0].Ang = 16.0;
             len = 1;
-            for (i = 0; i < this.mBCount; i++)
+            //for (i = 0; i < this.mBCount; i++)
+            for (i = 0; i < branches.Length; i++)
             {
-                child = this.mBranches[i];
+                //child = this.mBranches[i];
+                child = branches[i].GeomData;
                 for (j = 0; j < child.mConvexHull.Length; j++)
                 {
                     ch1 = child.mConvexHull[j];
@@ -686,11 +748,25 @@ namespace GraphForms.Algorithms.Collections
                         ch2.Ang += 2 * Math.PI;
                     while (ch2.Ang > Math.PI)
                         ch2.Ang -= 2 * Math.PI;
-                    chByRad[len++] = ch2;
+                    //chByRad[len++] = ch2;
+                    i1 = len - 1;
+                    while (i1 >= 0 && chByRad[i1].Rad < ch2.Rad)
+                    {
+                        i1--;
+                    }
+                    while (i1 >= 0 && chByRad[i1].Rad == ch2.Rad &&
+                                      chByRad[i1].Dst < ch2.Dst)
+                    {
+                        i1--;
+                    }
+                    i1++;
+                    Array.Copy(chByRad, i1, chByRad, i1 + 1, len - i1);
+                    chByRad[i1] = ch2;
+                    len++;
                 }
             }
             // Sort the list of arcs by decreasing radius and distance
-            Array.Sort<CHArc>(chByRad, 0, len, CHRadComp.S);
+            //Array.Sort<CHArc>(chByRad, 0, len, CHRadComp.S);
             // Find the root's index
             root = -1;
             for (i = 0; i < len && root < 0; i++)
@@ -2207,7 +2283,8 @@ namespace GraphForms.Algorithms.Collections
 
             #region Finalization
             // Calculate the bounding circle
-            this.mCHCircle = new CHArc(this.mNodeData, chByRad[0].Rad);
+            //this.mCHCircle = new CHArc(this.mNodeData, chByRad[0].Rad);
+            this.mCHCircle = new CHArc(this.mOwner.NodeData, chByRad[0].Rad);
             this.mCHCircle.LowerWedge = Math.PI;
             this.mCHCircle.UpperWedge = Math.PI;
             for (i = 0; i < len; i++)
@@ -2455,17 +2532,18 @@ namespace GraphForms.Algorithms.Collections
         /// the <see cref="ConvexHull"/>, but is tangent to one or more 
         /// of its arcs.</summary><remarks>
         /// This forces the circle tree to recalculate its bounding wedge
-        /// (both <see cref="UpperWedge"/> and <see cref="LowerWedge"/>)
+        /// (<see cref="UpperWedge"/>, <see cref="LowerWedge"/>,
+        ///  <see cref="UpperLength"/>, and <see cref="LowerLength"/>)
         /// if it hasn't already done so or if its <see cref="Distance"/>
         /// or <see cref="ConvexHull"/> have changed since the last time
         /// its bounding wedge was calculated.
-        /// </remarks><seealso cref="CalculateAngles()"/>
+        /// </remarks><seealso cref="CalculateBoundingWedge()"/>
         public double UpperWedge
         {
             get
             {
-                if (this.bWedgeDirty || this.bCHDirty)
-                    this.CalculateAngles();
+                if (this.bWedgeDirty || this.ConvexHullDirty)
+                    this.CalculateBoundingWedge();
                 return this.mUpperWedge; 
             }
         }
@@ -2476,33 +2554,75 @@ namespace GraphForms.Algorithms.Collections
         /// the <see cref="ConvexHull"/>, but is tangent to one or more 
         /// of its arcs.</summary><remarks>
         /// This forces the circle tree to recalculate its bounding wedge
-        /// (both <see cref="UpperWedge"/> and <see cref="LowerWedge"/>)
+        /// (<see cref="UpperWedge"/>, <see cref="LowerWedge"/>,
+        ///  <see cref="UpperLength"/>, and <see cref="LowerLength"/>)
         /// if it hasn't already done so or if its <see cref="Distance"/>
         /// or <see cref="ConvexHull"/> have changed since the last time
         /// its bounding wedge was calculated.
-        /// </remarks><seealso cref="CalculateAngles()"/>
+        /// </remarks><seealso cref="CalculateBoundingWedge()"/>
         public double LowerWedge
         {
             get 
             {
-                if (this.bWedgeDirty || this.bCHDirty)
-                    this.CalculateAngles();
+                if (this.bWedgeDirty || this.ConvexHullDirty)
+                    this.CalculateBoundingWedge();
                 return this.mLowerWedge; 
             }
         }
         /// <summary>
-        /// Forces this circle tree to calculate the angles of the bounding 
-        /// wedge of its <see cref="ConvexHull"/>, <see cref="UpperWedge"/> 
-        /// and <see cref="LowerWedge"/>.</summary><remarks>
+        /// The length of the ray that forms the <see cref="UpperWedge"/> of
+        /// the bounding wedge of this circle tree's 
+        /// <see cref="ConvexHull"/>.</summary><remarks>
+        /// This forces the circle tree to recalculate its bounding wedge
+        /// (<see cref="UpperWedge"/>, <see cref="LowerWedge"/>,
+        ///  <see cref="UpperLength"/>, and <see cref="LowerLength"/>)
+        /// if it hasn't already done so or if its <see cref="Distance"/>
+        /// or <see cref="ConvexHull"/> have changed since the last time
+        /// its bounding wedge was calculated.
+        /// </remarks><seealso cref="CalculateBoundingWedge()"/>
+        public double UpperLength
+        {
+            get
+            {
+                if (this.bWedgeDirty || this.ConvexHullDirty)
+                    this.CalculateBoundingWedge();
+                return this.mUpperLength;
+            }
+        }
+        /// <summary>
+        /// The length of the ray that forms the <see cref="LowerWedge"/> of
+        /// the bounding wedge of this circle tree's 
+        /// <see cref="ConvexHull"/>.</summary><remarks>
+        /// This forces the circle tree to recalculate its bounding wedge
+        /// (<see cref="UpperWedge"/>, <see cref="LowerWedge"/>,
+        ///  <see cref="UpperLength"/>, and <see cref="LowerLength"/>)
+        /// if it hasn't already done so or if its <see cref="Distance"/>
+        /// or <see cref="ConvexHull"/> have changed since the last time
+        /// its bounding wedge was calculated.
+        /// </remarks><seealso cref="CalculateBoundingWedge()"/>
+        public double LowerLength
+        {
+            get
+            {
+                if (this.bWedgeDirty || this.ConvexHullDirty)
+                    this.CalculateBoundingWedge();
+                return this.mLowerLength;
+            }
+        }
+        /// <summary>
+        /// Forces this circle tree to calculate the angles and lengths of 
+        /// the two rays that form the bounding wedge of its 
+        /// <see cref="ConvexHull"/>.</summary><remarks>
         /// This forces the circle tree to recalculate its convex hull 
         /// if it hasn't done so already or if its <see cref="Radius"/> or
         /// branches have been changed since the last time its convex hull
         /// was calculated.</remarks>
         /// <seealso cref="UpperWedge"/><seealso cref="LowerWedge"/>
-        public void CalculateAngles()
+        /// <seealso cref="UpperLength"/><seealso cref="LowerLength"/>
+        public void CalculateBoundingWedge()
         {
             double rad = this.mDst;
-            if (this.bCHDirty)
+            if (this.ConvexHullDirty)
             {
                 this.CalculateConvexHull();
             }
@@ -2511,14 +2631,18 @@ namespace GraphForms.Algorithms.Collections
                 if (rad <= this.mRad)
                 {
                     this.mUpperWedge = Math.PI / 2;
+                    this.mUpperLength = 0.0;
                     //this.Distance = this.mRad;
                 }
                 else
                 {
                     this.mUpperWedge = Math.Asin(this.mRad / rad);
+                    this.mUpperLength 
+                        = Math.Sqrt(rad * rad - this.mRad * this.mRad);
                     //this.Distance = rad;
                 }
                 this.mLowerWedge = this.mUpperWedge;
+                this.mLowerLength = this.mUpperLength;
                 this.bWedgeDirty = false;
                 return;
             }
@@ -2531,33 +2655,39 @@ namespace GraphForms.Algorithms.Collections
                     if (rad <= arc.Rad)
                     {
                         this.mUpperWedge = Math.PI / 2;
+                        this.mUpperLength = 0.0;
                     }
                     else
                     {
                         this.mUpperWedge = Math.Asin(arc.Rad / rad);
+                        this.mUpperLength
+                            = Math.Sqrt(rad * rad - arc.Rad * arc.Rad);
                     }
                     this.mLowerWedge = this.mUpperWedge;
+                    this.mLowerLength = this.mUpperLength;
                 }
                 else if (rad <= arc.Rad - arc.Dst * Math.Cos(arc.Ang))
                 {
                     this.mUpperWedge = Math.PI / 2;
+                    this.mUpperLength = 0.0;
                     this.mLowerWedge = this.mUpperWedge;
+                    this.mLowerLength = 0.0;
                 }
                 else
                 {
-                    // Distance between ray origin & pt's center
+                    // Distance between ray origin & arc's center
                     // Sqrt(rad^2 + Dst^2 - 2 rad Dst Cos(PI - Ang))
                     double h = Math.Sqrt(rad * rad + arc.Dst * arc.Dst
                         + 2 * rad * arc.Dst * Math.Cos(arc.Ang));
                     if (arc.Ang < 0.0)
                     {
-                        // Angle between next ray & ray tangent to pt +
+                        // Angle between next ray & ray tangent to arc +
                         // Angle between ray to arc's center & X-axis
                         // Asin(Dst Sin(PI + Ang)/hyp) + Asin(Rad/hyp)
                         this.mLowerWedge = Math.Asin(arc.Rad / h) +
                             Math.Asin(arc.Dst * Math.Sin(arc.Ang) / -h);
-                        // Angle between next ray & ray tangent to pt -
-                        // Angle between ray to pt's center & X-axis
+                        // Angle between next ray & ray tangent to arc -
+                        // Angle between ray to arc's center & X-axis
                         // Asin(Rad/hyp) - Asin(Dst Sin(PI - Ang)/hyp)
                         this.mUpperWedge = Math.Asin(arc.Rad / h) -
                             Math.Asin(arc.Dst * Math.Sin(arc.Ang) / h);
@@ -2569,18 +2699,20 @@ namespace GraphForms.Algorithms.Collections
                         // Asin(Rad/hyp) - Asin(Dst Sin(PI - Ang)/hyp)
                         this.mLowerWedge = Math.Asin(arc.Rad / h) -
                             Math.Asin(arc.Dst * Math.Sin(arc.Ang) / h);
-                        // Angle between next ray & ray tangent to pt +
-                        // Angle between ray to pt's center & X-axis
+                        // Angle between next ray & ray tangent to arc +
+                        // Angle between ray to arc's center & X-axis
                         // Asin(Dst Sin(PI - Ang)/hyp) + Asin(Rad/hyp)
                         this.mUpperWedge = Math.Asin(arc.Rad / h) +
                             Math.Asin(arc.Dst * Math.Sin(arc.Ang) / h);
                     }
+                    this.mUpperLength = Math.Sqrt(h * h - arc.Rad * arc.Rad);
+                    this.mLowerLength = this.mUpperLength;
                 }
                 this.bWedgeDirty = false;
                 return;
             }
             int i = 0;
-            double hyp, ang, currA, prevA;
+            double hyp, ang, currA, prevA, currL, prevL;
             // Test if rad is <= the left edge of the bounding box
             CHArc pt = this.mConvexHull[i++];
             currA = prevA = 0.0;
@@ -2610,7 +2742,9 @@ namespace GraphForms.Algorithms.Collections
             if (rad <= -prevA)
             {
                 this.mUpperWedge = Math.PI / 2;
+                this.mUpperLength = 0.0;
                 this.mLowerWedge = this.mUpperWedge;
+                this.mLowerLength = 0.0;
                 this.bWedgeDirty = false;
                 return;
             }
@@ -2620,6 +2754,7 @@ namespace GraphForms.Algorithms.Collections
             if (pt.Ang <= 0.0 || pt.UpperWedge <= 0.0)
             {
                 currA = 0.0;
+                currL = 0.0;
             }
             else
             {
@@ -2644,6 +2779,7 @@ namespace GraphForms.Algorithms.Collections
                 if (ang < Math.PI)
                 {
                     currA = 0.0;
+                    currL = 0.0;
                 }
                 else
                 {
@@ -2662,6 +2798,7 @@ namespace GraphForms.Algorithms.Collections
                     {
                         // Angle between ray tangent to pt & X-axis
                         currA = Math.Asin(pt.Rad / rad);
+                        currL = Math.Sqrt(rad * rad - pt.Rad * pt.Rad);
                     }
                     else
                     {
@@ -2674,12 +2811,14 @@ namespace GraphForms.Algorithms.Collections
                         // Asin(Rad/hyp) - Asin(Dst Sin(PI - Ang)/hyp)
                         currA = Math.Asin(pt.Rad / hyp) -
                             Math.Asin(pt.Dst * Math.Sin(pt.Ang) / hyp);
+                        currL = Math.Sqrt(hyp * hyp - pt.Rad * pt.Rad);
                     }
                 }
             }
             // Calculate the lower angle
             i = 0;
             prevA = 0.0;
+            prevL = 0.0;
             pt = this.mConvexHull[i++];
             if (pt.Dst == 0.0)
             {
@@ -2706,11 +2845,13 @@ namespace GraphForms.Algorithms.Collections
                 hyp = Math.Sqrt(rad * rad + pt.Dst * pt.Dst
                     + 2 * rad * pt.Dst * Math.Cos(pt.Ang));
                 prevA = currA;
+                prevL = currL;
                 // Angle between next ray & ray tangent to pt + 
                 // Angle between ray to pt's center & X-axis
                 // Asin(Dst Sin(PI + Ang)/hyp) + Asin(Rad/hyp)
                 currA = Math.Asin(pt.Rad / hyp) + 
                     Math.Asin(pt.Dst * Math.Sin(pt.Ang) / -hyp);
+                currL = Math.Sqrt(hyp * hyp - pt.Rad * pt.Rad);
                 if (i == this.mConvexHull.Length)
                     break;
                 pt = this.mConvexHull[i++];
@@ -2734,6 +2875,7 @@ namespace GraphForms.Algorithms.Collections
                 }
             }
             this.mLowerWedge = prevA;
+            this.mLowerLength = prevL;
 
             // Test if the arc with greatest negative angle crosses over
             // the -X-axis, and if so, calculate the angle
@@ -2741,6 +2883,7 @@ namespace GraphForms.Algorithms.Collections
             if (pt.Ang >= 0.0 || pt.LowerWedge <= 0.0)
             {
                 currA = 0.0;
+                currL = 0.0;
             }
             else
             {
@@ -2765,6 +2908,7 @@ namespace GraphForms.Algorithms.Collections
                 if (ang > -Math.PI)
                 {
                     currA = 0.0;
+                    currL = 0.0;
                 }
                 else
                 {
@@ -2784,6 +2928,7 @@ namespace GraphForms.Algorithms.Collections
                     {
                         // Angle between ray tangent to pt & X-axis
                         currA = Math.Asin(pt.Rad / rad);
+                        currL = Math.Sqrt(rad * rad - pt.Rad * pt.Rad);
                     }
                     else
                     {
@@ -2796,12 +2941,14 @@ namespace GraphForms.Algorithms.Collections
                         // Asin(Rad/hyp) - Asin(Dst Sin(PI - Ang)/hyp)
                         currA = Math.Asin(pt.Rad / hyp) -
                             Math.Asin(pt.Dst * Math.Sin(pt.Ang) / hyp);
+                        currL = Math.Sqrt(hyp * hyp - pt.Rad * pt.Rad);
                     }
                 }
             }
             // Calculate the upper angle
             i = this.mConvexHull.Length - 1;
             prevA = 0.0;
+            prevL = 0.0;
             pt = this.mConvexHull[i--];
             if (pt.Dst == 0.0)
             {
@@ -2833,6 +2980,7 @@ namespace GraphForms.Algorithms.Collections
                 // Asin(Dst Sin(PI - Ang)/hyp) + Asin(Rad/hyp)
                 currA = Math.Asin(pt.Rad / hyp) + 
                     Math.Asin(pt.Dst * Math.Sin(pt.Ang) / hyp);
+                currL = Math.Sqrt(hyp * hyp - pt.Rad * pt.Rad);
                 if (i < 0)
                     break;
                 pt = this.mConvexHull[i--];
@@ -2856,6 +3004,7 @@ namespace GraphForms.Algorithms.Collections
                 }
             }
             this.mUpperWedge = prevA;
+            this.mUpperLength = prevL;
 
             this.bWedgeDirty = false;
         }
@@ -2926,8 +3075,8 @@ namespace GraphForms.Algorithms.Collections
         {
             get
             {
-                //if (this.bWedgeDirty || this.bCHDirty)
-                //    this.CalculateAngles();
+                if (this.bWedgeDirty || this.ConvexHullDirty)
+                    this.CalculateBoundingWedge();
                 return 180.0 * this.mUpperWedge / Math.PI; 
             }
         }
@@ -2939,8 +3088,8 @@ namespace GraphForms.Algorithms.Collections
         {
             get
             {
-                //if (this.bWedgeDirty || this.bCHDirty)
-                //    this.CalculateAngles();
+                if (this.bWedgeDirty || this.ConvexHullDirty)
+                    this.CalculateBoundingWedge();
                 return 180.0 * this.mLowerWedge / Math.PI;
             }
         }

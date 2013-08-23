@@ -38,7 +38,7 @@ namespace GraphForms.Algorithms.ConnectedComponents
             get { return this.mWeakComponents; }
         }
 
-        public Digraph<Node, Edge>.GNode[] Roots
+        public Digraph<Node, Edge>.GNode[] ComponentRoots
         {
             get { return this.mWeakRoots; }
         }

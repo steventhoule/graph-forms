@@ -28,6 +28,6 @@ namespace GraphForms.Algorithms.ConnectedComponents
         /// The roots or starting points of each connected component,
         /// in the same order as <see cref="Components"/>.
         /// </summary>
-        Digraph<Node, Edge>.GNode[] Roots { get; }
+        Digraph<Node, Edge>.GNode[] ComponentRoots { get; }
     }
 }

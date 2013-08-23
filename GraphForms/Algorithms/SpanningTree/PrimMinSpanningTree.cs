@@ -132,7 +132,7 @@ namespace GraphForms.Algorithms.SpanningTree
                 for (i = 0; i < count; i++)
                 {
                     edge = this.mGraph.InternalEdgeAt(i);
-                    if (!edge.Hidden)
+                    //if (!edge.Hidden)
                     {
                         if (edge.SrcNode.Index == u)//node.Index)
                         {

@@ -72,8 +72,6 @@ namespace GraphForms.Algorithms
                     for (j = 0; j < eCount; j++)
                     {
                         gEdge = graph.InternalEdgeAt(j);
-                        if (gEdge.Hidden)
-                            continue;
                         if (gEdge.SrcNode.Index == k &&
                             gEdge.DstNode.Color == GraphColor.Black)
                         {
@@ -212,8 +210,6 @@ namespace GraphForms.Algorithms
                         // we try swapping u with a node that comes
                         // right before one of its neighbors
                         edge = graph.InternalEdgeAt(j);
-                        if (edge.Hidden)
-                            continue;
                         if (edge.SrcNode.Index == u.Index)
                             x = edge.DstNode;
                         else if (edge.DstNode.Index == u.Index)
@@ -233,8 +229,6 @@ namespace GraphForms.Algorithms
                         for (k = 0; k < eCount; k++)
                         {
                             edge = graph.InternalEdgeAt(k);
-                            if (edge.Hidden)
-                                continue;
                             if (edge.SrcNode.Index == u.Index)
                                 x = edge.DstNode;
                             else if (edge.DstNode.Index == u.Index)
@@ -249,8 +243,6 @@ namespace GraphForms.Algorithms
                             for (m = 0; m < eCount; m++)
                             {
                                 edge = graph.InternalEdgeAt(m);
-                                if (edge.Hidden)
-                                    continue;
                                 if (edge.SrcNode.Index == v.Index)
                                     y = edge.DstNode;
                                 else if (edge.DstNode.Index == v.Index)

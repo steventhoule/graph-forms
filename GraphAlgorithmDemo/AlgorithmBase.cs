@@ -220,6 +220,7 @@ namespace GraphAlgorithmDemo
             this.mScene = scene;
             this.CenterX = boundingBox.X + boundingBox.W / 2;
             this.CenterY = boundingBox.Y + boundingBox.H / 2;
+            this.AdaptToSizeChanges = true;
         }
 
         public SCircleLayoutForCircles(CircleNodeScene scene,
@@ -230,6 +231,7 @@ namespace GraphAlgorithmDemo
             Box2F bbox = clusterNode.LayoutBBox;
             this.CenterX = bbox.X + bbox.W / 2;
             this.CenterY = bbox.Y + bbox.H / 2;
+            this.AdaptToSizeChanges = true;
         }
 
         protected override void OnEndIteration(uint iteration,
@@ -256,6 +258,7 @@ namespace GraphAlgorithmDemo
             : base(scene.Graph, boundingBox)
         {
             this.mScene = scene;
+            this.AdaptToSizeChanges = true;
         }
 
         public BalloonCirclesLayoutForCircles(CircleNodeScene scene,
@@ -263,6 +266,7 @@ namespace GraphAlgorithmDemo
             : base(scene.Graph, clusterNode)
         {
             this.mScene = scene;
+            this.AdaptToSizeChanges = true;
         }
 
         protected override void OnEndIteration(uint iteration,
@@ -289,6 +293,7 @@ namespace GraphAlgorithmDemo
             : base(scene.Graph, boundingBox)
         {
             this.mScene = scene;
+            this.AdaptToSizeChanges = true;
         }
 
         public BalloonTreeLayoutForCircles(CircleNodeScene scene,
@@ -296,11 +301,12 @@ namespace GraphAlgorithmDemo
             : base(scene.Graph, clusterNode)
         {
             this.mScene = scene;
+            this.AdaptToSizeChanges = true;
         }
 
-        public CircleTree<CircleNode, ArrowEdge> CircleTree
+        public GTree<CircleNode, ArrowEdge, CircleGeom<CircleNode, ArrowEdge>> CircleTree
         {
-            get { return this.BalloonTree; }
+            get { return this.DataTree; }
         }
 
         protected override void OnEndIteration(uint iteration,
@@ -327,6 +333,7 @@ namespace GraphAlgorithmDemo
             : base(scene.Graph, boundingBox)
         {
             this.mScene = scene;
+            this.AdaptToSizeChanges = true;
         }
 
         public SimpleTreeLayoutForCircles(CircleNodeScene scene,
@@ -334,6 +341,7 @@ namespace GraphAlgorithmDemo
             : base(scene.Graph, clusterNode)
         {
             this.mScene = scene;
+            this.AdaptToSizeChanges = true;
         }
 
         protected override void OnEndIteration(uint iteration,

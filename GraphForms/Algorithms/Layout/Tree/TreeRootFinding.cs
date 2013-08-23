@@ -9,10 +9,18 @@ namespace GraphForms.Algorithms.Layout.Tree
     public enum TreeRootFinding
     {
         /// <summary>
-        /// Chooses a root based on the last value set with
-        /// <see cref="M:ARootedAlgorithm`1{Node}.SetRoot(Node)"/>.
+        /// Chooses a root based on the values set with
+        /// <see cref="M:AGraphAlgorithm`2{Node,Edge}.AddRoot(Node)"/>.
         /// </summary>
         UserDefined,
+        /// <summary>
+        /// Chooses a root with no incoming edges, only outgoing ones.
+        /// </summary>
+        SourceDirected,
+        /// <summary>
+        /// Chooses a root with no outgoing edges, only incoming ones.
+        /// </summary>
+        SinkDirected,
         /// <summary>
         /// Chooses a root such that the depth of the tree is minimized.
         /// </summary>

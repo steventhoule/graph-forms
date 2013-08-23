@@ -248,8 +248,6 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                     // iterate through all its neighbors
                     for (i = 0; i < edges.Length; i++)
                     {
-                        if (edges[i].Hidden)
-                            continue;
                         if (edges[i].SrcNode.Index == ci)
                             n = edges[i].DstNode;
                         else if (edges[i].DstNode.Index == ci)

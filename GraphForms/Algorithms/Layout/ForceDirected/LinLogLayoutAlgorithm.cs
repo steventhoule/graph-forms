@@ -449,8 +449,6 @@ namespace GraphForms.Algorithms.Layout.ForceDirected
                 for (j = 0; j < eCount; j++)
                 {
                     edge = this.mGraph.InternalEdgeAt(j);
-                    if (edge.Hidden)
-                        continue;
                     e = null;
                     if (edge.SrcNode.Index == node.Index)
                     {

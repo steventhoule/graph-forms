@@ -110,8 +110,7 @@ namespace GraphForms.Algorithms.SpanningTree
             for (i = this.mGraph.EdgeCount - 1; i >= 0; i--)
             {
                 edge = this.mGraph.InternalEdgeAt(i);
-                if (!edge.Hidden &&
-                    !edge.SrcNode.Hidden && !edge.DstNode.Hidden)
+                if (!edge.SrcNode.Hidden && !edge.DstNode.Hidden)
                 {
                     weight = edge.Data.Weight;
                     src = count - 1;

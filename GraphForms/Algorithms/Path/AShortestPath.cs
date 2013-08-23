@@ -21,11 +21,6 @@ namespace GraphForms.Algorithms.Path
             this.bReversed = reversed;
         }
 
-        public Digraph<Node, Edge> Graph
-        {
-            get { return this.mGraph; }
-        }
-
         public bool Directed
         {
             get { return !this.bUndirected; }
@@ -135,7 +130,7 @@ namespace GraphForms.Algorithms.Path
                 for (i = 0; i < count; i++)
                 {
                     edge = this.mGraph.InternalEdgeAt(i);
-                    if (!edge.Hidden && !edge.DstNode.Hidden)
+                    if (!edge.DstNode.Hidden)
                     {
                         // If edge.SrcNode is the root,
                         // we already know it's not hidden
@@ -155,7 +150,7 @@ namespace GraphForms.Algorithms.Path
                 for (i = 0; i < count; i++)
                 {
                     edge = this.mGraph.InternalEdgeAt(i);
-                    if (!edge.Hidden && !edge.SrcNode.Hidden)
+                    if (!edge.SrcNode.Hidden)
                     {
                         // If edge.DstNode is the root,
                         // we already know it's not hidden

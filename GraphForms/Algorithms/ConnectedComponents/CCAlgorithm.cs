@@ -62,7 +62,7 @@ namespace GraphForms.Algorithms.ConnectedComponents
             }
         }
 
-        public Digraph<Node, Edge>.GNode[] Roots
+        public Digraph<Node, Edge>.GNode[] ComponentRoots
         {
             get 
             {
